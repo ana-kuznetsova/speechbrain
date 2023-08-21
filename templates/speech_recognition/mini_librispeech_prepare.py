@@ -196,18 +196,14 @@ def download_mini_librispeech(destination):
     shutil.unpack_archive(test_archive, destination)
 
 
-def main(data_folder, data_save_folder):
-    """Runs data preparation script on the data_folder.
-    """
-    # data_folder, parts, save_json_train, save_json_valid, save_json_test
+if __name__=="__main__":
+    DATA_FOLDER = sys.argv[1]
+    DATA_SAVE_FOLDER = sys.argv[2]
     prepare_librispeech(
-        data_folder,
+        DATA_FOLDER,
         ["train-clean-100", "train-clean-360", "train-other-500"],
-        f"{data_save_folder}/train.json",
-        f"{data_folder}/valid.json",
-        f"{data_save_folder}/test.json"
+        f"{DATA_SAVE_FOLDER}/train.json",
+        f"{DATA_SAVE_FOLDER}/valid.json",
+        f"{DATA_SAVE_FOLDER}/test.json"
 
     )
-
-if __name__=="__main__":
-    main(sys.argv[1], sys.argv[2])
