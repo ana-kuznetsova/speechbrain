@@ -7,6 +7,7 @@ Authors:
 """
 
 import os
+import sys
 import json
 import shutil
 import logging
@@ -14,24 +15,27 @@ from speechbrain.utils.data_utils import get_all_files, download_file
 from speechbrain.dataio.dataio import read_audio
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 MINILIBRI_TRAIN_URL = "http://www.openslr.org/resources/31/train-clean-5.tar.gz"
 MINILIBRI_VALID_URL = "http://www.openslr.org/resources/31/dev-clean-2.tar.gz"
 MINILIBRI_TEST_URL = "https://www.openslr.org/resources/12/test-clean.tar.gz"
 SAMPLERATE = 16000
 
 
-def prepare_mini_librispeech(
-    data_folder, save_json_train, save_json_valid, save_json_test
+
+def prepare_librispeech(
+    data_folder, parts, save_json_train, save_json_valid, save_json_test
 ):
     """
-    Prepares the json files for the Mini Librispeech dataset.
-
-    Downloads the dataset if its not found in the `data_folder`.
+    Prepares the json files for the Librispeech dataset.
 
     Arguments
     ---------
     data_folder : str
         Path to the folder where the Mini Librispeech dataset is stored.
+
+    parts: List[str] which subparts of LS to use. Eg. train-clean-100,
+        train-clean-360, train-other-500
     save_json_train : str
         Path where the train data specification file will be saved.
     save_json_valid : str
@@ -41,8 +45,9 @@ def prepare_mini_librispeech(
 
     Example
     -------
-    >>> data_folder = '/path/to/mini_librispeech'
-    >>> prepare_mini_librispeech(data_folder, 'train.json', 'valid.json', 'test.json')
+    >>> data_folder = '/path/to/librispeech'
+    >>> prepare_librispeech(data_folder, 
+        ['train-clean-360', 'train-clean-100'], 'train.json', 'valid.json', 'test.json')
     """
 
     # Check if this phase is already done (if so, skip it)
@@ -51,20 +56,26 @@ def prepare_mini_librispeech(
         return
 
     # If the dataset doesn't exist yet, download it
-    train_folder = os.path.join(data_folder, "LibriSpeech", "train-clean-5")
-    valid_folder = os.path.join(data_folder, "LibriSpeech", "dev-clean-2")
-    test_folder = os.path.join(data_folder, "LibriSpeech", "test-clean")
-    if not check_folders(train_folder, valid_folder, test_folder):
-        download_mini_librispeech(data_folder)
+    train_folders = [
+        os.path.join(data_folder, part) for part in parts
+    ]
+    valid_folder = os.path.join(data_folder, "dev-clean")
+    test_folder = os.path.join(data_folder, "test-clean")
+
+    # Data should be already downloaded, comment it
+    # if not check_folders(train_folder, valid_folder, test_folder):
+    #    download_mini_librispeech(data_folder)
 
     # List files and create manifest from list
-    logger.info(
-        f"Creating {save_json_train}, {save_json_valid}, and {save_json_test}"
-    )
+    logger.info("Creating %s, %s, and %s", save_json_train, save_json_valid, save_json_test)
     extension = [".flac"]
 
     # List of flac audio files
-    wav_list_train = get_all_files(train_folder, match_and=extension)
+    wav_list_train = []
+    for folder in train_folders:
+        # Get files for the current subset
+        curr_files = get_all_files(folder, match_and=extension)
+        wav_list_train.extend(curr_files)
     wav_list_valid = get_all_files(valid_folder, match_and=extension)
     wav_list_test = get_all_files(test_folder, match_and=extension)
 
@@ -92,8 +103,8 @@ def get_transcription(trans_list):
     trans_dict = {}
     for trans_file in trans_list:
         # Reading the text file
-        with open(trans_file) as f:
-            for line in f:
+        with open(trans_file, encoding="utf-8") as file:
+            for line in file:
                 uttid = line.split(" ")[0]
                 text = line.rstrip().split(" ")[1:]
                 text = " ".join(text)
@@ -119,7 +130,6 @@ def create_json(wav_list, trans_dict, json_file):
     # Processing all the wav files in the list
     json_dict = {}
     for wav_file in wav_list:
-
         # Reading the signal (to retrieve duration in seconds)
         signal = read_audio(wav_file)
         duration = signal.shape[0] / SAMPLERATE
@@ -137,11 +147,10 @@ def create_json(wav_list, trans_dict, json_file):
         }
 
     # Writing the dictionary to the json file
-    with open(json_file, mode="w") as json_f:
+    with open(json_file, mode="w", encoding="utf-8") as json_f:
         json.dump(json_dict, json_f, indent=2)
 
-    logger.info(f"{json_file} successfully created!")
-
+    logger.info("%s successfully created!", json_file)
 
 def skip(*filenames):
     """
@@ -185,3 +194,20 @@ def download_mini_librispeech(destination):
     shutil.unpack_archive(train_archive, destination)
     shutil.unpack_archive(valid_archive, destination)
     shutil.unpack_archive(test_archive, destination)
+
+
+def main(data_folder, data_save_folder):
+    """Runs data preparation script on the data_folder.
+    """
+    # data_folder, parts, save_json_train, save_json_valid, save_json_test
+    prepare_librispeech(
+        data_folder,
+        ["train-clean-100", "train-clean-360", "train-other-500"],
+        f"{data_save_folder}/train.json",
+        f"{data_folder}/valid.json",
+        f"{data_save_folder}/test.json"
+
+    )
+
+if __name__=="__main__":
+    main(sys.argv[1], sys.argv[2])
