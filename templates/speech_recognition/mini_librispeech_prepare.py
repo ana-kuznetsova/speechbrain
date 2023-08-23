@@ -23,7 +23,7 @@ SAMPLERATE = 16000
 
 
 
-def prepare_librispeech(
+def prepare_mini_librispeech(
     data_folder, parts, save_json_train, save_json_valid, save_json_test
 ):
     """
@@ -85,8 +85,11 @@ def prepare_librispeech(
     trans_dict = get_transcription(trans_list)
 
     # Create the json files
+    logger.info("Creating train file")
     create_json(wav_list_train, trans_dict, save_json_train)
+    logger.info("Creating valid file")
     create_json(wav_list_valid, trans_dict, save_json_valid)
+    logger.info("Creating test file")
     create_json(wav_list_test, trans_dict, save_json_test)
 
 
@@ -137,7 +140,7 @@ def create_json(wav_list, trans_dict, json_file):
         # Manipulate path to get relative path and uttid
         path_parts = wav_file.split(os.path.sep)
         uttid, _ = os.path.splitext(path_parts[-1])
-        relative_path = os.path.join("{data_root}", *path_parts[-5:])
+        relative_path = os.path.join("{data_root}", *path_parts[-4:])
 
         # Create entry for this utterance
         json_dict[uttid] = {
@@ -199,7 +202,7 @@ def download_mini_librispeech(destination):
 if __name__=="__main__":
     DATA_FOLDER = sys.argv[1]
     DATA_SAVE_FOLDER = sys.argv[2]
-    prepare_librispeech(
+    prepare_mini_librispeech(
         DATA_FOLDER,
         ["train-clean-100", "train-clean-360", "train-other-500"],
         f"{DATA_SAVE_FOLDER}/train.json",

@@ -53,11 +53,13 @@ class SpeechCodes(torch.nn.Module):
     def forward(self, wav):
         """Get speech codes for feature extraction.
         """
-        assert len(wav.shape) == 1, "Wav inp shape must be 1"
-        wav = wav.view(1, 1, -1)
+        print("BEFORE", wav.shape, len(wav.shape))
+        assert len(wav.shape) == 2, "Wav inp shape must be 2D"
+        wav = wav.unsqueeze(1)
         wav = self.enc_model.preprocess(wav, self.wav_sample_rate)
-        _, codes, _, _, _ = self.enc_model.encode(wav)
-        return codes
+        z_feats, _, _, _, _ = self.enc_model.encode(wav)
+        print("Z", z_feats.shape)
+        return z_feats
 
 
 class Fbank(torch.nn.Module):

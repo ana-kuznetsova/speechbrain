@@ -698,7 +698,6 @@ class Conv2d(nn.Module):
             L_in, stride[-2], kernel_size[-2], dilation[-2]
         )
         padding = padding_time + padding_freq
-
         # Applying padding
         x = nn.functional.pad(x, padding, mode=self.padding_mode)
 
