@@ -104,18 +104,22 @@ def dataio_prepare(hparams):
 
 
 if __name__=="__main__":
-    hparams_file, run_opts, overrides = sb.parse_arguments(sys.argv[1:])
-    # Load hyperparameters file with command-line overrides
-    with open(hparams_file) as fin:
-        hparams = load_hyperpyyaml(fin, overrides)
-    datasets = dataio_prepare(hparams)
-    asr_brain = ASR(
-        modules=hparams["modules"],
-        opt_class=hparams["opt_class"],
-        hparams=hparams,
-        run_opts=run_opts,
-        checkpointer=hparams["checkpointer"],
+    x = torch.rand(8, 1024, 56)
+    model = sb.lobes.models.convolution.ConvolutionFrontEnd(
+        input_shape=x.shape,
+        num_blocks=2,
+        num_layers_per_block=1,
+        out_channels=[64, 32],
+        kernel_sizes=[3, 3],
+        strides=[2, 2],
+        residuals=[False, False],
+        conv_module=sb.nnet.CNN.Conv2d,
+        activation=torch.nn.LeakyReLU,
+        norm=sb.nnet.normalization.LayerNorm,
+        dropout=0.1,
+        conv_bias=True,
+        padding="reflect",
+        conv_init=None,
     )
-    for batch in datasets["train"]:
-        asr_brain.compute_forward(batch, sb.Stage.TRAIN)
-        break
+    out = model(x)
+    print(out.shape)
