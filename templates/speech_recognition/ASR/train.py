@@ -77,8 +77,10 @@ class ASR(sb.Brain):
             At validation/test time, it returns the predicted tokens as well.
         """
         # We first move the batch to the appropriate device.
+        print("One batch")
         batch = batch.to(self.device)
         feats, self.feat_lens = self.prepare_features(stage, batch.sig)
+        print("FEATS", feats.shape)
         tokens_bos, _ = self.prepare_tokens(stage, batch.tokens_bos)
 
         # Running the encoder (prevent propagation to feature extraction)
@@ -106,7 +108,7 @@ class ASR(sb.Brain):
             predictions["tokens"], _ = self.hparams.test_search(
                 encoded_signal, self.feat_lens
             )
-
+        print("RETURN")
         return predictions
 
     def is_ctc_active(self, stage):
@@ -133,7 +135,6 @@ class ASR(sb.Brain):
             The input signals (tensor) and their lengths (tensor).
         """
         wavs, wav_lens = wavs
-
         # Add augmentation if specified. In this version of augmentation, we
         # concatenate the original and the augment batches in a single bigger
         # batch. This is more memory-demanding, but helps to improve the
@@ -149,7 +150,7 @@ class ASR(sb.Brain):
 
         # Feature computation and normalization
         feats = self.hparams.compute_features(wavs)
-        feats = self.modules.normalize(feats, wav_lens)
+        #feats = self.modules.normalize(feats, wav_lens)
 
         return feats, wav_lens
 

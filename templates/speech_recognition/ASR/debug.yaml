@@ -33,14 +33,19 @@ number_of_epochs: 15
 number_of_ctc_epochs: 5
 batch_size: 8
 sorting: ascending
-ckpt_interval_minutes: 15
 lr: 1.0
 
 # Feature parameters
-model_sample_rate: "16khz"
-wav_sample_rate: 16000
-num_codes: 1024
-code_dim: 748
+#model_sample_rate: "16khz"
+#wav_sample_rate: 16000
+#num_codes: 1024
+#code_dim: 748
+
+# Feature parameters
+sample_rate: 16000
+n_fft: 512
+n_mels: 80
+
 
 # Dataloader options
 train_dataloader_opts:
@@ -154,11 +159,10 @@ log_softmax: !new:torch.nn.LogSoftmax
 #normalizer: !new:speechbrain.processing.features.InputNormalization
 #    norm_type: global
 
-compute_features: !new:speechbrain.lobes.features.SpeechCodes
-    model_sample_rate: !ref <model_sample_rate>
-    wav_sample_rate: !ref <wav_sample_rate>
-    device: "cuda"
-    trainable: False
+compute_features: !new:speechbrain.lobes.features.Fbank
+    sample_rate: !ref <sample_rate>
+    n_fft: !ref <n_fft>
+    n_mels: !ref <n_mels>
 
 # This is the Transformer LM that is used according to the Huggingface repository
 # Visit the HuggingFace model corresponding to the pretrained_lm_tokenizer_path
@@ -181,7 +185,7 @@ Tencoder: !new:speechbrain.lobes.models.transformer.TransformerASR.EncoderWrappe
     transformer: !ref <Transformer>
 
 encoder: !new:speechbrain.nnet.containers.LengthsCapableSequential
-    input_shape: [null, !ref <num_codes>, !ref <code_dim>]
+    input_shape: [null, null, !ref <n_mels>]
     compute_features: !ref <compute_features>
 #    normalize: !ref <normalizer>
     cnn: !ref <CNN>
