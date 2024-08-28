@@ -19,7 +19,9 @@ Note that for the speaker verification experiments with Voxceleb2 the official s
 Voxceleb2 stores files with the m4a audio format. To use them within SpeechBrain you have to convert all the m4a files into wav files.
 You can do the conversion using ffmpeg(https://gist.github.com/seungwonpark/4f273739beef2691cd53b5c39629d830). This operation might take several hours and should be only once.
 
+<!-- cspell:disable -->
 2. Put all the wav files in a folder called wav. You should have something like `voxceleb2/wav/id*/*.wav` (e.g, `voxceleb2/wav/id00012/21Uxsk56VDQ/00001.wav`)
+<!-- cspell:enable -->
 
 3. copy the `voxceleb1/vox1_test_wav.zip` file into the voxceleb2 folder.
 
@@ -83,25 +85,29 @@ Below results are all obtained with the official verification split of voxceleb1
 [Speaker verification results (in EER) on VoxCeleb1-O, with score normalization]
 | System          | Dataset    | EER  | Model/Log Link |
 |-----------------|------------|------| -----|
-| Xvector + PLDA  | VoxCeleb 1,2 | 3.23% | https://www.dropbox.com/sh/mau2nrt6i81ctfc/AAAUkAECzVaVWUMjD3mytjgea?dl=0 |
+| Xvector + PLDA  | VoxCeleb 1,2 | 3.23% | https://www.dropbox.com/sh/ab1ma1lnmskedo8/AADsmgOLPdEjSF6wV3KyhNG1a?dl=0 |
 | ECAPA-TDNN      | VoxCeleb 1,2 | 0.80% | https://www.dropbox.com/sh/ab1ma1lnmskedo8/AADsmgOLPdEjSF6wV3KyhNG1a?dl=0 |
-| ResNet TDNN     | VoxCeleb 1,2 | 0.95% | https://www.dropbox.com/sh/yvqn7tn6iqztx9k/AAAhhhbOCUJ47C0LbcpUlzYUa?dl=0 |
+| ResNet TDNN     | VoxCeleb 1,2 | 0.95% | https://www.dropbox.com/sh/ab1ma1lnmskedo8/AADsmgOLPdEjSF6wV3KyhNG1a?dl=0 |
 
 [Speaker verification results (in EER), no score normalization]
 | System          | Dataset    | VoxCeleb1-O  | VoxCeleb1-E  | VoxCeleb1-H  | Model/Log Link |
 |-----------------|------------|------|------|------| -----|
 | ECAPA-TDNN      | VoxCeleb 1,2 | 0.90% | - | - | https://www.dropbox.com/sh/ab1ma1lnmskedo8/AADsmgOLPdEjSF6wV3KyhNG1a?dl=0 |
 | ECAPA-TDNN      | VoxCeleb 2 | 1.30% | 1.98% | 3.62% | (to be updated) |
-| ResNet TDNN     | VoxCeleb 1,2 | 1.05% | - | - | https://www.dropbox.com/sh/yvqn7tn6iqztx9k/AAAhhhbOCUJ47C0LbcpUlzYUa?dl=0  |
+| ResNet TDNN     | VoxCeleb 1,2 | 1.05% | - | - | https://www.dropbox.com/sh/ab1ma1lnmskedo8/AADsmgOLPdEjSF6wV3KyhNG1a?dl=0  |
 
 
 ## PreTrained Model + Easy-Inference
 You can perform the easy-inference of various models provided on [HuggingFace](https://huggingface.co) via the links below. They are specified in the hyperparameter yaml files as well.
+
+**NOTE: If you would like to store the embeddings for future use, please check `extract_speaker_embeddings.py` for the gist.**
+
 | System          | Hugging Face model link |
 |-----------------|-------------------------|
 | Xvector         | https://huggingface.co/speechbrain/spkrec-xvect-voxceleb |
 | ECAPA-TDNN      | https://huggingface.co/speechbrain/spkrec-ecapa-voxceleb |
 | ResNet TDNN     | https://huggingface.co/speechbrain/spkrec-resnet-voxceleb |
+
 
 # **About SpeechBrain**
 - Website: https://speechbrain.github.io/
@@ -113,6 +119,15 @@ You can perform the easy-inference of various models provided on [HuggingFace](h
 Please, cite SpeechBrain if you use it for your research or business.
 
 ```bibtex
+@misc{ravanelli2024opensourceconversationalaispeechbrain,
+      title={Open-Source Conversational AI with SpeechBrain 1.0},
+      author={Mirco Ravanelli and Titouan Parcollet and Adel Moumen and Sylvain de Langen and Cem Subakan and Peter Plantinga and Yingzhi Wang and Pooneh Mousavi and Luca Della Libera and Artem Ploujnikov and Francesco Paissan and Davide Borra and Salah Zaiem and Zeyu Zhao and Shucong Zhang and Georgios Karakasidis and Sung-Lin Yeh and Pierre Champion and Aku Rouhe and Rudolf Braun and Florian Mai and Juan Zuluaga-Gomez and Seyed Mahed Mousavi and Andreas Nautsch and Xuechen Liu and Sangeet Sagar and Jarod Duret and Salima Mdhaffar and Gaelle Laperriere and Mickael Rouvier and Renato De Mori and Yannick Esteve},
+      year={2024},
+      eprint={2407.00463},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2407.00463},
+}
 @misc{speechbrain,
   title={{SpeechBrain}: A General-Purpose Speech Toolkit},
   author={Mirco Ravanelli and Titouan Parcollet and Peter Plantinga and Aku Rouhe and Samuele Cornell and Loren Lugosch and Cem Subakan and Nauman Dawalatabad and Abdelwahab Heba and Jianyuan Zhong and Ju-Chieh Chou and Sung-Lin Yeh and Szu-Wei Fu and Chien-Feng Liao and Elena Rastorgueva and François Grondin and William Aris and Hwidong Na and Yan Gao and Renato De Mori and Yoshua Bengio},

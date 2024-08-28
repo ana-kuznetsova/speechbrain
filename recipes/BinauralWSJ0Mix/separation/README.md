@@ -69,8 +69,8 @@ The output folders with the checkpoints, logs, etc are available [here](https://
 
 You can run the following command to train the model using Distributed Data Parallel (DDP) with 2 GPUs:
 
-```
- python -m torch.distributed.launch --nproc_per_node=2 train.py hparams/convtasnet-parallel.yaml --data_folder /yourdatapath --distributed_launch --distributed_backend='nccl'
+```bash
+torchrun --nproc_per_node=2 train.py hparams/convtasnet-parallel.yaml --data_folder /yourdatapath
 ```
 You can add the other runtime options as appropriate. For more complete information on multi-GPU usage, take a look at this [tutorial](https://colab.research.google.com/drive/13pBUacPiotw1IvyffvGZ-HrtBr9T6l15).
 
@@ -81,6 +81,15 @@ You can add the other runtime options as appropriate. For more complete informat
 Please, cite SpeechBrain if you use it for your research or business.
 
 ```bibtex
+@misc{ravanelli2024opensourceconversationalaispeechbrain,
+      title={Open-Source Conversational AI with SpeechBrain 1.0},
+      author={Mirco Ravanelli and Titouan Parcollet and Adel Moumen and Sylvain de Langen and Cem Subakan and Peter Plantinga and Yingzhi Wang and Pooneh Mousavi and Luca Della Libera and Artem Ploujnikov and Francesco Paissan and Davide Borra and Salah Zaiem and Zeyu Zhao and Shucong Zhang and Georgios Karakasidis and Sung-Lin Yeh and Pierre Champion and Aku Rouhe and Rudolf Braun and Florian Mai and Juan Zuluaga-Gomez and Seyed Mahed Mousavi and Andreas Nautsch and Xuechen Liu and Sangeet Sagar and Jarod Duret and Salima Mdhaffar and Gaelle Laperriere and Mickael Rouvier and Renato De Mori and Yannick Esteve},
+      year={2024},
+      eprint={2407.00463},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2407.00463},
+}
 @misc{speechbrain,
   title={{SpeechBrain}: A General-Purpose Speech Toolkit},
   author={Mirco Ravanelli and Titouan Parcollet and Peter Plantinga and Aku Rouhe and Samuele Cornell and Loren Lugosch and Cem Subakan and Nauman Dawalatabad and Abdelwahab Heba and Jianyuan Zhong and Ju-Chieh Chou and Sung-Lin Yeh and Szu-Wei Fu and Chien-Feng Liao and Elena Rastorgueva and François Grondin and William Aris and Hwidong Na and Yan Gao and Renato De Mori and Yoshua Bengio},

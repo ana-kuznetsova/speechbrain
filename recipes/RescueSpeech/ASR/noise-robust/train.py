@@ -15,27 +15,28 @@ To run this recipe, do the following:
 
 Authors
  * Sangeet Sagar 2023
- * Adel Moumen 2022
+ * Adel Moumen 2022, 2024
  * Titouan Parcollet 2022
 """
 
-import os
-import sys
 import csv
 import logging
+import os
+import sys
+
 import numpy as np
-from tqdm import tqdm
+import torch
+import torch.nn.functional as F
+import torchaudio
+from hyperpyyaml import load_hyperpyyaml
 from pesq import pesq
 from pystoi import stoi
+from tqdm import tqdm
 
-import torch
-import torchaudio
-import torch.nn.functional as F
 import speechbrain as sb
-from hyperpyyaml import load_hyperpyyaml
-from speechbrain.utils.metric_stats import MetricStats
-from speechbrain.utils.distributed import run_on_main
 from speechbrain.utils.data_utils import undo_padding
+from speechbrain.utils.distributed import run_on_main
+from speechbrain.utils.metric_stats import MetricStats
 
 logger = logging.getLogger(__name__)
 
@@ -51,10 +52,8 @@ class ASR(sb.core.Brain):
 
         predictions, clean = self.compute_forward_enhance(batch, stage)
 
-        # Add augmentation if specified
-        if stage == sb.Stage.TRAIN:
-            if hasattr(self.hparams, "augmentation"):
-                wavs = self.hparams.augmentation(wavs, wav_lens)
+        # Enhanced signal is to be fed into ASR
+        wavs = predictions[0]
 
         # We compute the padding mask and replace the values with the pad_token_id
         # that the Whisper decoder expect to see.
@@ -72,15 +71,16 @@ class ASR(sb.core.Brain):
 
         hyps = None
         if stage == sb.Stage.VALID:
-            hyps, _ = self.hparams.valid_greedy_searcher(enc_out, wav_lens)
+            hyps, _, _, _ = self.hparams.valid_greedy_searcher(
+                enc_out, wav_lens
+            )
         elif stage == sb.Stage.TEST:
-            hyps, _ = self.hparams.test_beam_searcher(enc_out, wav_lens)
+            hyps, _, _, _ = self.hparams.test_beam_searcher(enc_out, wav_lens)
 
         return predictions, clean, [log_probs, hyps, wav_lens]
 
     def compute_forward_enhance(self, batch, stage):
-        """Forward computations from the noisy to the separated signals.
-        """
+        """Forward computations from the noisy to the separated signals."""
         noisy = batch.noisy_sig
         clean = batch.clean_sig
         noise = batch.noise_sig[0]
@@ -115,9 +115,6 @@ class ASR(sb.core.Brain):
                     # fix the length of clean also
                     clean = clean[:, :min_len, :]
 
-                if self.hparams.use_wavedrop:
-                    noisy = self.hparams.wavedrop(noisy, noisy_lens)
-
                 if self.hparams.limit_training_signal_len:
                     noisy, clean = self.cut_signals(noisy, clean)
 
@@ -149,22 +146,23 @@ class ASR(sb.core.Brain):
     def compute_objectives(self, predictions, batch, stage):
         """Computes the loss NLL given predictions and targets."""
 
-        log_probs, hyps, wav_lens, = predictions
+        (log_probs, hyps, wav_lens) = predictions
         batch = batch.to(self.device)
         ids = batch.id
         tokens_eos, tokens_eos_lens = batch.tokens_eos
 
         loss = self.hparams.nll_loss(
-            log_probs, tokens_eos, length=tokens_eos_lens,
+            log_probs, tokens_eos, length=tokens_eos_lens
         )
 
         if stage != sb.Stage.TRAIN:
             tokens, tokens_lens = batch.tokens
 
             # Decode token terms to words
-            predicted_words = self.tokenizer.batch_decode(
-                hyps, skip_special_tokens=True
-            )
+            predicted_words = [
+                self.tokenizer.decode(t, skip_special_tokens=True).strip()
+                for t in hyps
+            ]
 
             # Convert indices to words
             target_words = undo_padding(tokens, tokens_lens)
@@ -174,18 +172,18 @@ class ASR(sb.core.Brain):
 
             if hasattr(self.hparams, "normalized_transcripts"):
                 predicted_words = [
-                    self.tokenizer._normalize(text).split(" ")
+                    self.tokenizer.normalize(text).split(" ")
                     for text in predicted_words
                 ]
 
                 target_words = [
-                    self.tokenizer._normalize(text).split(" ")
+                    self.tokenizer.normalize(text).split(" ")
                     for text in target_words
                 ]
             else:
                 predicted_words = [text.split(" ") for text in predicted_words]
-
                 target_words = [text.split(" ") for text in target_words]
+
             self.wer_metric.append(ids, predicted_words, target_words)
             self.cer_metric.append(ids, predicted_words, target_words)
 
@@ -214,13 +212,19 @@ class ASR(sb.core.Brain):
             self.compute_objectives_enhance(predictions, clean)
             * self.hparams.sepformer_weight
         )
-        loss = self.compute_objectives(outputs, batch, sb.Stage.TRAIN)
+        loss = (
+            self.compute_objectives(outputs, batch, sb.Stage.TRAIN)
+            * self.hparams.asr_weight
+        )
         loss = torch.add(enhance_loss, loss)
 
-        loss.backward()
+        if loss.requires_grad:
+            loss.backward()
 
-        if self.check_gradients(loss):
-            self.optimizer.step()
+        torch.nn.utils.clip_grad_norm_(
+            self.modules.parameters(), self.max_grad_norm
+        )
+        self.optimizer.step()
         self.optimizer.zero_grad()
 
         return loss.detach()
@@ -230,7 +234,15 @@ class ASR(sb.core.Brain):
         predictions, clean, outputs = self.compute_forward(batch, stage=stage)
 
         with torch.no_grad():
-            loss = self.compute_objectives(outputs, batch, stage=stage)
+            enhance_loss = (
+                self.compute_objectives_enhance(predictions, clean)
+                * self.hparams.sepformer_weight
+            )
+            loss = (
+                self.compute_objectives(outputs, batch, stage=stage)
+                * self.hparams.asr_weight
+            )
+            loss = torch.add(enhance_loss, loss)
 
         if stage != sb.Stage.TRAIN:
             self.pesq_metric.append(
@@ -278,7 +290,6 @@ class ASR(sb.core.Brain):
                     self.modules[model].train()
                     for p in self.modules[model].parameters():
                         p.requires_grad = True  # Model's weight will be updated
-                    print(model)
                 else:
                     self.modules[model].eval()
                     for p in self.modules[model].parameters():
@@ -329,7 +340,8 @@ class ASR(sb.core.Brain):
                 valid_stats=stage_stats,
             )
             self.checkpointer.save_and_keep_only(
-                meta={"WER": stage_stats["WER"]}, min_keys=["WER"],
+                meta={"WER": stage_stats["WER"]},
+                min_keys=["WER"],
             )
         elif stage == sb.Stage.TEST:
             self.hparams.train_logger.log_stats(
@@ -354,9 +366,7 @@ class ASR(sb.core.Brain):
             recombine = True
 
             for i in range(clean.shape[-1]):
-                new_target = self.hparams.speedperturb(
-                    clean[:, :, i], targ_lens
-                )
+                new_target = self.hparams.speed_perturb(clean[:, :, i])
                 new_clean.append(new_target)
                 if i == 0:
                     min_len = new_target.shape[-1]
@@ -431,7 +441,7 @@ class ASR(sb.core.Brain):
         saves the test audio (noisy, clean, and estimated sources) on disk
         (Only for enhance Model)
         """
-        # Create outout folder
+        # Create output folder
         f_name = batch.noisy_wav[0].split("/")[-1].replace(".wav", "")
         save_path = os.path.join(
             self.hparams.output_folder, "enhanced_wavs", f_name
@@ -522,9 +532,14 @@ class ASR(sb.core.Brain):
                         )
 
                     # Write enhanced wavs for sanity check
-                    self.save_audio(
-                        snt_id[0], batch.noisy_sig, clean, predictions[0], batch
-                    )
+                    if self.hparams.save_audio:
+                        self.save_audio(
+                            snt_id[0],
+                            batch.noisy_sig,
+                            clean,
+                            predictions[0],
+                            batch,
+                        )
 
                     psq_mode = (
                         "wb"
@@ -626,13 +641,15 @@ class ASR(sb.core.Brain):
 # Define custom data procedure
 def dataio_prepare(hparams, tokenizer):
     """This function prepares the datasets to be used in the brain class.
-    It also defines the data processing pipeline through user-defined functions."""
+    It also defines the data processing pipeline through user-defined functions.
+    """
 
     # 1. Define datasets
     data_folder = hparams["data_folder"]
 
     train_data = sb.dataio.dataset.DynamicItemDataset.from_csv(
-        csv_path=hparams["train_csv"], replacements={"data_root": data_folder},
+        csv_path=hparams["train_csv"],
+        replacements={"data_root": data_folder},
     )
 
     if hparams["sorting"] == "ascending":
@@ -662,13 +679,15 @@ def dataio_prepare(hparams, tokenizer):
         )
 
     valid_data = sb.dataio.dataset.DynamicItemDataset.from_csv(
-        csv_path=hparams["valid_csv"], replacements={"data_root": data_folder},
+        csv_path=hparams["valid_csv"],
+        replacements={"data_root": data_folder},
     )
     # We also sort the validation data so it is faster to validate
     valid_data = valid_data.filtered_sorted(sort_key="duration")
 
     test_data = sb.dataio.dataset.DynamicItemDataset.from_csv(
-        csv_path=hparams["test_csv"], replacements={"data_root": data_folder},
+        csv_path=hparams["test_csv"],
+        replacements={"data_root": data_folder},
     )
 
     # We also sort the validation data so it is faster to validate
@@ -683,7 +702,8 @@ def dataio_prepare(hparams, tokenizer):
         info = torchaudio.info(wav)
         clean_sig = sb.dataio.dataio.read_audio(wav)
         clean_sig = torchaudio.transforms.Resample(
-            info.sample_rate, hparams["enhance_sample_rate"],
+            info.sample_rate,
+            hparams["enhance_sample_rate"],
         )(clean_sig)
         return clean_sig
 
@@ -693,7 +713,8 @@ def dataio_prepare(hparams, tokenizer):
         info = torchaudio.info(wav)
         noise_sig = sb.dataio.dataio.read_audio(wav)
         noise_sig = torchaudio.transforms.Resample(
-            info.sample_rate, hparams["enhance_sample_rate"],
+            info.sample_rate,
+            hparams["enhance_sample_rate"],
         )(noise_sig)
         return noise_sig
 
@@ -703,7 +724,8 @@ def dataio_prepare(hparams, tokenizer):
         info = torchaudio.info(wav)
         noisy_sig = sb.dataio.dataio.read_audio(wav)
         noisy_sig = torchaudio.transforms.Resample(
-            info.sample_rate, hparams["enhance_sample_rate"],
+            info.sample_rate,
+            hparams["enhance_sample_rate"],
         )(noisy_sig)
         return wav, noisy_sig
 
@@ -717,14 +739,15 @@ def dataio_prepare(hparams, tokenizer):
         "wrd", "tokens_list", "tokens_bos", "tokens_eos", "tokens"
     )
     def text_pipeline(wrd):
+        if hasattr(hparams, "normalized_transcripts"):
+            wrd = tokenizer.normalize(wrd)
         yield wrd
-        tokens_list = tokenizer.encode(wrd)
-        # avoid bos and eos tokens.
-        tokens_list = tokens_list[1:-1]
+        tokens_list = tokenizer.encode(wrd, add_special_tokens=False)
         yield tokens_list
-        tokens_bos = torch.LongTensor([hparams["bos_index"]] + tokens_list)
+        tokens_list = tokenizer.build_inputs_with_special_tokens(tokens_list)
+        tokens_bos = torch.LongTensor(tokens_list[:-1])
         yield tokens_bos
-        tokens_eos = torch.LongTensor(tokens_list + [hparams["eos_index"]])
+        tokens_eos = torch.LongTensor(tokens_list[1:])
         yield tokens_eos
         tokens = torch.LongTensor(tokens_list)
         yield tokens
@@ -751,11 +774,9 @@ def dataio_prepare(hparams, tokenizer):
 
 
 if __name__ == "__main__":
-
     # CLI:
     hparams_file, run_opts, overrides = sb.parse_arguments(sys.argv[1:])
 
-    # If --distributed_launch then
     # create ddp_group with the right communication protocol
     sb.utils.distributed.ddp_init_group(run_opts)
 
@@ -788,20 +809,6 @@ if __name__ == "__main__":
 
     # Defining tokenizer and loading it
     tokenizer = hparams["whisper"].tokenizer
-    tokenizer.set_prefix_tokens(hparams["language"], "transcribe", False)
-
-    # we need to prepare the tokens for searchers
-    hparams["valid_greedy_searcher"].set_decoder_input_tokens(
-        tokenizer.prefix_tokens
-    )
-    hparams["valid_greedy_searcher"].set_language_token(
-        tokenizer.prefix_tokens[1]
-    )
-
-    hparams["test_beam_searcher"].set_decoder_input_tokens(
-        tokenizer.prefix_tokens
-    )
-    hparams["test_beam_searcher"].set_language_token(tokenizer.prefix_tokens[1])
 
     # here we create the datasets objects as well as tokenization and encoding
     train_data, valid_data, test_data = dataio_prepare(hparams, tokenizer)

@@ -66,9 +66,6 @@ test_dataloader_opts:
     batch_size: 1
     num_workers: !ref <num_workers>
 
-dataloader_options:
-    batch_size: !ref <batch_size>
-
 use_tensorboard: False
 tensorboard_logs: !ref <output_folder>/logs/
 
@@ -127,7 +124,7 @@ diffwave: !new:speechbrain.lobes.models.DiffWave.DiffWave
 noise: !new:speechbrain.nnet.diffusion.GaussianNoise
 
 diffusion: !new:speechbrain.lobes.models.DiffWave.DiffWaveDiffusion
-    model: !ref <diffwave>
+    model: !ref <diffwave.diffusion_forward>
     beta_start: !ref <beta_start>
     beta_end: !ref <beta_end>
     timesteps: !ref <train_timesteps>

@@ -9,7 +9,7 @@ Similar to the X-Vector a bigger and more powerful ECAPA-TDNN model can be used.
 The experiment is also fine-tuning of the trained speaker embeddings done for Speaker Identification task on VoxCeleb, and can be accessed on [HuggingFace](https://huggingface.co/speechbrain/spkrec-ecapa-voxceleb). Therefore, most of the architecture choices come from that task.
 
 Data augmentation and environmental corruption are done by concatenating waveforms, dropout, speed change, reverberation, noise, and noise+rev. The batch is double size of the original one. This may lead to
-better performance, at the cost of longer training time and higher compute resourses.
+better performance, at the cost of longer training time and higher compute resources.
 
 # Performance
 | Release | hyperparams file | Val. Err | Test Err | Model link | GPUs |
@@ -26,7 +26,7 @@ Basically, you can run inference with only few lines of code:
 
 ```python
 import torchaudio
-from speechbrain.pretrained import EncoderClassifier
+from speechbrain.inference import EncoderClassifier
 classifier = EncoderClassifier.from_hparams(source="speechbrain/lang-id-commonlanguage_ecapa", savedir="pretrained_models/lang-id-commonlanguage_ecapa")
 
 # Italian Example
@@ -51,6 +51,15 @@ print(text_lab)
 Please, cite SpeechBrain if you use it for your research or business.
 
 ```bibtex
+@misc{ravanelli2024opensourceconversationalaispeechbrain,
+      title={Open-Source Conversational AI with SpeechBrain 1.0},
+      author={Mirco Ravanelli and Titouan Parcollet and Adel Moumen and Sylvain de Langen and Cem Subakan and Peter Plantinga and Yingzhi Wang and Pooneh Mousavi and Luca Della Libera and Artem Ploujnikov and Francesco Paissan and Davide Borra and Salah Zaiem and Zeyu Zhao and Shucong Zhang and Georgios Karakasidis and Sung-Lin Yeh and Pierre Champion and Aku Rouhe and Rudolf Braun and Florian Mai and Juan Zuluaga-Gomez and Seyed Mahed Mousavi and Andreas Nautsch and Xuechen Liu and Sangeet Sagar and Jarod Duret and Salima Mdhaffar and Gaelle Laperriere and Mickael Rouvier and Renato De Mori and Yannick Esteve},
+      year={2024},
+      eprint={2407.00463},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2407.00463},
+}
 @misc{speechbrain,
   title={{SpeechBrain}: A General-Purpose Speech Toolkit},
   author={Mirco Ravanelli and Titouan Parcollet and Peter Plantinga and Aku Rouhe and Samuele Cornell and Loren Lugosch and Cem Subakan and Nauman Dawalatabad and Abdelwahab Heba and Jianyuan Zhong and Ju-Chieh Chou and Sung-Lin Yeh and Szu-Wei Fu and Chien-Feng Liao and Elena Rastorgueva and François Grondin and William Aris and Hwidong Na and Yan Gao and Renato De Mori and Yoshua Bengio},

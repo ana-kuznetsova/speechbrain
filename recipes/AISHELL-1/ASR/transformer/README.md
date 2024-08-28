@@ -6,9 +6,8 @@ This folder contains recipes for tokenization and speech recognition with [AISHE
 
 ```
 cd ../../Tokenizer
-python train.py hparams/train_transformer_tokenizer_bpe5000.yaml --data_folder=/localscratch/aishell/
+python train.py hparams/train_transformer_tokenizer_bpe5000.yaml --data_folder=/path/to/aishell
 ```
-If not present in the specified data_folder, the dataset will be automatically downloaded there.
 This step is not mandatory. We will use the official tokenizer downloaded from the web if you do not
 specify a different tokenizer in the speech recognition recipe.
 
@@ -17,7 +16,7 @@ specify a different tokenizer in the speech recognition recipe.
 python train.py hparams/train_ASR_transformer.yaml --data_folder=/localscratch/aishell/
 ```
 
-Make sure to have "transformers" installed if you use the wav2vec2 recipe (see extra-requirements.txt)
+Make sure to have `transformers` installed if you use the wav2vec2 recipe (see extra-requirements.txt)
 
 # Performance summary
 Results are reported in terms of Character Error Rate (CER).
@@ -51,6 +50,15 @@ You can find the pre-trained model with an easy-inference function on HuggingFac
 Please, cite SpeechBrain if you use it for your research or business.
 
 ```bibtex
+@misc{ravanelli2024opensourceconversationalaispeechbrain,
+      title={Open-Source Conversational AI with SpeechBrain 1.0},
+      author={Mirco Ravanelli and Titouan Parcollet and Adel Moumen and Sylvain de Langen and Cem Subakan and Peter Plantinga and Yingzhi Wang and Pooneh Mousavi and Luca Della Libera and Artem Ploujnikov and Francesco Paissan and Davide Borra and Salah Zaiem and Zeyu Zhao and Shucong Zhang and Georgios Karakasidis and Sung-Lin Yeh and Pierre Champion and Aku Rouhe and Rudolf Braun and Florian Mai and Juan Zuluaga-Gomez and Seyed Mahed Mousavi and Andreas Nautsch and Xuechen Liu and Sangeet Sagar and Jarod Duret and Salima Mdhaffar and Gaelle Laperriere and Mickael Rouvier and Renato De Mori and Yannick Esteve},
+      year={2024},
+      eprint={2407.00463},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2407.00463},
+}
 @misc{speechbrain,
   title={{SpeechBrain}: A General-Purpose Speech Toolkit},
   author={Mirco Ravanelli and Titouan Parcollet and Peter Plantinga and Aku Rouhe and Samuele Cornell and Loren Lugosch and Cem Subakan and Nauman Dawalatabad and Abdelwahab Heba and Jianyuan Zhong and Ju-Chieh Chou and Sung-Lin Yeh and Szu-Wei Fu and Chien-Feng Liao and Elena Rastorgueva and François Grondin and William Aris and Hwidong Na and Yan Gao and Renato De Mori and Yoshua Bengio},
