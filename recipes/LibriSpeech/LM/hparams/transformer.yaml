@@ -16,7 +16,7 @@ train_log: !ref <output_folder>/train_log.txt
 # Data files
 # The data_folder is needed because we train the LM on the training
 # transcriptions of LibriSpeech as well.
-data_folder: !PLACEHOLDER # e.g, /localscratch/LibriSpeech
+data_folder: /data/anakuzne/LibriSpeech # e.g, /localscratch/LibriSpeech
 
 # path to the lm_corpus
 # if set to null, it will automatically download from the internet

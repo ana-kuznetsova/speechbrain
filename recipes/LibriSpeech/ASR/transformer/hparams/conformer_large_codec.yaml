@@ -11,12 +11,10 @@
 
 seed: 3407
 __set_seed: !apply:torch.manual_seed [!ref <seed>]
-output_folder: !ref results/conformer_large_ls100h/<seed>
+output_folder: !ref results/conformer_large_codec/<seed>
 output_wer_folder: !ref <output_folder>/
 save_folder: !ref <output_folder>/save
 train_log: !ref <output_folder>/train_log.txt
-
-
 
 # Language model (LM) pretraining
 # NB: To avoid mismatch, the speech recognizer must be trained with the same
@@ -27,18 +25,19 @@ train_log: !ref <output_folder>/train_log.txt
 pretrained_lm_tokenizer_path: speechbrain/asr-transformer-transformerlm-librispeech
 
 # Data files
-data_folder: /data/anakuzne/LibriSpeech  # e.g., /path/to/LibriSpeech
+data_folder: /data/anakuzne/LS100_6kbps  # e.g., /path/to/LibriSpeech
 # If RIRS_NOISES dir exists in /localscratch/xxx_corpus/RIRS_NOISES
 # then data_folder_rirs should be /localscratch/xxx_corpus
 # otherwise the dataset will automatically be downloaded
 # data_folder_rirs: !ref <data_folder>
 train_splits: ["train-clean-100"]
 dev_splits: ["dev-clean"]
-test_splits: ["test-clean", "test-other"]
+test_splits: ["test-clean"]
 skip_prep: False
 train_csv: !ref <output_folder>/train.csv
 valid_csv: !ref <output_folder>/dev-clean.csv
 test_csv:
+    - !ref <output_folder>/dev-clean.csv
     - !ref <output_folder>/test-clean.csv
     - !ref <output_folder>/test-other.csv
 
@@ -48,7 +47,7 @@ test_csv:
 # Empirically, we found that this value should be >= 128.
 # Please, set your parameters accordingly.
 number_of_epochs: 120
-batch_size: 64 # This works for 2x GPUs with 32GB
+batch_size: 16 # This works for 2x GPUs with 32GB
 ctc_weight: 0.3
 grad_accumulation_factor: 1
 max_grad_norm: 5.0
@@ -277,7 +276,6 @@ acc_computer: !name:speechbrain.utils.Accuracy.AccuracyStats
 # are declared in the yaml. E.g here, we will download the file lm.ckpt
 # and it will be loaded into "lm" which is pointing to the <lm_model> defined
 # before.
-
 pretrainer: !new:speechbrain.utils.parameter_transfer.Pretrainer
     collect_in: !ref <save_folder>
     loadables:
@@ -286,4 +284,3 @@ pretrainer: !new:speechbrain.utils.parameter_transfer.Pretrainer
     paths:
         lm: !ref <pretrained_lm_tokenizer_path>/lm.ckpt
         tokenizer: !ref <pretrained_lm_tokenizer_path>/tokenizer.ckpt
-

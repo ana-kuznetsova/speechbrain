@@ -6,6 +6,7 @@ Authors
  * Sarthak Yadav 2020
 """
 import torch
+import numpy as np
 from speechbrain.processing.features import (
     STFT,
     spectral_magnitude,
@@ -437,3 +438,21 @@ class Leaf(torch.nn.Module):
                 "Leaf expects 2d or 3d inputs. Got " + str(len(shape))
             )
         return in_channels
+
+class CodecOffline(torch.nn.Module):
+    """This class implements loading presaved codec feats from disk."""
+    def __init__(self, from_numpy=True):
+        super(CodecOffline, self).__init__()
+        self.from_numpy = from_numpy
+    
+    def forward(self, x):
+        """Reads a batch of presaved codec feats.
+        x :list, list of paths on the disk.
+        """
+        z_batch = []
+        for path in x:
+            if self.from_numpy:
+                z = torch.from_numpy(np.load(path))
+                z_batch.append(z)
+        z_batch = torch.stack(z_batch, dim=0)
+        return z_batch

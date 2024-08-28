@@ -454,3 +454,11 @@ def check_librispeech_folders(data_folder, splits):
                 "Librispeech dataset)" % split_folder
             )
             raise OSError(err_msg)
+
+if __name__ == "__main__":
+    data_folder = '/data/anakuzne/LibriSpeech'
+    tr_splits = ['train-clean-100']
+    dev_splits = ['dev-clean']
+    te_splits = ['test-clean']
+    save_folder = 'LS100_PREPARED'
+    prepare_librispeech(data_folder, save_folder, tr_splits, dev_splits, te_splits)
