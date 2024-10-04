@@ -20,6 +20,7 @@ from speechbrain.lobes.models.transformer.Transformer import (
     get_key_padding_mask,
     get_lookahead_mask,
 )
+from speechbrain.lobes.models.discrete.dac import ResidualVectorQuantize
 from speechbrain.nnet.activations import Swish
 from speechbrain.nnet.containers import ModuleList
 from speechbrain.nnet.linear import Linear
@@ -263,6 +264,13 @@ class TransformerASR(TransformerInterface):
         csgu_linear_units: Optional[int] = 3072,
         gate_activation: Optional[nn.Module] = nn.Identity,
         use_linear_after_conv: Optional[bool] = False,
+        use_quantizer: Optional[bool] = False,
+        freeze_encoder: Optional[bool] = False,
+        freeze_decoder: Optional[bool] = False,
+        quantizer_init: Optional[str] = "kmeans",
+        num_codebooks: Optional[int] = 12,
+        codebook_size: Optional[int] = 1024,
+        codebook_dim: Optional[int] = 64,
     ):
         if causal is None:
             logger.warning(
@@ -306,10 +314,24 @@ class TransformerASR(TransformerInterface):
             torch.nn.Dropout(dropout),
         )
 
+        self.use_quantizer = use_quantizer
+
         if num_decoder_layers > 0:
             self.custom_tgt_module = ModuleList(
                 NormalizedEmbedding(d_model, tgt_vocab)
             )
+        if freeze_encoder:
+            self.__freeze_parameters(freeze_encoder, "encoder")
+        if freeze_decoder:
+            self.__freeze_parameters(freeze_decoder, "decoder")
+
+        if self.use_quantizer:
+            self.quantizer = ResidualVectorQuantize(input_dim=512,
+                                                    n_codebooks=num_codebooks,
+                                                    codebook_size=codebook_size,
+                                                    codebook_dim=codebook_dim,
+                                                    quantizer_dropout=0.0,)
+            self.quantizer_init = quantizer_init
 
         # reset parameters using xavier_normal_
         self._init_params()
@@ -341,7 +363,6 @@ class TransformerASR(TransformerInterface):
         ) = make_transformer_src_tgt_masks(
             src, tgt, wav_len, causal=self.causal, pad_idx=pad_idx
         )
-
         src = self.custom_src_module(src)
         # add pos encoding to queries if are sinusoidal ones else
         if self.attention_type == "hypermixing":
@@ -351,13 +372,19 @@ class TransformerASR(TransformerInterface):
         elif self.positional_encoding_type == "fixed_abs_sine":
             src = src + self.positional_encoding(src)  # add the encodings here
             pos_embs_encoder = None
-
+        #print("DEBUG feature shape", src.shape)
         encoder_out, _ = self.encoder(
             src=src,
             src_mask=src_mask,
             src_key_padding_mask=src_key_padding_mask,
             pos_embs=pos_embs_encoder,
         )
+       #print("DEBUG encoder_out shape", encoder_out.shape)
+        if self.use_quantizer:
+            z, _, _, commitment_loss, codebook_loss = self.quantizer(encoder_out.transpose(1, 2))
+            z = z.transpose(1, 2)
+            encoder_out = z
+        #print("DEBUG encoder_out quantized shape", encoder_out.shape)
 
         # if encoder only, we return the output of the encoder
         if tgt is None:
@@ -387,8 +414,9 @@ class TransformerASR(TransformerInterface):
             pos_embs_tgt=pos_embs_target,
             pos_embs_src=pos_embs_encoder,
         )
-
-        return encoder_out, decoder_out
+        if self.use_quantizer:
+            return encoder_out, decoder_out, commitment_loss, codebook_loss
+        return encoder_out, decoder_out, None, None
 
     @torch.no_grad()
     def decode(self, tgt, encoder_out, enc_len=None):
@@ -622,6 +650,11 @@ class TransformerASR(TransformerInterface):
         for p in self.parameters():
             if p.dim() > 1:
                 torch.nn.init.xavier_normal_(p)
+
+    def __freeze_parameters(self, freeze: bool, module: str):
+        for name, param in self.named_parameters():
+            if module in name:
+                param.requires_grad = False
 
 
 class EncoderWrapper(nn.Module):

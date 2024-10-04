@@ -485,8 +485,9 @@ class ResidualVectorQuantize(nn.Module):
             residual = residual - z_q_i
 
             # Sum losses
-            commitment_loss += (commitment_loss_i * mask).mean()
-            codebook_loss += (codebook_loss_i * mask).mean()
+            # Note anakuzne (reduction sum for matching the scale of ASR losses)
+            commitment_loss += (commitment_loss_i * mask).sum()
+            codebook_loss += (codebook_loss_i * mask).sum()
 
             codebook_indices.append(indices_i)
             latents.append(z_e_i)
@@ -939,6 +940,8 @@ class DAC(nn.Module):
         load_path: str = None,
         strict: bool = False,
         load_pretrained: bool = False,
+        freeze_codec: bool = False,
+        max_duration: int = 10,
     ):
         super().__init__()
 
@@ -952,6 +955,7 @@ class DAC(nn.Module):
         self.codebook_dim = codebook_dim
         self.latent_dim = latent_dim
         self.quantizer_dropout = quantizer_dropout
+        self.max_duration = max_duration
 
         if load_pretrained:
             if not load_path:
@@ -987,6 +991,11 @@ class DAC(nn.Module):
         if load_pretrained:
             self.load_state_dict(model_dict["state_dict"], strict=strict)
             self.metadata = metadata
+            if freeze_codec:
+                for param in self.parameters():
+                    param.requires_grad = False
+                logger.info("Freezing the codec parameters")
+                self.eval()
 
     def encode(
         self,
@@ -1076,5 +1085,7 @@ class DAC(nn.Module):
         )
         audio_data = nn.functional.pad(audio_data, (0, right_pad))
 
+        audio_data = audio_data.unsqueeze(1)
+        audio_data = audio_data[:, :, : self.max_duration * self.sample_rate]
         z, codes, _, _, _ = self.encode(audio_data, n_quantizers)
         return codes, z

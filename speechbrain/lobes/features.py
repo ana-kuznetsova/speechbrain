@@ -10,8 +10,10 @@ Authors
 from dataclasses import dataclass
 from typing import Optional
 
+import os
 import torch
 import numpy as np
+import dac
 
 from speechbrain.nnet.CNN import GaborConv1d
 from speechbrain.nnet.normalization import PCEN
@@ -27,6 +29,16 @@ from speechbrain.processing.features import (
 from speechbrain.utils.autocast import fwd_default_precision
 from speechbrain.utils.filter_analysis import FilterProperties
 
+class RawAudio(torch.nn.Module):
+    """Dummy class to pass raw audio through the pipeline.
+    """
+    def __init__(self):
+        super().__init__()
+
+    @fwd_default_precision(cast_inputs=torch.float32)
+    def forward(self, x):
+        """Returns the input tensor unchanged."""
+        return x
 
 class Fbank(torch.nn.Module):
     """Generate features for input to the speech pipeline.
@@ -472,24 +484,6 @@ class Leaf(torch.nn.Module):
                 "Leaf expects 2d or 3d inputs. Got " + str(len(shape))
             )
         return in_channels
-
-class CodecOffline(torch.nn.Module):
-    """This class implements loading presaved codec feats from disk."""
-    def __init__(self, from_numpy=True):
-        super(CodecOffline, self).__init__()
-        self.from_numpy = from_numpy
-    
-    def forward(self, x):
-        """Reads a batch of presaved codec feats.
-        x :list, list of paths on the disk.
-        """
-        z_batch = []
-        for path in x:
-            if self.from_numpy:
-                z = torch.from_numpy(np.load(path))
-                z_batch.append(z)
-        z_batch = torch.stack(z_batch, dim=0)
-        return z_batch
 
 def upalign_value(x, to: int) -> int:
     """If `x` cannot evenly divide `to`, round it up to the next value that

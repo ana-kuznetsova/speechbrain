@@ -459,15 +459,6 @@ def check_librispeech_folders(data_folder, splits):
             )
             raise OSError(err_msg)
 
-<<<<<<< HEAD
-if __name__ == "__main__":
-    data_folder = '/data/anakuzne/LibriSpeech'
-    tr_splits = ['train-clean-100']
-    dev_splits = ['dev-clean']
-    te_splits = ['test-clean']
-    save_folder = 'LS100_PREPARED'
-    prepare_librispeech(data_folder, save_folder, tr_splits, dev_splits, te_splits)
-=======
 
 def download_librispeech_vocab_text(destination):
     """Download librispeech vocab file and unpack it.
@@ -519,4 +510,3 @@ def download_sb_librispeech_lm(destination, rescoring_lm=True):
             "https://www.dropbox.com/scl/fi/roz46ee0ah2lvy5csno4z/4gram_lm.arpa?rlkey=2wt8ozb1mqgde9h9n9rp2yppz&dl=1",
             os.path.join(destination, "4-gram_sb.arpa"),
         )
->>>>>>> e88b9e8df97fa12400e72b31e49d3405d6a3d163

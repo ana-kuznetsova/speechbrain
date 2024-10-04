@@ -151,7 +151,6 @@ class STFT(torch.nn.Module):
         if len(or_shape) == 3:
             x = x.transpose(1, 2)
             x = x.reshape(or_shape[0] * or_shape[2], or_shape[1])
-
         stft = torch.stft(
             x,
             self.n_fft,

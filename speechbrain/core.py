@@ -63,7 +63,7 @@ run_opt_defaults = {
     "device": "cpu",
     "data_parallel_backend": False,
     "distributed_backend": "nccl",
-    "find_unused_parameters": False,
+    "find_unused_parameters": True,
     "jit": False,
     "jit_module_keys": None,
     "compile": False,

@@ -11,7 +11,7 @@
 
 seed: 3407
 __set_seed: !apply:torch.manual_seed [!ref <seed>]
-output_folder: !ref results/conformer_large_codec_ls960_debug/<seed>
+output_folder: !ref results/conformer_large_quantizer_ft_regularized_codec_loss_1_codebook/<seed>
 output_wer_folder: !ref <output_folder>/
 save_folder: !ref <output_folder>/save
 train_log: !ref <output_folder>/train_log.txt
@@ -23,6 +23,7 @@ train_log: !ref <output_folder>/train_log.txt
 # directory containing the lm.ckpt and tokenizer.ckpt may also be specified
 # instead. E.g if you want to use your own LM / tokenizer.
 pretrained_lm_tokenizer_path: speechbrain/asr-transformer-transformerlm-librispeech
+pretrained_model_path: /data/anakuzne/speechbrain/recipes/LibriSpeech/ASR/transformer/results/conformer_large_quantizer_pretrain_codebook_only_1_codebook/3407/save/quantizer_pretrained/
 
 # Data files
 data_folder: /data/anakuzne/LibriSpeech  # e.g., /path/to/LibriSpeech
@@ -31,12 +32,14 @@ data_folder: /data/anakuzne/LibriSpeech  # e.g., /path/to/LibriSpeech
 # otherwise the dataset will automatically be downloaded
 # data_folder_rirs: !ref <data_folder>
 train_splits: ["train-clean-100", "train-clean-360", "train-other-500"]
-dev_splits: ["dev-clean", "dev-other"]
-test_splits: ["test-clean", "test-other"]
+#train_splits: ["train-clean-100"]
+dev_splits: ["dev-clean"]
+test_splits: ["dev-clean", "test-clean", "test-other"]
 skip_prep: False
 train_csv: !ref <output_folder>/train.csv
 valid_csv: !ref <output_folder>/dev-clean.csv
 test_csv:
+    - !ref <output_folder>/dev-clean.csv
     - !ref <output_folder>/test-clean.csv
     - !ref <output_folder>/test-other.csv
 
@@ -46,9 +49,10 @@ test_csv:
 # The global batch size is computed as batch_size * n_gpus * grad_accumulation_factor.
 # Empirically, we found that this value should be >= 128.
 # Please, set your parameters accordingly.
-number_of_epochs: 120
+number_of_epochs: 50
 batch_size: 64 # This works for 2x GPUs with 32GB
 ctc_weight: 0.3
+codec_loss_weight: 0.2
 grad_accumulation_factor: 1
 max_grad_norm: 5.0
 loss_reduction: 'batchmean'
@@ -65,6 +69,7 @@ sample_rate: 16000
 n_fft: 512
 n_mels: 80
 win_length: 32
+
 
 # This setup works well for A100 80GB GPU, adapts it to your needs.
 # Or turn it off (but training speed will decrease)
@@ -132,25 +137,17 @@ ctc_weight_decode: 0.40
 
 ############################## Models ##########################################
 
-#CNN: !new:speechbrain.lobes.models.convolution.ConvolutionFrontEnd
-#    input_shape: (8, 10, 80)
-#    num_blocks: 2
-#    num_layers_per_block: 1
-#    out_channels: (64, 32)
-#    kernel_sizes: (3, 3)
-#    strides: (2, 2)
-#    residuals: (False, False)
+CNN: !new:speechbrain.lobes.models.convolution.ConvolutionFrontEnd
+    input_shape: (8, 10, 80)
+    num_blocks: 2
+    num_layers_per_block: 1
+    out_channels: (64, 32)
+    kernel_sizes: (3, 3)
+    strides: (2, 2)
+    residuals: (False, False)
 
-Codec: !new:speechbrain.lobes.models.discrete.dac.DAC
-    model_type: "16khz"
-    model_bitrate: "8kbps"
-    sample_rate: !ref <sample_rate>
-    load_pretrained: True
-    freeze_codec: True
-    max_duration: 8
-   
 Transformer: !new:speechbrain.lobes.models.transformer.TransformerASR.TransformerASR # yamllint disable-line rule:line-length
-    input_size: 1024
+    input_size: 640
     tgt_vocab: !ref <output_neurons>
     d_model: !ref <d_model>
     nhead: !ref <nhead>
@@ -163,6 +160,12 @@ Transformer: !new:speechbrain.lobes.models.transformer.TransformerASR.Transforme
     attention_type: RelPosMHAXL
     normalize_before: True
     causal: False
+    use_quantizer: True
+    freeze_encoder: False
+    freeze_decoder: False
+    num_codebooks: 1
+    codebook_size: 1024
+    codebook_dim: 8
 
 # This is the TransformerLM that is used according to the Huggingface repository
 # Visit the HuggingFace model corresponding to the pretrained_lm_tokenizer_path
@@ -194,8 +197,7 @@ normalize: !new:speechbrain.processing.features.InputNormalization
     update_until_epoch: 4
 
 modules:
-    #CNN: !ref <CNN>
-    Codec: !ref <Codec>
+    CNN: !ref <CNN>
     Transformer: !ref <Transformer>
     seq_lin: !ref <seq_lin>
     ctc_lin: !ref <ctc_lin>
@@ -207,9 +209,8 @@ Adam: !name:torch.optim.AdamW
     betas: (0.9, 0.98)
     eps: 0.000000001
 
-
 model: !new:torch.nn.ModuleList
-    - [!ref <Codec>, !ref <Transformer>, !ref <seq_lin>, !ref <ctc_lin>]
+    - [!ref <CNN>, !ref <Transformer>, !ref <seq_lin>, !ref <ctc_lin>]
 
 ####################### Decoding & optimiser ###########################
 
@@ -291,35 +292,39 @@ speed_perturb: !new:speechbrain.augment.time_domain.SpeedPerturb
     speeds: [95, 100, 105]
 
 # Time Drop
-#time_drop: !new:speechbrain.augment.freq_domain.SpectrogramDrop
-#    drop_length_low: 15
-#    drop_length_high: 25
-#    drop_count_low: 4
-#    drop_count_high: 4
-#    replace: "mean"
+time_drop: !new:speechbrain.augment.freq_domain.SpectrogramDrop
+    drop_length_low: 15
+    drop_length_high: 25
+    drop_count_low: 4
+    drop_count_high: 4
+    replace: "mean"
 
 # Freq Drop
-#freq_drop: !new:speechbrain.augment.freq_domain.SpectrogramDrop
-#    drop_length_low: 10
-#    drop_length_high: 20
-#    drop_count_low: 4
-#    drop_count_high: 4
-#    replace: "mean"
-#    dim: 2
+freq_drop: !new:speechbrain.augment.freq_domain.SpectrogramDrop
+    drop_length_low: 10
+    drop_length_high: 20
+    drop_count_low: 4
+    drop_count_high: 4
+    replace: "mean"
+    dim: 2
 
 # Time warp
-#time_warp: !new:speechbrain.augment.freq_domain.Warping
+time_warp: !new:speechbrain.augment.freq_domain.Warping
 
-#fea_augment: !new:speechbrain.augment.augmenter.Augmenter
-#    min_augmentations: 3
-#    max_augmentations: 3
-#    augment_prob: 1.0
-#    augmentations: [
-#        !ref <time_drop>,
-#        !ref <freq_drop>,
-#        !ref <time_warp>]
+fea_augment: !new:speechbrain.augment.augmenter.Augmenter
+    min_augmentations: 3
+    max_augmentations: 3
+    augment_prob: 1.0
+    augmentations: [
+        !ref <time_drop>,
+        !ref <freq_drop>,
+        !ref <time_warp>]
 
-
+compute_features: !new:speechbrain.lobes.features.Fbank
+    sample_rate: !ref <sample_rate>
+    n_fft: !ref <n_fft>
+    n_mels: !ref <n_mels>
+    win_length: !ref <win_length>
 
 ############################## Logging and Pretrainer ##########################
 
@@ -333,15 +338,13 @@ acc_computer: !name:speechbrain.utils.Accuracy.AccuracyStats
 # are declared in the yaml. E.g here, we will download the file lm.ckpt
 # and it will be loaded into "lm" which is pointing to the <lm_model> defined
 # before.
-
-compute_features: !new:speechbrain.lobes.features.RawAudio
-
 pretrainer: !new:speechbrain.utils.parameter_transfer.Pretrainer
     collect_in: !ref <save_folder>
     loadables:
         lm: !ref <lm_model>
         tokenizer: !ref <tokenizer>
+        model: !ref <model>
     paths:
         lm: !ref <pretrained_lm_tokenizer_path>/lm.ckpt
         tokenizer: !ref <pretrained_lm_tokenizer_path>/tokenizer.ckpt
-
+        model: !ref <pretrained_model_path>/model.ckpt

@@ -44,12 +44,12 @@ from hyperpyyaml import load_hyperpyyaml
 
 import speechbrain as sb
 from speechbrain.utils.distributed import if_main_process, run_on_main
-from speechbrain.core import AMPConfig
+
 logger = logging.getLogger(__name__)
 
 
 # Define training procedure
-class ASR(sb.core.Brain):
+class ASRQuantizerPretrain(sb.core.Brain):
     def compute_forward(self, batch, stage):
         """Forward computations from the waveform batches to the output probabilities."""
         batch = batch.to(self.device)
@@ -73,109 +73,26 @@ class ASR(sb.core.Brain):
             codes, z = self.modules.Codec(feats)
             src = z.transpose(1, 2)
 
-        enc_out, pred, commitment_loss, codebook_loss = (
-            self.modules.Transformer(
-                src, tokens_bos, wav_lens, pad_idx=self.hparams.pad_index
-            )
+        enc_out, pred, commitment_loss, codebook_loss = self.modules.Transformer(
+            src, tokens_bos, wav_lens, pad_idx=self.hparams.pad_index
         )
-        # output layer for ctc log-probabilities
-        logits = self.modules.ctc_lin(enc_out)
-        p_ctc = self.hparams.log_softmax(logits)
-
-        # output layer for seq2seq log-probabilities
-        pred = self.modules.seq_lin(pred)
-        p_seq = self.hparams.log_softmax(pred)
-
-        # Compute outputs
-        hyps = None
-        current_epoch = self.hparams.epoch_counter.current
-        is_valid_search = (
-            stage == sb.Stage.VALID
-            and current_epoch % self.hparams.valid_search_interval == 0
-        )
-        is_test_search = stage == sb.Stage.TEST
-
-        if any([is_valid_search, is_test_search]):
-            # Note: For valid_search, for the sake of efficiency, we only perform beamsearch with
-            # limited capacity and no LM to give user some idea of how the AM is doing
-
-            # Decide searcher for inference: valid or test search
-            if stage == sb.Stage.VALID:
-                hyps, _, _, _ = self.hparams.valid_search(
-                    enc_out.detach(), wav_lens
-                )
-            else:
-                hyps, _, _, _ = self.hparams.test_search(
-                    enc_out.detach(), wav_lens
-                )
-
-        return p_ctc, p_seq, wav_lens, hyps, commitment_loss, codebook_loss
+        return commitment_loss, codebook_loss, enc_out, pred
 
     def compute_objectives(self, predictions, batch, stage):
-        """Computes the loss (CTC+NLL) given predictions and targets."""
+        """Computes commitment and codebook loss across the batch."""
 
-        (p_ctc, p_seq, wav_lens, hyps, commitment_loss, codebook_loss) = (
-            predictions
-        )
-
-        ids = batch.id
-        tokens_eos, tokens_eos_lens = batch.tokens_eos
-        tokens, tokens_lens = batch.tokens
-
-        if stage == sb.Stage.TRAIN:
-            # Labels must be extended if parallel augmentation or concatenated
-            # augmentation was performed on the input (increasing the time dimension)
-            if hasattr(self.hparams, "fea_augment"):
-                (
-                    tokens,
-                    tokens_lens,
-                    tokens_eos,
-                    tokens_eos_lens,
-                ) = self.hparams.fea_augment.replicate_multiple_labels(
-                    tokens, tokens_lens, tokens_eos, tokens_eos_lens
-                )
-
-        loss_seq = self.hparams.seq_cost(
-            p_seq, tokens_eos, length=tokens_eos_lens
-        ).sum()
-
-        loss_ctc = self.hparams.ctc_cost(
-            p_ctc, tokens, wav_lens, tokens_lens
-        ).sum()
-
-        loss = (
-            self.hparams.ctc_weight * loss_ctc
-            + (1 - self.hparams.ctc_weight) * loss_seq
-        )
-
-        if commitment_loss is not None:
-            loss += self.hparams.codec_loss_weight * (commitment_loss + codebook_loss)
-
-        if stage != sb.Stage.TRAIN:
-            self.hparams.train_logger.log_stats(
-                stats_meta={"epoch": self.hparams.epoch_counter.current},
-                train_stats={
-                    "loss_ctc": loss_ctc.item(),
-                    "loss_seq": loss_seq.item(),
-                    "codebook_loss": codebook_loss.item(),
-                    "commitment_loss": commitment_loss.item(),
-                },
-                verbose=True
-            )
-            current_epoch = self.hparams.epoch_counter.current
-            valid_search_interval = self.hparams.valid_search_interval
-            if current_epoch % valid_search_interval == 0 or (
-                stage == sb.Stage.TEST
-            ):
-                # Decode token terms to words
-                predicted_words = [
-                    tokenizer.decode_ids(utt_seq).split(" ") for utt_seq in hyps
-                ]
-                target_words = [wrd.split(" ") for wrd in batch.wrd]
-                self.wer_metric.append(ids, predicted_words, target_words)
-
-            # compute the accuracy of the one-step-forward prediction
-            self.acc_metric.append(p_seq, tokens_eos, tokens_eos_lens)
+        commitment_loss, codebook_loss, enc_out, pred = predictions
+        # [NOTE] (anakuzne) this is the hack to avoid errors in distributed training
+        loss = codebook_loss + 0.0 * commitment_loss + 0.0 * enc_out.sum() + 0.0 * pred.sum()
+        #if stage == sb.Stage.TRAIN:
+        #    self.hparams.train_logger.log_stats(
+        #        stats_meta={"epoch": self.hparams.epoch_counter.current},
+        #        train_stats={
+        #            "tot_loss": loss.item(),
+        #            "commitment_loss": commitment_loss.item(),
+        #            "codebook_loss": codebook_loss.item(),
+        #        },)
+    
         return loss
 
     def on_evaluate_start(self, max_key=None, min_key=None):
@@ -193,27 +110,12 @@ class ASR(sb.core.Brain):
         self.hparams.model.eval()
         print("Loaded the average")
 
-    def on_stage_start(self, stage, epoch):
-        """Gets called at the beginning of each epoch"""
-        if stage != sb.Stage.TRAIN:
-            self.acc_metric = self.hparams.acc_computer()
-            self.wer_metric = self.hparams.error_rate_computer()
-
     def on_stage_end(self, stage, stage_loss, epoch):
         """Gets called at the end of a epoch."""
         # Compute/store important stats
         stage_stats = {"loss": stage_loss}
         if stage == sb.Stage.TRAIN:
             self.train_stats = stage_stats
-        else:
-            stage_stats["ACC"] = self.acc_metric.summarize()
-            current_epoch = self.hparams.epoch_counter.current
-            valid_search_interval = self.hparams.valid_search_interval
-            if (
-                current_epoch % valid_search_interval == 0
-                or stage == sb.Stage.TEST
-            ):
-                stage_stats["WER"] = self.wer_metric.summarize("error_rate")
 
         # log stats and save checkpoint at end-of-epoch
         if stage == sb.Stage.VALID:
@@ -233,8 +135,6 @@ class ASR(sb.core.Brain):
                 valid_stats=stage_stats,
             )
             self.checkpointer.save_and_keep_only(
-                meta={"ACC": stage_stats["ACC"], "epoch": epoch},
-                max_keys=["ACC"],
                 num_to_keep=self.hparams.avg_checkpoints,
             )
 
@@ -243,17 +143,11 @@ class ASR(sb.core.Brain):
                 stats_meta={"Epoch loaded": self.hparams.epoch_counter.current},
                 test_stats=stage_stats,
             )
-            if if_main_process():
-                with open(self.hparams.test_wer_file, "w") as w:
-                    self.wer_metric.write_stats(w)
-
             # save the averaged checkpoint at the end of the evaluation stage
             # delete the rest of the intermediate checkpoints
             # ACC is set to 1.1 so checkpointer only keeps the averaged checkpoint
             self.checkpointer.save_and_keep_only(
-                meta={"ACC": 1.1, "epoch": epoch},
-                max_keys=["ACC"],
-                num_to_keep=1,
+                num_to_keep=1
             )
 
     def on_fit_batch_end(self, batch, outputs, loss, should_step):
@@ -445,7 +339,7 @@ if __name__ == "__main__":
     hparams["pretrainer"].load_collected()
 
     # Trainer initialization
-    asr_brain = ASR(
+    asr_brain = ASRQuantizerPretrain(
         modules=hparams["modules"],
         opt_class=hparams["Adam"],
         hparams=hparams,
@@ -491,15 +385,15 @@ if __name__ == "__main__":
     )
 
     # Testing
-    if not os.path.exists(hparams["output_wer_folder"]):
-        os.makedirs(hparams["output_wer_folder"])
+    #if not os.path.exists(hparams["output_wer_folder"]):
+    #    os.makedirs(hparams["output_wer_folder"])
 
-    for k in test_datasets.keys():  # keys are test_clean, test_other etc
-        asr_brain.hparams.test_wer_file = os.path.join(
-            hparams["output_wer_folder"], f"wer_{k}.txt"
-        )
-        asr_brain.evaluate(
-            test_datasets[k],
-            max_key="ACC",
-            test_loader_kwargs=hparams["test_dataloader_opts"],
-        )
+    #for k in test_datasets.keys():  # keys are test_clean, test_other etc
+    #    asr_brain.hparams.test_wer_file = os.path.join(
+    #        hparams["output_wer_folder"], f"wer_{k}.txt"
+    #    )
+    #    asr_brain.evaluate(
+    #        test_datasets[k],
+    #        max_key="ACC",
+    #        test_loader_kwargs=hparams["test_dataloader_opts"],
+    #    )
