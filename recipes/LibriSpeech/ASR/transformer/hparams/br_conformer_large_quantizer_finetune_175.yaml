@@ -11,7 +11,7 @@
 
 seed: 3407
 __set_seed: !apply:torch.manual_seed [!ref <seed>]
-output_folder: !ref results/conformer_large_quantizer_ft_regularized_codec_loss_2_codebooks/<seed>
+output_folder: !ref results/conformer_large_quantizer_ft_regularized_codec_loss_175bps/<seed>
 output_wer_folder: !ref <output_folder>/
 save_folder: !ref <output_folder>/save
 train_log: !ref <output_folder>/train_log.txt

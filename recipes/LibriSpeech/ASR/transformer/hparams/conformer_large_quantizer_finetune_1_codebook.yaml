@@ -11,7 +11,7 @@
 
 seed: 3407
 __set_seed: !apply:torch.manual_seed [!ref <seed>]
-output_folder: !ref results/conformer_large_quantizer_ft_regularized_codec_loss_2_codebooks/<seed>
+output_folder: !ref results/conformer_large_quantizer_ft_regularized_codec_loss_1_codebook/<seed>
 output_wer_folder: !ref <output_folder>/
 save_folder: !ref <output_folder>/save
 train_log: !ref <output_folder>/train_log.txt
@@ -23,7 +23,7 @@ train_log: !ref <output_folder>/train_log.txt
 # directory containing the lm.ckpt and tokenizer.ckpt may also be specified
 # instead. E.g if you want to use your own LM / tokenizer.
 pretrained_lm_tokenizer_path: speechbrain/asr-transformer-transformerlm-librispeech
-pretrained_model_path: /data/anakuzne/speechbrain/recipes/LibriSpeech/ASR/transformer/results/conformer_large_quantizer_pretrain_codebook_only_2_codebooks/3407/save/quantizer_pretrained/
+pretrained_model_path: /data/anakuzne/speechbrain/recipes/LibriSpeech/ASR/transformer/results/conformer_large_quantizer_pretrain_codebook_only_1_codebook/3407/save/quantizer_pretrained/
 
 
 # Data files
@@ -164,7 +164,7 @@ Transformer: !new:speechbrain.lobes.models.transformer.TransformerASR.Transforme
     use_quantizer: True
     freeze_encoder: False
     freeze_decoder: False
-    num_codebooks: 2
+    num_codebooks: 1
     codebook_size: 1024
     codebook_dim: 8
 
