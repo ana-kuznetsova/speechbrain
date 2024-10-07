@@ -23,11 +23,11 @@ train_log: !ref <output_folder>/train_log.txt
 # directory containing the lm.ckpt and tokenizer.ckpt may also be specified
 # instead. E.g if you want to use your own LM / tokenizer.
 pretrained_lm_tokenizer_path: speechbrain/asr-transformer-transformerlm-librispeech
-pretrained_model_path: /data/anakuzne/speechbrain/recipes/LibriSpeech/ASR/transformer/results/conformer_large_quantizer_pretrain_codebook_only_2_codebooks/3407/save/quantizer_pretrained/
+pretrained_model_path: /N/slate/anakuzne/speechbrain/recipes/LibriSpeech/ASR/transformer/results/conformer_large_quantizer_pretrain_codebook_only_175_bps/3407/save/quantizer_pretrained
 
 
 # Data files
-data_folder: /data/anakuzne/LibriSpeech  # e.g., /path/to/LibriSpeech
+data_folder: /N/slate/anakuzne/LibriSpeech  # e.g., /path/to/LibriSpeech
 # If RIRS_NOISES dir exists in /localscratch/xxx_corpus/RIRS_NOISES
 # then data_folder_rirs should be /localscratch/xxx_corpus
 # otherwise the dataset will automatically be downloaded
@@ -164,8 +164,8 @@ Transformer: !new:speechbrain.lobes.models.transformer.TransformerASR.Transforme
     use_quantizer: True
     freeze_encoder: False
     freeze_decoder: False
-    num_codebooks: 2
-    codebook_size: 1024
+    num_codebooks: 1
+    codebook_size: 128
     codebook_dim: 8
 
 # This is the TransformerLM that is used according to the Huggingface repository

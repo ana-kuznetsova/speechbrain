@@ -27,7 +27,7 @@ pretrained_model_path: /N/slate/anakuzne/speechbrain/recipes/LibriSpeech/ASR/tra
 
 
 # Data files
-data_folder: /data/anakuzne/LibriSpeech  # e.g., /path/to/LibriSpeech
+data_folder: /N/slate/anakuzne/LibriSpeech # e.g., /path/to/LibriSpeech
 # If RIRS_NOISES dir exists in /localscratch/xxx_corpus/RIRS_NOISES
 # then data_folder_rirs should be /localscratch/xxx_corpus
 # otherwise the dataset will automatically be downloaded
