@@ -953,6 +953,7 @@ class Checkpointer:
             # strictly speaking needed. However, this feature does not seem to
             # be documented Python so I don't want to trust it.
             if max_num_checkpoints is not None:
+                print("DEBUG", max_num_checkpoints, ranked_ckpts[:max_num_checkpoints])
                 return ranked_ckpts[:max_num_checkpoints]
             else:  # No max number -> return all ckpts, but just sorted
                 return ranked_ckpts

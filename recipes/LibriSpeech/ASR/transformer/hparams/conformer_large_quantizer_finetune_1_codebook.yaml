@@ -11,7 +11,7 @@
 
 seed: 3407
 __set_seed: !apply:torch.manual_seed [!ref <seed>]
-output_folder: !ref results/conformer_large_quantizer_ft_regularized_codec_loss_1_codebook/<seed>
+output_folder: !ref results/conformer_large_quantizer_ft_regularized_codec_loss_1_codebook_code_loss_10/<seed>
 output_wer_folder: !ref <output_folder>/
 save_folder: !ref <output_folder>/save
 train_log: !ref <output_folder>/train_log.txt
@@ -23,7 +23,7 @@ train_log: !ref <output_folder>/train_log.txt
 # directory containing the lm.ckpt and tokenizer.ckpt may also be specified
 # instead. E.g if you want to use your own LM / tokenizer.
 pretrained_lm_tokenizer_path: speechbrain/asr-transformer-transformerlm-librispeech
-pretrained_model_path: /data/anakuzne/speechbrain/recipes/LibriSpeech/ASR/transformer/results/conformer_large_quantizer_pretrain_codebook_only_1_codebook/3407/save/quantizer_pretrained/
+pretrained_model_path: /data/anakuzne/speechbrain/recipes/LibriSpeech/ASR/transformer/results/conformer_large_quantizer_pretrain_codebook_only_1_codebook/3407/save/quantizer_pretrained
 
 
 # Data files
@@ -53,7 +53,7 @@ test_csv:
 number_of_epochs: 50
 batch_size: 64 # This works for 2x GPUs with 32GB
 ctc_weight: 0.3
-codec_loss_weight: 0.2
+codec_loss_weight: 10.0
 grad_accumulation_factor: 1
 max_grad_norm: 5.0
 loss_reduction: 'batchmean'

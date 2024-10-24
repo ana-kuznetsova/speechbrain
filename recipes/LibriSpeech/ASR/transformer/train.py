@@ -67,8 +67,10 @@ class ASR(sb.core.Brain):
             tokens_bos = self.hparams.fea_augment.replicate_labels(tokens_bos)
 
         # forward modules
+        #print("DEBUG FEATS:", feats.shape)
         if hasattr(self.hparams, "CNN"):
             src = self.modules.CNN(feats)
+        #    print("DEBUG FEATS after CNN:", src.shape)
         if hasattr(self.hparams, "Codec"):
             codes, z = self.modules.Codec(feats)
             src = z.transpose(1, 2)
@@ -78,6 +80,7 @@ class ASR(sb.core.Brain):
                 src, tokens_bos, wav_lens, pad_idx=self.hparams.pad_index
             )
         )
+        #print("DEBUG ENC_OUT:", enc_out.shape)
         # output layer for ctc log-probabilities
         logits = self.modules.ctc_lin(enc_out)
         p_ctc = self.hparams.log_softmax(logits)
@@ -181,9 +184,10 @@ class ASR(sb.core.Brain):
     def on_evaluate_start(self, max_key=None, min_key=None):
         """perform checkpoint average if needed"""
         super().on_evaluate_start()
-
+        # NOTE: (anakuzne) change max_key to None for quantizer only inference
         ckpts = self.checkpointer.find_checkpoints(
-            max_key=max_key, min_key=min_key
+            max_key=max_key, min_key=min_key, 
+            max_num_checkpoints=self.hparams.avg_checkpoints
         )
         ckpt = sb.utils.checkpoints.average_checkpoints(
             ckpts, recoverable_name="model"
@@ -191,7 +195,6 @@ class ASR(sb.core.Brain):
 
         self.hparams.model.load_state_dict(ckpt, strict=True)
         self.hparams.model.eval()
-        print("Loaded the average")
 
     def on_stage_start(self, stage, epoch):
         """Gets called at the beginning of each epoch"""

@@ -121,10 +121,14 @@ class EncoderDecoderASR(Pretrained):
         """
         wavs = wavs.float()
         wavs, wav_lens = wavs.to(self.device), wav_lens.to(self.device)
-        encoder_out = self.mods.encoder(wavs, wav_lens)
+        # [NOTE]: (anakuzne) hardcoded only for this project purposes
+        #encoder_out = self.mods.encoder(wavs, wav_lens)
+        encoder_out, codes = self.mods.Transformer.encode(wavs)
+        #print("DEBUG encoder_out:", encoder_out.shape, codes.shape)
+
         if self.transformer_beam_search:
             encoder_out = self.mods.transformer.encode(encoder_out, wav_lens)
-        return encoder_out
+        return encoder_out, codes
 
     def transcribe_batch(self, wavs, wav_lens):
         """Transcribes the input audio into a sequence of words

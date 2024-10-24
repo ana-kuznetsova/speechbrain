@@ -11,10 +11,11 @@
 
 seed: 3407
 __set_seed: !apply:torch.manual_seed [!ref <seed>]
-output_folder: !ref results/conformer_large_quantizer_pretrain_codebook_only_1_codebook/<seed>
+output_folder: !ref results/conformer_large_quantizer_ft_regularized_codec_loss_2_codebooks/<seed>
 output_wer_folder: !ref <output_folder>/
 save_folder: !ref <output_folder>/save
 train_log: !ref <output_folder>/train_log.txt
+
 
 # Language model (LM) pretraining
 # NB: To avoid mismatch, the speech recognizer must be trained with the same
@@ -23,7 +24,7 @@ train_log: !ref <output_folder>/train_log.txt
 # directory containing the lm.ckpt and tokenizer.ckpt may also be specified
 # instead. E.g if you want to use your own LM / tokenizer.
 pretrained_lm_tokenizer_path: speechbrain/asr-transformer-transformerlm-librispeech
-prtrained_model_path: /data/anakuzne/speechbrain/recipes/LibriSpeech/ASR/transformer/results/conformer_ls960_pretrained
+pretrained_model_path: /data/anakuzne/speechbrain/recipes/LibriSpeech/ASR/transformer/results/conformer_large_quantizer_ft_regularized_codec_loss_2_codebooks/3407/save/CKPT+2024-10-08+19-29-20+00
 
 # Data files
 data_folder: /data/anakuzne/LibriSpeech  # e.g., /path/to/LibriSpeech
@@ -52,6 +53,7 @@ test_csv:
 number_of_epochs: 50
 batch_size: 128 # This works for 2x GPUs with 32GB
 ctc_weight: 0.3
+codec_loss_weight: 0.2
 grad_accumulation_factor: 1
 max_grad_norm: 5.0
 loss_reduction: 'batchmean'
@@ -161,12 +163,12 @@ Transformer: !new:speechbrain.lobes.models.transformer.TransformerASR.Transforme
     use_quantizer: True
     freeze_encoder: True
     freeze_decoder: True
-    num_codebooks: 1
+    num_codebooks: 2
     codebook_size: 1024
     codebook_dim: 8
 
 # This is the TransformerLM that is used according to the Huggingface repository
-# Visit the HuggingFace model corresponding to the pretrained_lm_tokenizer_path
+# Visit the HuggingFace model corresponding to the pretrained_lm_tokenizer_patdh
 # For more details about the model!
 # NB: It has to match the pre-trained TransformerLM!!
 lm_model: !new:speechbrain.lobes.models.transformer.TransformerLM.TransformerLM # yamllint disable-line rule:line-length
@@ -345,4 +347,4 @@ pretrainer: !new:speechbrain.utils.parameter_transfer.Pretrainer
     paths:
         lm: !ref <pretrained_lm_tokenizer_path>/lm.ckpt
         tokenizer: !ref <pretrained_lm_tokenizer_path>/tokenizer.ckpt
-        model: !ref <prtrained_model_path>/model.ckpt
+        model: !ref <pretrained_model_path>/model.ckpt

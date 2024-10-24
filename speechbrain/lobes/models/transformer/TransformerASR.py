@@ -326,7 +326,7 @@ class TransformerASR(TransformerInterface):
             self.__freeze_parameters(freeze_decoder, "decoder")
 
         if self.use_quantizer:
-            self.quantizer = ResidualVectorQuantize(input_dim=512,
+            self.quantizer = ResidualVectorQuantize(input_dim=d_model,
                                                     n_codebooks=num_codebooks,
                                                     codebook_size=codebook_size,
                                                     codebook_dim=codebook_dim,
@@ -372,19 +372,20 @@ class TransformerASR(TransformerInterface):
         elif self.positional_encoding_type == "fixed_abs_sine":
             src = src + self.positional_encoding(src)  # add the encodings here
             pos_embs_encoder = None
-        #print("DEBUG feature shape", src.shape)
+
         encoder_out, _ = self.encoder(
             src=src,
             src_mask=src_mask,
             src_key_padding_mask=src_key_padding_mask,
             pos_embs=pos_embs_encoder,
         )
-       #print("DEBUG encoder_out shape", encoder_out.shape)
+
         if self.use_quantizer:
-            z, _, _, commitment_loss, codebook_loss = self.quantizer(encoder_out.transpose(1, 2))
+            z, codes, _, commitment_loss, codebook_loss = self.quantizer(encoder_out.transpose(1, 2))
             z = z.transpose(1, 2)
             encoder_out = z
-        #print("DEBUG encoder_out quantized shape", encoder_out.shape)
+            #print("DEBUG encoder_out quantized shape", encoder_out.shape, codes.shape, latents.shape)
+            #print("CODES", codes[0, 0, :])
 
         # if encoder only, we return the output of the encoder
         if tgt is None:
@@ -523,8 +524,13 @@ class TransformerASR(TransformerInterface):
             pos_embs=pos_embs_source,
             dynchunktrain_config=dynchunktrain_config,
         )
+        #print("DEBUG encoder_out shape", encoder_out.shape)
+        #if self.use_quantizer:
+        z, codes, _, commitment_loss, codebook_loss = self.quantizer(encoder_out.transpose(1, 2))
+        z = z.transpose(1, 2)
+        encoder_out = z
 
-        return encoder_out
+        return encoder_out, codes
 
     def encode_streaming(self, src, context: TransformerASRStreamingContext):
         """
@@ -648,7 +654,7 @@ class TransformerASR(TransformerInterface):
 
     def _init_params(self):
         for p in self.parameters():
-            if p.dim() > 1:
+            if p.dim() > 1 and p.requires_grad:
                 torch.nn.init.xavier_normal_(p)
 
     def __freeze_parameters(self, freeze: bool, module: str):
