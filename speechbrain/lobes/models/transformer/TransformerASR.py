@@ -267,6 +267,7 @@ class TransformerASR(TransformerInterface):
         use_quantizer: Optional[bool] = False,
         freeze_encoder: Optional[bool] = False,
         freeze_decoder: Optional[bool] = False,
+        freeze_quantizer: Optional[bool] = False,
         quantizer_init: Optional[str] = "kmeans",
         num_codebooks: Optional[int] = 12,
         codebook_size: Optional[int] = 1024,
@@ -332,6 +333,8 @@ class TransformerASR(TransformerInterface):
                                                     codebook_dim=codebook_dim,
                                                     quantizer_dropout=0.0,)
             self.quantizer_init = quantizer_init
+            if freeze_quantizer:
+                self.__freeze_parameters(freeze_quantizer, "quantizer")
 
         # reset parameters using xavier_normal_
         self._init_params()
