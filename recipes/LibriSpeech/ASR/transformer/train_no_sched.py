@@ -259,9 +259,10 @@ class ASR(sb.core.Brain):
                 num_to_keep=1,
             )
 
-    #def on_fit_batch_end(self, batch, outputs, loss, should_step):
-    #    """At the end of the optimizer step, apply noam annealing."""
-    #    if should_step:
+    def on_fit_batch_end(self, batch, outputs, loss, should_step):
+        """At the end of the optimizer step, apply noam annealing."""
+        if should_step:
+            self.optimizer.step()
     #        self.hparams.noam_annealing(self.optimizer)
 
 
