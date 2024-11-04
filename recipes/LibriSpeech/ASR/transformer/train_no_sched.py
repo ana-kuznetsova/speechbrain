@@ -220,7 +220,7 @@ class ASR(sb.core.Brain):
 
         # log stats and save checkpoint at end-of-epoch
         if stage == sb.Stage.VALID:
-            lr = self.hparams.noam_annealing.current_lr
+            lr = self.hparams.lr_adam
             steps = self.optimizer_step
             optimizer = self.optimizer.__class__.__name__
 
@@ -259,10 +259,10 @@ class ASR(sb.core.Brain):
                 num_to_keep=1,
             )
 
-    def on_fit_batch_end(self, batch, outputs, loss, should_step):
-        """At the end of the optimizer step, apply noam annealing."""
-        if should_step:
-            self.hparams.noam_annealing(self.optimizer)
+    #def on_fit_batch_end(self, batch, outputs, loss, should_step):
+    #    """At the end of the optimizer step, apply noam annealing."""
+    #    if should_step:
+    #        self.hparams.noam_annealing(self.optimizer)
 
 
 def dataio_prepare(hparams):

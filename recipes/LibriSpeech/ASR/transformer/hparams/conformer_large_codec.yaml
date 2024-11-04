@@ -148,7 +148,7 @@ Codec: !new:speechbrain.lobes.models.discrete.dac.DAC
     load_pretrained: True
     freeze_codec: True
     max_duration: 8
-   
+
 Transformer: !new:speechbrain.lobes.models.transformer.TransformerASR.TransformerASR # yamllint disable-line rule:line-length
     input_size: 1024
     tgt_vocab: !ref <output_neurons>

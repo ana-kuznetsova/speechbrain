@@ -16,6 +16,7 @@ output_wer_folder: !ref <output_folder>/
 save_folder: !ref <output_folder>/save
 train_log: !ref <output_folder>/train_log.txt
 
+
 # Language model (LM) pretraining
 # NB: To avoid mismatch, the speech recognizer must be trained with the same
 # tokenizer used for LM training. Here, we download everything from the
@@ -23,7 +24,8 @@ train_log: !ref <output_folder>/train_log.txt
 # directory containing the lm.ckpt and tokenizer.ckpt may also be specified
 # instead. E.g if you want to use your own LM / tokenizer.
 pretrained_lm_tokenizer_path: speechbrain/asr-transformer-transformerlm-librispeech
-pretrained_model_path: /data/anakuzne/speechbrain/recipes/LibriSpeech/ASR/transformer/results/conformer_large_quantizer_pretrain_codebook_only_2_codebooks/3407/save/CKPT+2024-10-03+15-03-29+00
+pretrained_model_path: /data/anakuzne/speechbrain/recipes/LibriSpeech/ASR/transformer/results/conformer_large_quantizer_pretrain_codebook_only_2_codebooks/3407/save/quantizer_pretrained
+
 # Data files
 data_folder: /data/anakuzne/LibriSpeech  # e.g., /path/to/LibriSpeech
 # If RIRS_NOISES dir exists in /localscratch/xxx_corpus/RIRS_NOISES
@@ -48,9 +50,10 @@ test_csv:
 # The global batch size is computed as batch_size * n_gpus * grad_accumulation_factor.
 # Empirically, we found that this value should be >= 128.
 # Please, set your parameters accordingly.
-number_of_epochs: 50
-batch_size: 64 # This works for 2x GPUs with 32GB
-ctc_weight: 0.3
+number_of_epochs: 51
+batch_size: 128 # This works for 2x GPUs with 32GB
+ctc_weight: 0.0
+seq_weight: 0.0
 codec_loss_weight: 0.2
 grad_accumulation_factor: 1
 max_grad_norm: 5.0
@@ -68,7 +71,6 @@ sample_rate: 16000
 n_fft: 512
 n_mels: 80
 win_length: 32
-
 
 # This setup works well for A100 80GB GPU, adapts it to your needs.
 # Or turn it off (but training speed will decrease)
@@ -160,14 +162,14 @@ Transformer: !new:speechbrain.lobes.models.transformer.TransformerASR.Transforme
     normalize_before: True
     causal: False
     use_quantizer: True
-    freeze_encoder: False
-    freeze_decoder: False
+    freeze_encoder: True
+    freeze_decoder: True
     num_codebooks: 2
     codebook_size: 1024
     codebook_dim: 8
 
 # This is the TransformerLM that is used according to the Huggingface repository
-# Visit the HuggingFace model corresponding to the pretrained_lm_tokenizer_path
+# Visit the HuggingFace model corresponding to the pretrained_lm_tokenizer_patdh
 # For more details about the model!
 # NB: It has to match the pre-trained TransformerLM!!
 lm_model: !new:speechbrain.lobes.models.transformer.TransformerLM.TransformerLM # yamllint disable-line rule:line-length
