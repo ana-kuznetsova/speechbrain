@@ -269,6 +269,8 @@ class TransformerASR(TransformerInterface):
         freeze_decoder: Optional[bool] = False,
         freeze_quantizer: Optional[bool] = False,
         quantizer_init: Optional[str] = "kmeans",
+        quantizer_dropout: Optional[float] = 0.0,
+        n_quantizers: Optional[int] = None,
         num_codebooks: Optional[int] = 12,
         codebook_size: Optional[int] = 1024,
         codebook_dim: Optional[int] = 64,
@@ -316,6 +318,8 @@ class TransformerASR(TransformerInterface):
         )
 
         self.use_quantizer = use_quantizer
+        # This is only used for the inference on the models with quantizer dropout
+        self.n_quantizers = n_quantizers
 
         if num_decoder_layers > 0:
             self.custom_tgt_module = ModuleList(
@@ -331,7 +335,7 @@ class TransformerASR(TransformerInterface):
                                                     n_codebooks=num_codebooks,
                                                     codebook_size=codebook_size,
                                                     codebook_dim=codebook_dim,
-                                                    quantizer_dropout=0.0,)
+                                                    quantizer_dropout=quantizer_dropout,)
             self.quantizer_init = quantizer_init
             if freeze_quantizer:
                 self.__freeze_parameters(freeze_quantizer, "quantizer")
@@ -384,11 +388,11 @@ class TransformerASR(TransformerInterface):
         )
 
         if self.use_quantizer:
-            z, codes, _, commitment_loss, codebook_loss = self.quantizer(encoder_out.transpose(1, 2))
+            z, codes, _, commitment_loss, codebook_loss = self.quantizer(
+                encoder_out.transpose(1, 2), self.n_quantizers
+            )
             z = z.transpose(1, 2)
             encoder_out = z
-            #print("DEBUG encoder_out quantized shape", encoder_out.shape, codes.shape, latents.shape)
-            #print("CODES", codes[0, 0, :])
 
         # if encoder only, we return the output of the encoder
         if tgt is None:
@@ -527,8 +531,8 @@ class TransformerASR(TransformerInterface):
             pos_embs=pos_embs_source,
             dynchunktrain_config=dynchunktrain_config,
         )
-        #print("DEBUG encoder_out shape", encoder_out.shape)
-        #if self.use_quantizer:
+        # print("DEBUG encoder_out shape", encoder_out.shape)
+        # if self.use_quantizer:
         z, codes, _, commitment_loss, codebook_loss = self.quantizer(encoder_out.transpose(1, 2))
         z = z.transpose(1, 2)
         encoder_out = z

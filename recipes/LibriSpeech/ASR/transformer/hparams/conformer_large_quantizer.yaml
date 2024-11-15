@@ -11,7 +11,7 @@
 
 seed: 3407
 __set_seed: !apply:torch.manual_seed [!ref <seed>]
-output_folder: !ref results/conformer_large_quantizer_ft_regularized_codec_loss_2_codebooks/<seed>
+output_folder: !ref results/conformer_large_quantizer_ft_regularized_codec_loss_12_codebooks_3kbps_dropout0.2/<seed>
 output_wer_folder: !ref <output_folder>/
 save_folder: !ref <output_folder>/save
 train_log: !ref <output_folder>/train_log.txt
@@ -24,8 +24,7 @@ train_log: !ref <output_folder>/train_log.txt
 # directory containing the lm.ckpt and tokenizer.ckpt may also be specified
 # instead. E.g if you want to use your own LM / tokenizer.
 pretrained_lm_tokenizer_path: speechbrain/asr-transformer-transformerlm-librispeech
-pretrained_model_path: /data/anakuzne/speechbrain/recipes/LibriSpeech/ASR/transformer/results/conformer_large_quantizer_ft_regularized_codec_loss_2_codebooks/3407/save/CKPT+2024-10-08+19-29-20+00
-
+pretrained_model_path: /data/anakuzne/speechbrain/recipes/LibriSpeech/ASR/transformer/results/conformer_large_quantizer_pretrain_12_codebooks_3kbps_dropout/3407/save/quantizer_pretrained
 # Data files
 data_folder: /data/anakuzne/LibriSpeech  # e.g., /path/to/LibriSpeech
 # If RIRS_NOISES dir exists in /localscratch/xxx_corpus/RIRS_NOISES
@@ -53,6 +52,7 @@ test_csv:
 number_of_epochs: 50
 batch_size: 128 # This works for 2x GPUs with 32GB
 ctc_weight: 0.3
+seq_weight: 0.7
 codec_loss_weight: 0.2
 grad_accumulation_factor: 1
 max_grad_norm: 5.0
@@ -161,9 +161,10 @@ Transformer: !new:speechbrain.lobes.models.transformer.TransformerASR.Transforme
     normalize_before: True
     causal: False
     use_quantizer: True
-    freeze_encoder: True
-    freeze_decoder: True
-    num_codebooks: 2
+    freeze_encoder: False
+    freeze_decoder: False
+    quantizer_dropout: 0.2
+    num_codebooks: 12
     codebook_size: 1024
     codebook_dim: 8
 
@@ -348,3 +349,6 @@ pretrainer: !new:speechbrain.utils.parameter_transfer.Pretrainer
         lm: !ref <pretrained_lm_tokenizer_path>/lm.ckpt
         tokenizer: !ref <pretrained_lm_tokenizer_path>/tokenizer.ckpt
         model: !ref <pretrained_model_path>/model.ckpt
+
+eval_only: True
+n_quantizers: 12

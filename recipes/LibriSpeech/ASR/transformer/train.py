@@ -484,14 +484,15 @@ if __name__ == "__main__":
         if collate_fn is not None:
             valid_dataloader_opts["collate_fn"] = collate_fn
 
-    # Training
-    asr_brain.fit(
-        asr_brain.hparams.epoch_counter,
-        train_data,
-        valid_data,
-        train_loader_kwargs=train_dataloader_opts,
-        valid_loader_kwargs=valid_dataloader_opts,
-    )
+    if not hparams["eval_only"]:
+        # Training
+        asr_brain.fit(
+            asr_brain.hparams.epoch_counter,
+            train_data,
+            valid_data,
+            train_loader_kwargs=train_dataloader_opts,
+            valid_loader_kwargs=valid_dataloader_opts,
+        )
 
     # Testing
     if not os.path.exists(hparams["output_wer_folder"]):

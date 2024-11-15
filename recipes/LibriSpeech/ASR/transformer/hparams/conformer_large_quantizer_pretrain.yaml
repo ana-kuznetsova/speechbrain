@@ -52,6 +52,8 @@ test_csv:
 number_of_epochs: 50
 batch_size: 128 # This works for 2x GPUs with 32GB
 ctc_weight: 0.3
+seq_weight: 0.7
+codec_loss_weight: 0.2
 grad_accumulation_factor: 1
 max_grad_norm: 5.0
 loss_reduction: 'batchmean'
@@ -347,3 +349,5 @@ pretrainer: !new:speechbrain.utils.parameter_transfer.Pretrainer
         lm: !ref <pretrained_lm_tokenizer_path>/lm.ckpt
         tokenizer: !ref <pretrained_lm_tokenizer_path>/tokenizer.ckpt
         model: !ref <prtrained_model_path>/model.ckpt
+
+eval_only: True
