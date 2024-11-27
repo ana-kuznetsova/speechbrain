@@ -67,6 +67,7 @@ if __name__ == "__main__":
     parser.add_argument("--code_distribution", action="store_true")
     parser.add_argument("--codebook_size", type=int, default=1024)
     parser.add_argument("--num_codebooks", type=int, default=2)
+    parser.add_argument("--num_samples", type=int)
 
     args = parser.parse_args()
 
@@ -86,7 +87,8 @@ if __name__ == "__main__":
                 files.append(os.path.join(root, file))
 
     random.shuffle(files)
-    files = files[:100]
+    if args.num_samples:
+        files = files[:args.num_samples]
     tot_entropy = 0
     probs = torch.zeros(args.num_codebooks, args.codebook_size).float()
 
