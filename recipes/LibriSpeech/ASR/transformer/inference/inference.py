@@ -38,7 +38,6 @@ def compute_entropy(codes: torch.Tensor, codebook_size: int):
     entropy = torch.zeros(num_codebooks)
     for i in range(num_codebooks):
         entropy[i] = -torch.sum(probs[i] * torch.log2(probs[i]))
-
     return entropy.sum()
 
 
@@ -64,6 +63,7 @@ if __name__ == "__main__":
     )
 
     parser.add_argument("--compute_entropy", action="store_true")
+
     parser.add_argument("--code_distribution", action="store_true")
     parser.add_argument("--codebook_size", type=int, default=1024)
     parser.add_argument("--num_codebooks", type=int, default=2)
@@ -124,17 +124,26 @@ if __name__ == "__main__":
             f.write(f"Bitrate: {bitrate}")
 
     if args.code_distribution:
-        probs = probs / len(files)
-        fig, axes = plt.subplots(
-            args.num_codebooks, 1, figsize=(9 * args.num_codebooks, 8)
-        )
-        axes = axes.ravel()
-        for i in range(args.num_codebooks):
-            axes[i].bar(
-                list(range(args.codebook_size)), probs[i].numpy(), edgecolor="r"
+        #probs = probs / len(files)
+        if args.num_codebooks > 1:
+            fig, axes = plt.subplots(
+                args.num_codebooks, 1, figsize=(9 * args.num_codebooks, 8)
             )
-            axes[i].set_title(f"Codebook {i}")
-            axes[i].grid(color="grey", linestyle="--", linewidth=0.5)
+            axes = axes.ravel()
+            for i in range(args.num_codebooks):
+                axes[i].bar(
+                    list(range(args.codebook_size)), probs[i].numpy(), edgecolor="r"
+                )
+                axes[i].set_title(f"Codebook {i}")
+                axes[i].grid(color="grey", linestyle="--", linewidth=0.5)
+        else:
+            fig = plt.figure(figsize=(18, 4))
+            plt.bar(
+                list(range(args.codebook_size)),
+                probs[0].numpy(),
+                edgecolor="r",
+            )
+            plt.grid(color="grey", linestyle="--", linewidth=0.5)
         fig.suptitle(
             f"Code distribution for num_codebooks={args.num_codebooks}, codebook_size={args.codebook_size}"
         )
