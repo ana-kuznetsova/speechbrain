@@ -6,7 +6,6 @@ Authors
 * Luca Della Libera 2024
 """
 
-import logging
 from dataclasses import dataclass
 from typing import Any, Optional
 
@@ -25,8 +24,9 @@ from speechbrain.nnet.activations import Swish
 from speechbrain.nnet.containers import ModuleList
 from speechbrain.nnet.linear import Linear
 from speechbrain.utils.dynamic_chunk_training import DynChunkTrainConfig
+from speechbrain.utils.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -225,6 +225,10 @@ class TransformerASR(TransformerInterface):
     use_linear_after_conv: bool, optional
         If True, will apply a linear transformation of size input_size//2.
         -> Branchformer
+    output_hidden_states: bool, optional
+        Whether the model should output the hidden states as a list of tensor.
+    layerdrop_prob: float
+        The probability to drop an entire layer.
 
     Example
     -------
@@ -305,6 +309,8 @@ class TransformerASR(TransformerInterface):
             csgu_linear_units=csgu_linear_units,
             gate_activation=gate_activation,
             use_linear_after_conv=use_linear_after_conv,
+            output_hidden_states=output_hidden_states,
+            layerdrop_prob=layerdrop_prob,
         )
 
         self.custom_src_module = ModuleList(
@@ -346,7 +352,7 @@ class TransformerASR(TransformerInterface):
     def forward(self, src, tgt, wav_len=None, pad_idx=0):
         """
         Arguments
-        ----------
+        ---------
         src : torch.Tensor
             The sequence to the encoder.
         tgt : torch.Tensor
@@ -355,6 +361,16 @@ class TransformerASR(TransformerInterface):
             Torch Tensor of shape (batch, ) containing the relative length to padded length for each example.
         pad_idx : int, optional
             The index for <pad> token (default=0).
+
+        Returns
+        -------
+        encoder_out : torch.Tensor
+            The output of the encoder.
+        decoder_out : torch.Tensor
+            The output of the decoder
+        hidden_state_lst : list, optional
+            The output of the hidden layers of the encoder.
+            Only works if output_hidden_states is set to true.
         """
 
         # reshape the src vector to [Batch, Time, Fea] is a 4d vector is given
@@ -380,7 +396,7 @@ class TransformerASR(TransformerInterface):
             src = src + self.positional_encoding(src)  # add the encodings here
             pos_embs_encoder = None
 
-        encoder_out, _ = self.encoder(
+        outputs = self.encoder(
             src=src,
             src_mask=src_mask,
             src_key_padding_mask=src_key_padding_mask,
@@ -396,7 +412,12 @@ class TransformerASR(TransformerInterface):
 
         # if encoder only, we return the output of the encoder
         if tgt is None:
-            return encoder_out, None
+            return outputs
+
+        if self.output_hidden_states:
+            encoder_out, _, hidden_states = outputs
+        else:
+            encoder_out, _ = outputs
 
         tgt = self.custom_tgt_module(tgt)
 
@@ -524,7 +545,7 @@ class TransformerASR(TransformerInterface):
             src = src + self.positional_encoding(src)
             pos_embs_source = None
 
-        encoder_out, _ = self.encoder(
+        outputs = self.encoder(
             src=src,
             src_mask=src_mask,
             src_key_padding_mask=src_key_padding_mask,
