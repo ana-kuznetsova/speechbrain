@@ -15,6 +15,7 @@ output_folder: !ref /data/anakuzne/speechbrain/recipes/LibriSpeech/ASR/transform
 output_wer_folder: !ref <output_folder>/
 save_folder: !ref <output_folder>/save
 train_log: !ref <output_folder>/train_log.txt
+cached_data_folder: !PLACEHOLDER
 
 # Language model (LM) pretraining
 # NB: To avoid mismatch, the speech recognizer must be trained with the same

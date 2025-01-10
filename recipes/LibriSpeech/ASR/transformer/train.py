@@ -43,7 +43,8 @@ from hyperpyyaml import load_hyperpyyaml
 
 import speechbrain as sb
 from speechbrain.utils.distributed import if_main_process, run_on_main
-from speechbrain.core import AMPConfig
+import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -66,7 +67,7 @@ class ASR(sb.core.Brain):
             tokens_bos = self.hparams.fea_augment.replicate_labels(tokens_bos)
 
         # forward modules
-        #print("DEBUG FEATS:", feats.shape)
+        # print("DEBUG FEATS:", feats.shape)
         if hasattr(self.hparams, "CNN"):
             src = self.modules.CNN(feats)
         #    print("DEBUG FEATS after CNN:", src.shape)
@@ -79,7 +80,7 @@ class ASR(sb.core.Brain):
                 src, tokens_bos, wav_lens, pad_idx=self.hparams.pad_index
             )
         )
-        #print("DEBUG ENC_OUT:", enc_out.shape)
+        # print("DEBUG ENC_OUT:", enc_out.shape)
         # output layer for ctc log-probabilities
         logits = self.modules.ctc_lin(enc_out)
         p_ctc = self.hparams.log_softmax(logits)
@@ -151,7 +152,9 @@ class ASR(sb.core.Brain):
         )
 
         if commitment_loss is not None:
-            loss += self.hparams.codec_loss_weight * (commitment_loss + codebook_loss)
+            loss += self.hparams.codec_loss_weight * (
+                commitment_loss + codebook_loss
+            )
 
         if stage != sb.Stage.TRAIN:
             self.hparams.train_logger.log_stats(
@@ -162,7 +165,7 @@ class ASR(sb.core.Brain):
                     "codebook_loss": codebook_loss.item(),
                     "commitment_loss": commitment_loss.item(),
                 },
-                verbose=True
+                verbose=True,
             )
             current_epoch = self.hparams.epoch_counter.current
             valid_search_interval = self.hparams.valid_search_interval
@@ -185,8 +188,9 @@ class ASR(sb.core.Brain):
         super().on_evaluate_start()
         # NOTE: (anakuzne) change max_key to None for quantizer only inference
         ckpts = self.checkpointer.find_checkpoints(
-            max_key=max_key, min_key=min_key, 
-            max_num_checkpoints=self.hparams.avg_checkpoints
+            max_key=max_key,
+            min_key=min_key,
+            max_num_checkpoints=self.hparams.avg_checkpoints,
         )
         ckpt = sb.utils.checkpoints.average_checkpoints(
             ckpts, recoverable_name="model"
