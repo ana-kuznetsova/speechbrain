@@ -23,7 +23,7 @@ train_log: !ref <output_folder>/train_log.txt
 # directory containing the lm.ckpt and tokenizer.ckpt may also be specified
 # instead. E.g if you want to use your own LM / tokenizer.
 pretrained_lm_tokenizer_path: speechbrain/asr-transformer-transformerlm-librispeech
-pretrained_model_path: /data/anakuzne/speechbrain/recipes/LibriSpeech/ASR/transformer/results/conformer_ls960_pretrained
+pretrained_model_path: /data/anakuzne/speechbrain/recipes/LibriSpeech/ASR/transformer/results/conformer_large_quantizer_ft_regularized_codec_loss/3407/save/CKPT+2024-09-26+00-25-30+00
 # Data files
 data_folder: /data/anakuzne/LibriSpeech  # e.g., /path/to/LibriSpeech
 # If RIRS_NOISES dir exists in /localscratch/xxx_corpus/RIRS_NOISES

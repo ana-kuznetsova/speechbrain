@@ -186,7 +186,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    save_folder = f"{args.model_folder}/inference"
+    save_folder = f"{args.model_folder}"
     hparams_file = f"{args.model_folder}/hyperparams.yaml"
 
     model = EncoderDecoderASR.from_hparams(
@@ -198,11 +198,15 @@ if __name__ == "__main__":
     files = []
     for root, d, f in os.walk(args.data_folder):
         for file in f:
-            if file.endswith(".flac"):
+            if file.endswith(".flac") and "train" in root:
                 files.append(os.path.join(root, file))
+    print(f"Found {len(files)} files")
+    if  args.num_samples:
+        files = files[: args.num_samples]
 
-    code_vectors = {}
-    # add all the code vectors to the dictionary
+    # Compute vector frequencies
+    code_vector_freqs = torch.zeros(args.num_codebooks, args.codebook_size)
+
     for f in tqdm(files):
         aud = model.load_audio(f)
         feats = model.hparams.compute_features(aud.unsqueeze(0))
@@ -210,7 +214,21 @@ if __name__ == "__main__":
         feats = model.mods.CNN(feats)
         z, codes = model.encode_batch(feats, feat_lens)
         codes = codes.squeeze(0)
-        for vec in codes:
-            vec = tuple(vec.tolist())
-            if vec not in code_vectors:
-                code_vectors[vec] = 0
+        # Compute frequencies for each codebook
+        for i in range(args.num_codebooks):
+            code_vector_freqs[i] += torch.histc(
+                codes[i].float(),
+                bins=args.codebook_size,
+                min=0,
+                max=args.codebook_size - 1,
+            )
+
+
+    # Build Huffman tree for each of the codebooks
+    codebooks = {i:None for i in range(args.num_codebooks)}
+    for i in range(args.num_codebooks):
+        freq_dict = {j:code_vector_freqs[i][j].item() for j in range(args.codebook_size) if code_vector_freqs[i][j] != 0}
+        root = build_huffman_tree(freq_dict)
+        codebook_i = generate_huffman_codes(root)
+        codebooks[i] = codebook_i
+    torch.save(codebooks, f"{save_folder}/codebooks.pt")
