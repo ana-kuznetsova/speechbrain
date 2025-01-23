@@ -18,6 +18,7 @@ run_name: !PLACEHOLDER
 
 # Load the pretrained Conformer and LM from Huggingface
 pretrained_model_path: /data/anakuzne/speechbrain/recipes/LibriSpeech/ASR/transformer/results/conformer_ls960_pretrained
+pretrained_lm_tokenizer_path: speechbrain/asr-transformer-transformerlm-librispeech
 
 data_folder: /data/anakuzne/LibriSpeech
 train_splits: ["train-clean-100"]
@@ -340,7 +341,7 @@ pretrainer: !new:speechbrain.utils.parameter_transfer.Pretrainer
         tokenizer: !ref <tokenizer>
         model: !ref <model>
     paths:
-        lm: !ref <pretrained_model_path>/lm.ckpt
-        tokenizer: !ref <pretrained_model_path>/tokenizer.ckpt
+        lm: !ref <pretrained_lm_tokenizer_path>/lm.ckpt
+        tokenizer: !ref <pretrained_lm_tokenizer_path>/tokenizer.ckpt
         model: !ref <pretrained_model_path>/model.ckpt
 eval_only: False
