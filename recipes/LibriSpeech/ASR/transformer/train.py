@@ -67,7 +67,6 @@ class ASR(sb.core.Brain):
             tokens_bos = self.hparams.fea_augment.replicate_labels(tokens_bos)
 
         # forward modules
-        # print("DEBUG FEATS:", feats.shape)
         if hasattr(self.hparams, "CNN"):
             src = self.modules.CNN(feats)
         #    print("DEBUG FEATS after CNN:", src.shape)
@@ -80,7 +79,6 @@ class ASR(sb.core.Brain):
                 src, tokens_bos, wav_lens, pad_idx=self.hparams.pad_index
             )
         )
-        # print("DEBUG ENC_OUT:", enc_out.shape)
         # output layer for ctc log-probabilities
         logits = self.modules.ctc_lin(enc_out)
         p_ctc = self.hparams.log_softmax(logits)
@@ -489,26 +487,27 @@ if __name__ == "__main__":
         if collate_fn is not None:
             valid_dataloader_opts["collate_fn"] = collate_fn
 
-    if not hparams["eval_only"]:
-        # Training
-        asr_brain.fit(
-            asr_brain.hparams.epoch_counter,
-            train_data,
-            valid_data,
-            train_loader_kwargs=train_dataloader_opts,
-            valid_loader_kwargs=valid_dataloader_opts,
-        )
+    #if not hparams["eval_only"]:
+    # Training
+    asr_brain.fit(
+        asr_brain.hparams.epoch_counter,
+        train_data,
+        valid_data,
+        train_loader_kwargs=train_dataloader_opts,
+        valid_loader_kwargs=valid_dataloader_opts,
+    )
 
-    # Testing
-    if not os.path.exists(hparams["output_wer_folder"]):
-        os.makedirs(hparams["output_wer_folder"])
+    if hparams["testing"]:
+        # Testing
+        if not os.path.exists(hparams["output_wer_folder"]):
+            os.makedirs(hparams["output_wer_folder"])
 
-    for k in test_datasets.keys():  # keys are test_clean, test_other etc
-        asr_brain.hparams.test_wer_file = os.path.join(
-            hparams["output_wer_folder"], f"wer_{k}.txt"
-        )
-        asr_brain.evaluate(
-            test_datasets[k],
-            max_key="ACC",
-            test_loader_kwargs=hparams["test_dataloader_opts"],
-        )
+        for k in test_datasets.keys():  # keys are test_clean, test_other etc
+            asr_brain.hparams.output_wer_folder = os.path.join(
+                hparams["output_wer_folder"], f"wer_{k}.txt"
+            )
+            asr_brain.evaluate(
+                test_datasets[k],
+                test_loader_kwargs=hparams["test_dataloader_opts"],
+                min_key="WER",
+            )
