@@ -278,6 +278,8 @@ class TransformerASR(TransformerInterface):
         num_codebooks: Optional[int] = 12,
         codebook_size: Optional[int] = 1024,
         codebook_dim: Optional[int] = 64,
+        output_hidden_states=False,
+        layerdrop_prob=0.0,
     ):
         if causal is None:
             logger.warning(
@@ -402,8 +404,9 @@ class TransformerASR(TransformerInterface):
             src_key_padding_mask=src_key_padding_mask,
             pos_embs=pos_embs_encoder,
         )
-
+        
         if self.use_quantizer:
+            encoder_out, encoder_lens = outputs
             z, codes, _, commitment_loss, codebook_loss = self.quantizer(
                 encoder_out.transpose(1, 2), self.n_quantizers
             )

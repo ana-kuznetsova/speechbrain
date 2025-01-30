@@ -151,6 +151,9 @@ dmypy.json
 
 # Results folders
 **/results/
+**/results_*
+recipes/LibriSpeech/ASR/transformer/hopt/*
+recipes/discrete-asr*
 
 # Log folders
 **/log/
