@@ -412,9 +412,10 @@ final_yaml_file="$output_folder/best_hparams.yaml"
 scp $best_yaml_file $final_yaml_file
 
 # Running evaluation on the test set for the best models
+# Running evaluation on the test set for the best models
 ./run_experiments.sh --hparams $final_yaml_file --data_folder $data_folder  --cached_data_folder $cached_data_folder \
   --output_folder $output_folder/best --task $task   --dataset $dataset  --seed $seed\
   --nruns $nruns_eval --eval_metric $eval_metric --eval_set test \
-  --rnd_dir $store_all --testing True $additional_flags
+  --rnd_dir False --testing True $additional_flags
 
 echo "The test performance with best hparams is available at  $output_folder/best"
