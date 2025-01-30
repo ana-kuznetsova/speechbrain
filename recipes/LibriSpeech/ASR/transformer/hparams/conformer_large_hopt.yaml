@@ -17,7 +17,7 @@ cached_data_folder: !PLACEHOLDER
 run_name: !PLACEHOLDER
 
 # Load the pretrained Conformer and LM from Huggingface
-pretrained_model_path: /data/anakuzne/speechbrain/recipes/LibriSpeech/ASR/transformer/results/conformer_ls960_pretrained
+pretrained_model_path: !PLACEHOLDER
 pretrained_lm_tokenizer_path: speechbrain/asr-transformer-transformerlm-librispeech
 
 data_folder: /data/anakuzne/LibriSpeech
