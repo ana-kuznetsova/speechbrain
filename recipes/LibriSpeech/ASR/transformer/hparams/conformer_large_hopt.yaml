@@ -38,7 +38,7 @@ testing: True
 # The global batch size is computed as batch_size * n_gpus * grad_accumulation_factor.
 # Empirically, we found that this value should be >= 128.
 # Please, set your parameters accordingly.
-number_of_epochs: 10
+number_of_epochs: 20
 batch_size_exponent: 4 # @orion_step1: --batch_size_exponent~"uniform(2, 4,discrete=True)"
 batch_size: !ref 2 ** <batch_size_exponent>
 ctc_weight: 0.3
