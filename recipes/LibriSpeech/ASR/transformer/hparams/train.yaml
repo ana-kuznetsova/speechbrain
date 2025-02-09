@@ -11,6 +11,7 @@
 seed: 3407
 __set_seed: !apply:torch.manual_seed [!ref <seed>]
 output_folder: !PLACEHOLDER
+output_wer_folder: !ref <output_folder>/
 save_folder: !ref <output_folder>/save
 train_log: !ref <output_folder>/train_log.txt
 cached_data_folder: !PLACEHOLDER
@@ -38,7 +39,7 @@ testing: True
 # The global batch size is computed as batch_size * n_gpus * grad_accumulation_factor.
 # Empirically, we found that this value should be >= 128.
 # Please, set your parameters accordingly.
-number_of_epochs: 50
+number_of_epochs: 20
 batch_size_exponent: 2
 batch_size: !ref 2 ** <batch_size_exponent>
 ctc_weight: 0.3
