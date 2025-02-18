@@ -190,6 +190,7 @@ class ASR(sb.core.Brain):
             min_key=min_key,
             max_num_checkpoints=self.hparams.avg_checkpoints,
         )
+        print("DEBUG ckpts:", ckpts, max_key, min_key)
         ckpt = sb.utils.checkpoints.average_checkpoints(
             ckpts, recoverable_name="model"
         )
@@ -503,11 +504,11 @@ if __name__ == "__main__":
             os.makedirs(hparams["output_wer_folder"])
 
         for k in test_datasets.keys():  # keys are test_clean, test_other etc
-            asr_brain.hparams.output_wer_folder = os.path.join(
+            asr_brain.hparams.test_wer_file = os.path.join(
                 hparams["output_wer_folder"], f"wer_{k}.txt"
             )
             asr_brain.evaluate(
                 test_datasets[k],
+                max_key="ACC",
                 test_loader_kwargs=hparams["test_dataloader_opts"],
-                min_key="WER",
             )
