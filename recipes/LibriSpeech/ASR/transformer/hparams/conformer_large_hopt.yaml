@@ -267,6 +267,10 @@ noam_annealing: !new:speechbrain.nnet.schedulers.NoamScheduler
     lr_initial: !ref <lr_adam>
     n_warmup_steps: 30000
 
+si_sdr: !name:speechbrain.nnet.losses.get_si_sdr_with_pitwrapper
+    blank_index: !ref <blank_index>
+    reduction: !ref <loss_reduction>
+
 checkpointer: !new:speechbrain.utils.checkpoints.Checkpointer
     checkpoints_dir: !ref <save_folder>
     recoverables:
