@@ -15,7 +15,6 @@ output_wer_folder: !ref <output_folder>/
 save_folder: !ref <output_folder>/save
 train_log: !ref <output_folder>/train_log.txt
 cached_data_folder: !PLACEHOLDER
-run_name: !PLACEHOLDER
 
 # Load the pretrained Conformer and LM from Huggingface
 pretrained_model_path: !PLACEHOLDER
