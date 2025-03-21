@@ -554,7 +554,6 @@ class TransformerASR(TransformerInterface):
             pos_embs=pos_embs_source,
             dynchunktrain_config=dynchunktrain_config,
         )
-        print("DEBUG encoder_out", outputs[0].shape)
         encoder_out, _ = outputs
         # if self.use_quantizer:
         z, codes, _, commitment_loss, codebook_loss = self.quantizer(encoder_out.transpose(1, 2))
