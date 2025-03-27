@@ -14,8 +14,6 @@ output_folder: !PLACEHOLDER
 output_wer_folder: !ref <output_folder>/
 save_folder: !ref <output_folder>/save
 train_log: !ref <output_folder>/train_log.txt
-cached_data_folder: !PLACEHOLDER
-run_name: !PLACEHOLDER
 
 # Load the pretrained Conformer and LM from Huggingface
 pretrained_model_path: /data/anakuzne/speechbrain/recipes/LibriSpeech/ASR/transformer/results/conformer_ls960_pretrained
@@ -41,7 +39,7 @@ testing: True
 # Please, set your parameters accordingly.
 number_of_epochs: 20
 batch_size_exponent: 2
-batch_size: !ref 2 ** <batch_size_exponent>
+batch_size: 16
 ctc_weight: 0.3
 seq_weight: 0.7
 codec_loss_weight: 0.2
@@ -54,14 +52,15 @@ precision: fp32 # bf16, fp16 or fp32
 avg_checkpoints: 10 # Number of checkpoints to average for evaluation
 
 # stages related parameters
-lr_adam: 1.787e-05
+lr_adam: 0.0008
+warmup: 50000
+augment_warmup: 8000
 
 # Feature parameters
 sample_rate: 16000
 n_fft: 512
 n_mels: 80
 win_length: 32
-codebook_dim_exponent: 2
 n_codebooks: 1
 vocab_size: 1024
 
@@ -160,7 +159,7 @@ Transformer: !new:speechbrain.lobes.models.transformer.TransformerASR.Transforme
     freeze_decoder: False
     num_codebooks: !ref <n_codebooks>
     codebook_size: !ref <vocab_size>
-    codebook_dim: !ref <codebook_dim_exponent>
+    codebook_dim: 128
 
 # This is the TransformerLM that is used according to the Huggingface repository
 # Visit the HuggingFace model corresponding to the pretrained_lm_tokenizer_path
