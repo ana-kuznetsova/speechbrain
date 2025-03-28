@@ -52,8 +52,9 @@ ckpt_interval_minutes: 15 # save checkpoint every N min
 
 ####################### Training Parameters ####################################
 number_of_epochs: 25
-batch_size: 32
-lr: 0.001
+batch_size_exponent: 4 # @orion_step1: --batch_size_exponent~"uniform(2, 4,discrete=True)"
+batch_size: 2**!ref <batch_size_exponent>
+lr: 0.001 # @orion_step1: --lr~"loguniform(0.00001,0.1)"
 base_lr: 0.00000001
 max_lr: !ref <lr>
 step_size: 65000
@@ -62,9 +63,9 @@ sample_rate: 16000
 # RVQ parameters
 n_codebooks: 1  # Number of codebooks for RVQ
 vocab_size: 1024
-codebook_dim_exponent: 2
+codebook_dim_exponent: 2 # @orion_step1: --codebook_dim_exponent~"uniform(1, 3,discrete=True)"
 quantize_layer_idx: 3
-vq_loss_weight: 0.01 #Regularization for codebook loss
+vq_loss_weight: 0.01 # @orion_step1: --vq_loss_weight~"loguniform(0.00001,0.1)"
 
 # Feature parameters
 n_mels: 80
