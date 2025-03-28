@@ -62,6 +62,7 @@ sample_rate: 16000
 # RVQ parameters
 n_codebooks: 1  # Number of codebooks for RVQ
 vocab_size: 1024
+codebook_dim_exponent: 2
 quantize_layer_idx: 3
 vq_loss_weight: 0.01 #Regularization for codebook loss
 
@@ -105,7 +106,7 @@ embedding_model: !new:speechbrain.lobes.models.ECAPA_TDNN.ECAPA_TDNNQ
     num_codebooks: !ref <n_codebooks>  # Number of codebooks for RVQ
     codebook_size: !ref <vocab_size>  # Size of each codebook
     quantize_layer: !ref <quantize_layer_idx>  # Layer index to apply RVQ
-    codebook_dim: 128
+    codebook_dim: 8 ** !ref <codebook_dim_exponent>  # Dimensionality of the codebook vectors
 
 classifier: !new:speechbrain.lobes.models.ECAPA_TDNN.Classifier
     input_size: 192

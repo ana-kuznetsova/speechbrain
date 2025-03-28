@@ -27,6 +27,7 @@ eval_metric="acc"
 eval_set="test"
 rnd_dir=False
 additional_flags=""
+architecture=""
 
 
 # Function to print argument descriptions and exit
@@ -39,6 +40,7 @@ print_argument_descriptions() {
     echo "  --output_folder output_path       Output folder path"
     echo "  --task task                       downstream task"
     echo "  --dataset dataset                 dataset"
+    echo "  --architecture architecture       Model architecture (e.g., LSTM, Transformer))"
     echo "  --seed random_seed                Seed (random if not specified)"
     echo "  --nruns num_runs                  Number of runs"
     echo "  --eval_metric metric              Evaluation metric (e.g., acc or WER)"
@@ -84,6 +86,11 @@ while [[ $# -gt 0 ]]; do
       ;;
 
       --dataset)
+      dataset="$2"
+      shift
+      shift
+      ;;
+      --architecture)
       dataset="$2"
       shift
       shift
@@ -186,7 +193,7 @@ mkdir -p $cached_data_folder
 # Function to run the training experiment
 run_experiment() {
 
-python $dataset/$task/transformer/train.py $hparams  --cached_data_folder=$cached_data_folder --seed=$seed --data_folder=$data_folder --output_folder=$output_folder_exp \
+python $dataset/$task/$architecture/train.py $hparams  --cached_data_folder=$cached_data_folder --seed=$seed --data_folder=$data_folder --output_folder=$output_folder_exp \
 $additional_flags
 
 }
