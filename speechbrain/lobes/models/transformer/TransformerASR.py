@@ -19,7 +19,6 @@ from speechbrain.lobes.models.transformer.Transformer import (
     get_key_padding_mask,
     get_lookahead_mask,
 )
-from speechbrain.lobes.models.discrete.dac import ResidualVectorQuantize
 from speechbrain.nnet.activations import Swish
 from speechbrain.nnet.containers import ModuleList
 from speechbrain.nnet.linear import Linear
