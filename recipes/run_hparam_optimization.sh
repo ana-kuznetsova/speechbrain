@@ -133,7 +133,7 @@ while [[ $# -gt 0 ]]; do
       ;;
 
     --architecture)
-      task="$2"
+      architecture="$2"
       shift
       shift
       ;;

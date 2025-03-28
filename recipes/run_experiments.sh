@@ -91,7 +91,7 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
       --architecture)
-      dataset="$2"
+      architecture="$2"
       shift
       shift
       ;;
@@ -182,6 +182,7 @@ mkdir -p $output_folder
     echo "eval_set: $eval_set"
     echo "rnd_dir: $rnd_dir"
     echo "additional flags: $additional_flags"
+    echo "architecture: $architecture"
 } | tee "$output_folder/flags.txt"
 
 
