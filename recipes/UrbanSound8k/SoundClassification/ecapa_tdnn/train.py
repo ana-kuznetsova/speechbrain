@@ -415,8 +415,9 @@ if __name__ == "__main__":
     class_labels = list(label_encoder.ind2lab.values())
     print("Class Labels:", class_labels)
     # Load pre-trained modules if specified
-    hparams["pretrainer"].collect_files()
-    hparams["pretrainer"].load_collected()
+    if "pretrainer" in hparams:
+        hparams["pretrainer"].collect_files()
+        hparams["pretrainer"].load_collected()
 
     urban_sound_8k_brain = UrbanSound8kBrain(
         modules=hparams["modules"],
