@@ -196,7 +196,6 @@ run_experiment() {
 
 python $dataset/$task/$architecture/train.py $hparams  --cached_data_folder=$cached_data_folder --seed=$seed --data_folder=$data_folder --output_folder=$output_folder_exp \
 $additional_flags
-
 }
 
 # Run multiple training experiments (with different seeds)

@@ -707,7 +707,6 @@ class ECAPA_TDNNQ(torch.nn.Module):
         """
         # Minimize transpose for efficiency
         x = x.transpose(1, 2)
-
         xl = []
       
         for i, layer in enumerate(self.blocks):

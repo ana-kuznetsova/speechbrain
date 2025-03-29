@@ -48,6 +48,7 @@ train_fold_nums: [1, 2, 3, 4, 5, 6, 7, 8]
 valid_fold_nums: [9]
 test_fold_nums: [10]
 skip_manifest_creation: False
+testing: True
 
 ckpt_interval_minutes: 15 # save checkpoint every N min
 
