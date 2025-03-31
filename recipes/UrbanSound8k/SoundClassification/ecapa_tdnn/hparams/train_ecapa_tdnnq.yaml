@@ -97,7 +97,7 @@ compute_features: !new:speechbrain.lobes.features.Fbank
 
 embedding_model: !new:speechbrain.lobes.models.ECAPA_TDNN.ECAPA_TDNNQ
     input_size: !ref <n_mels>
-    channels: [1024, 1024, 1024, 1024, 3072]
+    channels: [1024, 1024, 1024, 1024, 1536]
     kernel_sizes: [5, 3, 3, 3, 1]
     dilations: [1, 2, 3, 4, 1]
     attention_channels: 128
@@ -106,6 +106,7 @@ embedding_model: !new:speechbrain.lobes.models.ECAPA_TDNN.ECAPA_TDNNQ
     codebook_size: !ref <vocab_size>  # Size of each codebook
     quantize_layer: !ref <quantize_layer_idx>  # Layer index to apply RVQ
     codebook_dim: 128
+    merge_codes: True
 
 classifier: !new:speechbrain.lobes.models.ECAPA_TDNN.Classifier
     input_size: 192

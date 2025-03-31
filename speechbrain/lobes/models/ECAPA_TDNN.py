@@ -620,13 +620,15 @@ class ECAPA_TDNNQ(torch.nn.Module):
         codebook_size=512,
         codebook_dim=64,
         quantizer_dropout=0.0,
-        quantize_layer=4
+        quantize_layer=4,
+        merge_codes = False
                 ):
         super().__init__()
         assert len(channels) == len(kernel_sizes)
         assert len(channels) == len(dilations)
         self.channels = channels
         self.quantize_layer = quantize_layer
+        self.merge_codes = merge_codes
         self.blocks = nn.ModuleList()
 
         # The initial TDNN layer
@@ -665,8 +667,9 @@ class ECAPA_TDNNQ(torch.nn.Module):
             )
 
         # Multi-layer feature aggregation
-        self.mfa = TDNNBlock(
-            channels[-2] * (len(channels) - 2),
+        if self.merge_codes:
+            self.mfa = TDNNBlock(
+            channels[-2]//2 * (len(channels) - 2),
             channels[-1],
             kernel_sizes[-1],
             dilations[-1],
@@ -674,6 +677,16 @@ class ECAPA_TDNNQ(torch.nn.Module):
             groups=groups[-1],
             dropout=dropout,
         )
+        else:
+            self.mfa = TDNNBlock(
+                channels[-2] * (len(channels) - 2),
+                channels[-1],
+                kernel_sizes[-1],
+                dilations[-1],
+                activation,
+                groups=groups[-1],
+                dropout=dropout,
+            )
 
         # Attentive Statistical Pooling
         self.asp = AttentiveStatisticsPooling(
@@ -689,6 +702,37 @@ class ECAPA_TDNNQ(torch.nn.Module):
             out_channels=lin_neurons,
             kernel_size=1,
         )
+
+    def merge_adjacent_frames(self,tensor):
+        """
+        Merges every two adjacent frames across the time dimension of a tensor.
+
+        Arguments:
+        ----------
+        tensor : torch.Tensor
+            Input tensor of shape (B, T, D), where:
+            B = Batch size
+            T = Time dimension
+            D = Feature dimension
+
+        Returns:
+        --------
+        torch.Tensor
+            Output tensor of shape (B, T//2, D) if T is even, or (B, T//2 + 1, D) if T is odd.
+        """
+        # If T is odd, pad the last frame with zeros to make it even
+        if tensor.size(1) % 2 != 0:
+            tensor = torch.nn.functional.pad(tensor, (0, 0, 0, 1))  # Pad one frame along the time dimension
+
+        # Reshape to merge adjacent frames
+        B, T, D = tensor.size()
+        tensor = tensor.view(B, T // 2, 2, D)  # Reshape to (B, T//2, 2, D)
+
+        # Average the two adjacent frames
+        merged_tensor = tensor.mean(dim=2)  # Reduce the third dimension (2) by averaging
+
+        return merged_tensor
+
 
     def forward(self, x, lengths=None):
         """Returns the embedding vector.
@@ -723,6 +767,10 @@ class ECAPA_TDNNQ(torch.nn.Module):
 
         # Multi-layer feature aggregation
         x = torch.cat(xl[1:], dim=1)
+
+        if self.merge_codes:
+            # Merge adjacent frames if specified
+            x = self.merge_adjacent_frames(x)
         x = self.mfa(x)
 
         # Attentive Statistical Pooling
