@@ -14,15 +14,17 @@ output_folder: !PLACEHOLDER
 output_wer_folder: !ref <output_folder>/
 save_folder: !ref <output_folder>/save
 train_log: !ref <output_folder>/train_log.txt
+cached_data_folder: !PLACEHOLDER
+run_name: !PLACEHOLDER
 
 # Load the pretrained Conformer and LM from Huggingface
-pretrained_model_path: /data/anakuzne/speechbrain/recipes/LibriSpeech/ASR/transformer/results/conformer_ls960_pretrained
+pretrained_model_path: !PLACEHOLDER
 pretrained_lm_tokenizer_path: speechbrain/asr-transformer-transformerlm-librispeech
 
 data_folder: /data/anakuzne/LibriSpeech
 train_splits: ["train-clean-100", "train-clean-360", "train-other-500"]
-dev_splits: ["dev-clean"]
-test_splits: ["dev-clean", "test-clean", "test-other"]
+dev_splits: ["dev-clean", "dev-other"]
+test_splits: ["test-clean", "test-other"]
 skip_prep: False
 train_csv: !ref <output_folder>/train.csv
 valid_csv: !ref <output_folder>/dev-clean.csv
@@ -39,7 +41,7 @@ testing: True
 # Please, set your parameters accordingly.
 number_of_epochs: 20
 batch_size_exponent: 2
-batch_size: 16
+batch_size: !ref 2 ** <batch_size_exponent>
 ctc_weight: 0.3
 seq_weight: 0.7
 codec_loss_weight: 0.2
@@ -49,21 +51,19 @@ loss_reduction: 'batchmean'
 sorting: random
 num_workers: 4
 precision: fp32 # bf16, fp16 or fp32
-avg_checkpoints: 10 # Number of checkpoints to average for evaluation
+avg_checkpoints: 5 # Number of checkpoints to average for evaluation
 
 # stages related parameters
-lr_adam: 0.0008
-warmup: 50000
-augment_warmup: 8000
+lr_adam: 0.0001103
 
 # Feature parameters
 sample_rate: 16000
 n_fft: 512
 n_mels: 80
 win_length: 32
+codebook_dim_exponent: 2
 n_codebooks: 1
 vocab_size: 1024
-
 
 # This setup works well for A100 80GB GPU, adapts it to your needs.
 # Or turn it off (but training speed will decrease)
@@ -159,7 +159,7 @@ Transformer: !new:speechbrain.lobes.models.transformer.TransformerASR.Transforme
     freeze_decoder: False
     num_codebooks: !ref <n_codebooks>
     codebook_size: !ref <vocab_size>
-    codebook_dim: 128
+    codebook_dim: !ref 8 ** <codebook_dim_exponent>
 
 # This is the TransformerLM that is used according to the Huggingface repository
 # Visit the HuggingFace model corresponding to the pretrained_lm_tokenizer_path

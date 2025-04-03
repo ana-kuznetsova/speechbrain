@@ -314,7 +314,6 @@ class TransformerASR(TransformerInterface):
             output_hidden_states=output_hidden_states,
             layerdrop_prob=layerdrop_prob,
         )
-
         self.custom_src_module = ModuleList(
             Linear(
                 input_size=input_size,
@@ -555,7 +554,7 @@ class TransformerASR(TransformerInterface):
             pos_embs=pos_embs_source,
             dynchunktrain_config=dynchunktrain_config,
         )
-        # print("DEBUG encoder_out shape", encoder_out.shape)
+        encoder_out, _ = outputs
         # if self.use_quantizer:
         z, codes, _, commitment_loss, codebook_loss = self.quantizer(encoder_out.transpose(1, 2))
         z = z.transpose(1, 2)
