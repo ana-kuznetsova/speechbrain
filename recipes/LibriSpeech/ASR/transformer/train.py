@@ -118,7 +118,6 @@ class ASR(sb.core.Brain):
         (p_ctc, p_seq, wav_lens, hyps, commitment_loss, codebook_loss) = (
             predictions
         )
-
         ids = batch.id
         tokens_eos, tokens_eos_lens = batch.tokens_eos
         tokens, tokens_lens = batch.tokens

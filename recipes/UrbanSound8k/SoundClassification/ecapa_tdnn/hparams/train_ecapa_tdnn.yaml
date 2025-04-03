@@ -19,7 +19,7 @@ data_folder_rir: !ref <data_folder>/rir # The impulse responses used for data au
 audio_data_folder: !ref <data_folder>/audio
 # TODO the following folder will contain the resampled audio files (mono channel and config SR) to train on
 # resampled_audio_data_folder: !ref <data_folder>/audio_mono16kHz
-output_folder: !ref ./results/urban_sound/<seed>
+output_folder: !PLACEHOLDER
 save_folder: !ref <output_folder>/save
 train_log: !ref <output_folder>/train_log.txt
 
@@ -64,6 +64,8 @@ right_frames: 0
 deltas: False
 amp_to_db: False
 normalize: True
+last_channel_dim: 1536
+merge_feats: True
 
 # Number of classes
 out_n_neurons: 10
@@ -89,11 +91,12 @@ compute_features: !new:speechbrain.lobes.features.Fbank
 
 embedding_model: !new:speechbrain.lobes.models.ECAPA_TDNN.ECAPA_TDNN
     input_size: !ref <n_mels>
-    channels: [1024, 1024, 1024, 1024, 3072]
+    channels: [1024, 1024, 1024, 1024, !ref <last_channel_dim>]
     kernel_sizes: [5, 3, 3, 3, 1]
     dilations: [1, 2, 3, 4, 1]
     attention_channels: 128
     lin_neurons: 192
+    merge_feats: !ref <merge_feats>
 
 classifier: !new:speechbrain.lobes.models.ECAPA_TDNN.Classifier
     input_size: 192

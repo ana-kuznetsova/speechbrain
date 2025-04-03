@@ -46,7 +46,7 @@ rir_annotation: !ref <save_folder>/rir.csv
 train_fold_nums: [1, 2, 3, 4, 5, 6, 7, 8]
 valid_fold_nums: [9]
 test_fold_nums: [10]
-skip_manifest_creation: False
+skip_manifest_creation: True  # Set to True if manifests are already created
 
 ckpt_interval_minutes: 15 # save checkpoint every N min
 
@@ -62,7 +62,7 @@ sample_rate: 16000
 # RVQ parameters
 n_codebooks: 1  # Number of codebooks for RVQ
 vocab_size: 1024
-quantize_layer_idx: 3
+quantize_layer_idx: 1
 vq_loss_weight: 0.01 #Regularization for codebook loss
 
 # Feature parameters

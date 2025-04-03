@@ -1,0 +1,6698 @@
+{
+  "100648-1-0-0": {
+    "wav": "100648-1-0-0.wav",
+    "classID": 1,
+    "class_string": "car_horn",
+    "salience": 2,
+    "fold": "10",
+    "duration": 0.6485260770975056
+  },
+  "100648-1-1-0": {
+    "wav": "100648-1-1-0.wav",
+    "classID": 1,
+    "class_string": "car_horn",
+    "salience": 2,
+    "fold": "10",
+    "duration": 1.05
+  },
+  "100648-1-2-0": {
+    "wav": "100648-1-2-0.wav",
+    "classID": 1,
+    "class_string": "car_horn",
+    "salience": 2,
+    "fold": "10",
+    "duration": 0.40532879818594103
+  },
+  "100648-1-3-0": {
+    "wav": "100648-1-3-0.wav",
+    "classID": 1,
+    "class_string": "car_horn",
+    "salience": 2,
+    "fold": "10",
+    "duration": 1.62
+  },
+  "100648-1-4-0": {
+    "wav": "100648-1-4-0.wav",
+    "classID": 1,
+    "class_string": "car_horn",
+    "salience": 2,
+    "fold": "10",
+    "duration": 1.86
+  },
+  "100795-3-0-0": {
+    "wav": "100795-3-0-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "100795-3-1-0": {
+    "wav": "100795-3-1-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "100795-3-1-1": {
+    "wav": "100795-3-1-1.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "100795-3-1-2": {
+    "wav": "100795-3-1-2.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "101382-2-0-10": {
+    "wav": "101382-2-0-10.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "101382-2-0-12": {
+    "wav": "101382-2-0-12.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "101382-2-0-20": {
+    "wav": "101382-2-0-20.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "101382-2-0-21": {
+    "wav": "101382-2-0-21.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "101382-2-0-29": {
+    "wav": "101382-2-0-29.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "101382-2-0-33": {
+    "wav": "101382-2-0-33.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "101382-2-0-42": {
+    "wav": "101382-2-0-42.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "101382-2-0-45": {
+    "wav": "101382-2-0-45.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "102103-3-0-0": {
+    "wav": "102103-3-0-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 0.53
+  },
+  "102103-3-1-0": {
+    "wav": "102103-3-1-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 0.3885487528344671
+  },
+  "102857-5-0-0": {
+    "wav": "102857-5-0-0.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "102857-5-0-1": {
+    "wav": "102857-5-0-1.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "102857-5-0-10": {
+    "wav": "102857-5-0-10.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "102857-5-0-11": {
+    "wav": "102857-5-0-11.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "102857-5-0-12": {
+    "wav": "102857-5-0-12.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "102857-5-0-13": {
+    "wav": "102857-5-0-13.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "102857-5-0-14": {
+    "wav": "102857-5-0-14.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "102857-5-0-15": {
+    "wav": "102857-5-0-15.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "102857-5-0-16": {
+    "wav": "102857-5-0-16.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "102857-5-0-17": {
+    "wav": "102857-5-0-17.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "102857-5-0-18": {
+    "wav": "102857-5-0-18.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "102857-5-0-19": {
+    "wav": "102857-5-0-19.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "102857-5-0-2": {
+    "wav": "102857-5-0-2.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "102857-5-0-20": {
+    "wav": "102857-5-0-20.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "102857-5-0-21": {
+    "wav": "102857-5-0-21.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "102857-5-0-22": {
+    "wav": "102857-5-0-22.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "102857-5-0-23": {
+    "wav": "102857-5-0-23.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "102857-5-0-24": {
+    "wav": "102857-5-0-24.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "102857-5-0-25": {
+    "wav": "102857-5-0-25.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "102857-5-0-26": {
+    "wav": "102857-5-0-26.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "102857-5-0-27": {
+    "wav": "102857-5-0-27.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "102857-5-0-28": {
+    "wav": "102857-5-0-28.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "102857-5-0-29": {
+    "wav": "102857-5-0-29.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "102857-5-0-3": {
+    "wav": "102857-5-0-3.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "102857-5-0-30": {
+    "wav": "102857-5-0-30.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "102857-5-0-4": {
+    "wav": "102857-5-0-4.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "102857-5-0-5": {
+    "wav": "102857-5-0-5.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "102857-5-0-6": {
+    "wav": "102857-5-0-6.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "102857-5-0-7": {
+    "wav": "102857-5-0-7.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "102857-5-0-8": {
+    "wav": "102857-5-0-8.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "102857-5-0-9": {
+    "wav": "102857-5-0-9.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "103438-5-0-0": {
+    "wav": "103438-5-0-0.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "103438-5-0-1": {
+    "wav": "103438-5-0-1.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "103438-5-0-2": {
+    "wav": "103438-5-0-2.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "106014-5-0-0": {
+    "wav": "106014-5-0-0.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "106014-5-0-1": {
+    "wav": "106014-5-0-1.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "106014-5-0-2": {
+    "wav": "106014-5-0-2.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "106014-5-0-3": {
+    "wav": "106014-5-0-3.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "106014-5-0-4": {
+    "wav": "106014-5-0-4.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "115241-9-0-1": {
+    "wav": "115241-9-0-1.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "115241-9-0-14": {
+    "wav": "115241-9-0-14.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "115241-9-0-2": {
+    "wav": "115241-9-0-2.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "115241-9-0-20": {
+    "wav": "115241-9-0-20.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "115241-9-0-6": {
+    "wav": "115241-9-0-6.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "115241-9-0-8": {
+    "wav": "115241-9-0-8.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "115241-9-0-9": {
+    "wav": "115241-9-0-9.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "115418-9-0-11": {
+    "wav": "115418-9-0-11.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "115418-9-0-12": {
+    "wav": "115418-9-0-12.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "115418-9-0-15": {
+    "wav": "115418-9-0-15.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "115418-9-0-20": {
+    "wav": "115418-9-0-20.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "115418-9-0-29": {
+    "wav": "115418-9-0-29.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "115418-9-0-6": {
+    "wav": "115418-9-0-6.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "11722-3-0-0": {
+    "wav": "11722-3-0-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.2585260770975057
+  },
+  "11722-3-1-0": {
+    "wav": "11722-3-1-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 0.4386848072562358
+  },
+  "117889-9-0-12": {
+    "wav": "117889-9-0-12.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "117889-9-0-20": {
+    "wav": "117889-9-0-20.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "117889-9-0-30": {
+    "wav": "117889-9-0-30.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "117889-9-0-36": {
+    "wav": "117889-9-0-36.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "117889-9-0-39": {
+    "wav": "117889-9-0-39.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "117889-9-0-40": {
+    "wav": "117889-9-0-40.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "118278-4-0-0": {
+    "wav": "118278-4-0-0.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "118278-4-0-1": {
+    "wav": "118278-4-0-1.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "118278-4-0-10": {
+    "wav": "118278-4-0-10.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "118278-4-0-11": {
+    "wav": "118278-4-0-11.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "118278-4-0-12": {
+    "wav": "118278-4-0-12.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "118278-4-0-13": {
+    "wav": "118278-4-0-13.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "118278-4-0-2": {
+    "wav": "118278-4-0-2.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "118278-4-0-3": {
+    "wav": "118278-4-0-3.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "118278-4-0-4": {
+    "wav": "118278-4-0-4.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "118278-4-0-5": {
+    "wav": "118278-4-0-5.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "118278-4-0-6": {
+    "wav": "118278-4-0-6.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "118278-4-0-7": {
+    "wav": "118278-4-0-7.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "118278-4-0-8": {
+    "wav": "118278-4-0-8.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "118278-4-0-9": {
+    "wav": "118278-4-0-9.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "118558-5-0-0": {
+    "wav": "118558-5-0-0.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "118558-5-0-1": {
+    "wav": "118558-5-0-1.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "118558-5-0-2": {
+    "wav": "118558-5-0-2.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "118558-5-1-0": {
+    "wav": "118558-5-1-0.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "118558-5-1-1": {
+    "wav": "118558-5-1-1.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "118558-5-1-2": {
+    "wav": "118558-5-1-2.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "118558-5-2-0": {
+    "wav": "118558-5-2-0.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "118558-5-2-1": {
+    "wav": "118558-5-2-1.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "118558-5-2-2": {
+    "wav": "118558-5-2-2.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "118558-5-2-3": {
+    "wav": "118558-5-2-3.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "119067-0-0-0": {
+    "wav": "119067-0-0-0.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "119067-0-0-1": {
+    "wav": "119067-0-0-1.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "119067-0-0-2": {
+    "wav": "119067-0-0-2.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "128240-3-0-1": {
+    "wav": "128240-3-0-1.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "128240-3-0-20": {
+    "wav": "128240-3-0-20.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "128240-3-0-39": {
+    "wav": "128240-3-0-39.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "128240-3-0-42": {
+    "wav": "128240-3-0-42.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "128470-3-0-0": {
+    "wav": "128470-3-0-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "128470-3-0-1": {
+    "wav": "128470-3-0-1.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "128470-3-0-5": {
+    "wav": "128470-3-0-5.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "128470-3-0-8": {
+    "wav": "128470-3-0-8.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "129750-2-0-3": {
+    "wav": "129750-2-0-3.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "129750-2-0-34": {
+    "wav": "129750-2-0-34.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "129750-2-0-36": {
+    "wav": "129750-2-0-36.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "129750-2-0-37": {
+    "wav": "129750-2-0-37.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "129750-2-0-4": {
+    "wav": "129750-2-0-4.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "129750-2-0-45": {
+    "wav": "129750-2-0-45.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "129750-2-0-46": {
+    "wav": "129750-2-0-46.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "129750-2-0-48": {
+    "wav": "129750-2-0-48.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "136558-9-0-1": {
+    "wav": "136558-9-0-1.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "136558-9-0-2": {
+    "wav": "136558-9-0-2.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "136558-9-1-10": {
+    "wav": "136558-9-1-10.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "136558-9-1-21": {
+    "wav": "136558-9-1-21.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "136558-9-1-26": {
+    "wav": "136558-9-1-26.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "136558-9-1-39": {
+    "wav": "136558-9-1-39.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "138017-9-0-2": {
+    "wav": "138017-9-0-2.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "138017-9-0-9": {
+    "wav": "138017-9-0-9.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "138017-9-1-10": {
+    "wav": "138017-9-1-10.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "138017-9-1-16": {
+    "wav": "138017-9-1-16.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "138017-9-1-4": {
+    "wav": "138017-9-1-4.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "138017-9-1-6": {
+    "wav": "138017-9-1-6.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "141240-5-0-0": {
+    "wav": "141240-5-0-0.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 3.05
+  },
+  "141240-5-1-0": {
+    "wav": "141240-5-1-0.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 2.85
+  },
+  "142641-3-0-0": {
+    "wav": "142641-3-0-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 0.38
+  },
+  "14468-3-0-2": {
+    "wav": "14468-3-0-2.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "14468-3-0-3": {
+    "wav": "14468-3-0-3.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "14468-3-1-0": {
+    "wav": "14468-3-1-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 2.146235827664399
+  },
+  "14468-3-5-0": {
+    "wav": "14468-3-5-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "14470-2-0-10": {
+    "wav": "14470-2-0-10.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "14470-2-0-14": {
+    "wav": "14470-2-0-14.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "14470-2-0-21": {
+    "wav": "14470-2-0-21.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "14470-2-0-4": {
+    "wav": "14470-2-0-4.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "14470-2-0-56": {
+    "wav": "14470-2-0-56.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "14470-2-0-65": {
+    "wav": "14470-2-0-65.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "14470-2-0-70": {
+    "wav": "14470-2-0-70.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "14470-2-0-72": {
+    "wav": "14470-2-0-72.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "146244-4-0-0": {
+    "wav": "146244-4-0-0.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 2.0467291666666667
+  },
+  "147491-9-0-0": {
+    "wav": "147491-9-0-0.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "147491-9-0-5": {
+    "wav": "147491-9-0-5.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "147491-9-2-10": {
+    "wav": "147491-9-2-10.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "147491-9-2-25": {
+    "wav": "147491-9-2-25.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "147491-9-2-32": {
+    "wav": "147491-9-2-32.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "147491-9-2-6": {
+    "wav": "147491-9-2-6.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "155241-9-0-50": {
+    "wav": "155241-9-0-50.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "155241-9-0-56": {
+    "wav": "155241-9-0-56.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "155241-9-0-69": {
+    "wav": "155241-9-0-69.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "155241-9-0-79": {
+    "wav": "155241-9-0-79.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "155241-9-0-8": {
+    "wav": "155241-9-0-8.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "155241-9-0-88": {
+    "wav": "155241-9-0-88.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "155262-2-0-101": {
+    "wav": "155262-2-0-101.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "155262-2-0-11": {
+    "wav": "155262-2-0-11.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "155262-2-0-15": {
+    "wav": "155262-2-0-15.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "155262-2-0-2": {
+    "wav": "155262-2-0-2.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "155262-2-0-21": {
+    "wav": "155262-2-0-21.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "155262-2-0-48": {
+    "wav": "155262-2-0-48.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "155262-2-0-58": {
+    "wav": "155262-2-0-58.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "155262-2-0-63": {
+    "wav": "155262-2-0-63.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "155280-2-0-10": {
+    "wav": "155280-2-0-10.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "155280-2-0-11": {
+    "wav": "155280-2-0-11.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "155280-2-0-13": {
+    "wav": "155280-2-0-13.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "155280-2-0-15": {
+    "wav": "155280-2-0-15.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "155280-2-0-3": {
+    "wav": "155280-2-0-3.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "155280-2-0-5": {
+    "wav": "155280-2-0-5.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "155280-2-0-6": {
+    "wav": "155280-2-0-6.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "155280-2-0-7": {
+    "wav": "155280-2-0-7.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "155311-3-0-0": {
+    "wav": "155311-3-0-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 3.6899773242630385
+  },
+  "15544-5-0-0": {
+    "wav": "15544-5-0-0.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "15544-5-0-1": {
+    "wav": "15544-5-0-1.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "15544-5-0-10": {
+    "wav": "15544-5-0-10.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "15544-5-0-11": {
+    "wav": "15544-5-0-11.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "15544-5-0-12": {
+    "wav": "15544-5-0-12.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "15544-5-0-13": {
+    "wav": "15544-5-0-13.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "15544-5-0-14": {
+    "wav": "15544-5-0-14.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "15544-5-0-15": {
+    "wav": "15544-5-0-15.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "15544-5-0-16": {
+    "wav": "15544-5-0-16.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "15544-5-0-17": {
+    "wav": "15544-5-0-17.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "15544-5-0-18": {
+    "wav": "15544-5-0-18.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "15544-5-0-19": {
+    "wav": "15544-5-0-19.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "15544-5-0-2": {
+    "wav": "15544-5-0-2.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "15544-5-0-3": {
+    "wav": "15544-5-0-3.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "15544-5-0-4": {
+    "wav": "15544-5-0-4.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "15544-5-0-5": {
+    "wav": "15544-5-0-5.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "15544-5-0-6": {
+    "wav": "15544-5-0-6.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "15544-5-0-7": {
+    "wav": "15544-5-0-7.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "15544-5-0-8": {
+    "wav": "15544-5-0-8.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "15544-5-0-9": {
+    "wav": "15544-5-0-9.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "157207-6-0-0": {
+    "wav": "157207-6-0-0.wav",
+    "classID": 6,
+    "class_string": "gun_shot",
+    "salience": 1,
+    "fold": "10",
+    "duration": 2.9279591836734693
+  },
+  "157207-6-1-0": {
+    "wav": "157207-6-1-0.wav",
+    "classID": 6,
+    "class_string": "gun_shot",
+    "salience": 1,
+    "fold": "10",
+    "duration": 3.199501133786848
+  },
+  "157207-6-10-0": {
+    "wav": "157207-6-10-0.wav",
+    "classID": 6,
+    "class_string": "gun_shot",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.9690476190476192
+  },
+  "157207-6-2-0": {
+    "wav": "157207-6-2-0.wav",
+    "classID": 6,
+    "class_string": "gun_shot",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.1688208616780045
+  },
+  "157207-6-3-0": {
+    "wav": "157207-6-3-0.wav",
+    "classID": 6,
+    "class_string": "gun_shot",
+    "salience": 1,
+    "fold": "10",
+    "duration": 0.8972789115646258
+  },
+  "157207-6-4-0": {
+    "wav": "157207-6-4-0.wav",
+    "classID": 6,
+    "class_string": "gun_shot",
+    "salience": 1,
+    "fold": "10",
+    "duration": 0.94
+  },
+  "157207-6-5-0": {
+    "wav": "157207-6-5-0.wav",
+    "classID": 6,
+    "class_string": "gun_shot",
+    "salience": 1,
+    "fold": "10",
+    "duration": 2.0779138321995463
+  },
+  "157207-6-6-0": {
+    "wav": "157207-6-6-0.wav",
+    "classID": 6,
+    "class_string": "gun_shot",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.26
+  },
+  "157207-6-7-0": {
+    "wav": "157207-6-7-0.wav",
+    "classID": 6,
+    "class_string": "gun_shot",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.0153287981859411
+  },
+  "157207-6-8-0": {
+    "wav": "157207-6-8-0.wav",
+    "classID": 6,
+    "class_string": "gun_shot",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.0389569160997731
+  },
+  "157207-6-9-0": {
+    "wav": "157207-6-9-0.wav",
+    "classID": 6,
+    "class_string": "gun_shot",
+    "salience": 1,
+    "fold": "10",
+    "duration": 2.0897052154195013
+  },
+  "157800-6-0-0": {
+    "wav": "157800-6-0-0.wav",
+    "classID": 6,
+    "class_string": "gun_shot",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.1493877551020408
+  },
+  "159709-6-0-0": {
+    "wav": "159709-6-0-0.wav",
+    "classID": 6,
+    "class_string": "gun_shot",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.92
+  },
+  "159742-8-0-0": {
+    "wav": "159742-8-0-0.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "159742-8-0-1": {
+    "wav": "159742-8-0-1.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "159742-8-0-10": {
+    "wav": "159742-8-0-10.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "159742-8-0-11": {
+    "wav": "159742-8-0-11.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "159742-8-0-12": {
+    "wav": "159742-8-0-12.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "159742-8-0-13": {
+    "wav": "159742-8-0-13.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "159742-8-0-14": {
+    "wav": "159742-8-0-14.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "159742-8-0-2": {
+    "wav": "159742-8-0-2.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "159742-8-0-3": {
+    "wav": "159742-8-0-3.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "159742-8-0-4": {
+    "wav": "159742-8-0-4.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "159742-8-0-5": {
+    "wav": "159742-8-0-5.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "159742-8-0-6": {
+    "wav": "159742-8-0-6.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "159742-8-0-7": {
+    "wav": "159742-8-0-7.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "159742-8-0-8": {
+    "wav": "159742-8-0-8.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "159742-8-0-9": {
+    "wav": "159742-8-0-9.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-0-0": {
+    "wav": "162134-7-0-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-0-1": {
+    "wav": "162134-7-0-1.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-0-2": {
+    "wav": "162134-7-0-2.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-1-0": {
+    "wav": "162134-7-1-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 3.73
+  },
+  "162134-7-10-0": {
+    "wav": "162134-7-10-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-10-1": {
+    "wav": "162134-7-10-1.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-10-2": {
+    "wav": "162134-7-10-2.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-10-3": {
+    "wav": "162134-7-10-3.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-11-0": {
+    "wav": "162134-7-11-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-11-1": {
+    "wav": "162134-7-11-1.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-11-2": {
+    "wav": "162134-7-11-2.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-11-3": {
+    "wav": "162134-7-11-3.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-11-4": {
+    "wav": "162134-7-11-4.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-11-5": {
+    "wav": "162134-7-11-5.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-11-6": {
+    "wav": "162134-7-11-6.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-11-7": {
+    "wav": "162134-7-11-7.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-12-0": {
+    "wav": "162134-7-12-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-12-1": {
+    "wav": "162134-7-12-1.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-12-2": {
+    "wav": "162134-7-12-2.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-12-3": {
+    "wav": "162134-7-12-3.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-12-4": {
+    "wav": "162134-7-12-4.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-13-0": {
+    "wav": "162134-7-13-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-13-1": {
+    "wav": "162134-7-13-1.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-13-2": {
+    "wav": "162134-7-13-2.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-13-3": {
+    "wav": "162134-7-13-3.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-13-4": {
+    "wav": "162134-7-13-4.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-14-0": {
+    "wav": "162134-7-14-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-14-1": {
+    "wav": "162134-7-14-1.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-14-2": {
+    "wav": "162134-7-14-2.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-15-0": {
+    "wav": "162134-7-15-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-15-1": {
+    "wav": "162134-7-15-1.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-15-2": {
+    "wav": "162134-7-15-2.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-15-3": {
+    "wav": "162134-7-15-3.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-15-4": {
+    "wav": "162134-7-15-4.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-16-0": {
+    "wav": "162134-7-16-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-16-1": {
+    "wav": "162134-7-16-1.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-17-0": {
+    "wav": "162134-7-17-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-17-1": {
+    "wav": "162134-7-17-1.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-17-2": {
+    "wav": "162134-7-17-2.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-17-3": {
+    "wav": "162134-7-17-3.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-17-4": {
+    "wav": "162134-7-17-4.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-2-0": {
+    "wav": "162134-7-2-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-3-0": {
+    "wav": "162134-7-3-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-4-0": {
+    "wav": "162134-7-4-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 2.52
+  },
+  "162134-7-5-0": {
+    "wav": "162134-7-5-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.98
+  },
+  "162134-7-6-0": {
+    "wav": "162134-7-6-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.8
+  },
+  "162134-7-7-0": {
+    "wav": "162134-7-7-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-7-1": {
+    "wav": "162134-7-7-1.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-8-0": {
+    "wav": "162134-7-8-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-8-1": {
+    "wav": "162134-7-8-1.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-8-2": {
+    "wav": "162134-7-8-2.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-8-3": {
+    "wav": "162134-7-8-3.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-8-4": {
+    "wav": "162134-7-8-4.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-8-5": {
+    "wav": "162134-7-8-5.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-8-6": {
+    "wav": "162134-7-8-6.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-8-7": {
+    "wav": "162134-7-8-7.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-9-0": {
+    "wav": "162134-7-9-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-9-1": {
+    "wav": "162134-7-9-1.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-9-2": {
+    "wav": "162134-7-9-2.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-9-3": {
+    "wav": "162134-7-9-3.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162134-7-9-4": {
+    "wav": "162134-7-9-4.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "162148-3-0-0": {
+    "wav": "162148-3-0-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 0.45
+  },
+  "163459-3-0-0": {
+    "wav": "163459-3-0-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 0.78
+  },
+  "164194-2-0-10": {
+    "wav": "164194-2-0-10.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "164194-2-0-11": {
+    "wav": "164194-2-0-11.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "164194-2-0-14": {
+    "wav": "164194-2-0-14.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "164194-2-0-18": {
+    "wav": "164194-2-0-18.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "164194-2-0-24": {
+    "wav": "164194-2-0-24.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "164194-2-0-26": {
+    "wav": "164194-2-0-26.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "164194-2-0-29": {
+    "wav": "164194-2-0-29.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "164194-2-0-7": {
+    "wav": "164194-2-0-7.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "164377-9-0-16": {
+    "wav": "164377-9-0-16.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "164377-9-1-15": {
+    "wav": "164377-9-1-15.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "164377-9-1-3": {
+    "wav": "164377-9-1-3.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "164377-9-1-36": {
+    "wav": "164377-9-1-36.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "164377-9-1-43": {
+    "wav": "164377-9-1-43.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "164377-9-1-50": {
+    "wav": "164377-9-1-50.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "164377-9-1-92": {
+    "wav": "164377-9-1-92.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "164646-6-0-0": {
+    "wav": "164646-6-0-0.wav",
+    "classID": 6,
+    "class_string": "gun_shot",
+    "salience": 1,
+    "fold": "10",
+    "duration": 0.7866875
+  },
+  "165166-8-0-0": {
+    "wav": "165166-8-0-0.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "165166-8-0-1": {
+    "wav": "165166-8-0-1.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "165166-8-0-2": {
+    "wav": "165166-8-0-2.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "165166-8-0-3": {
+    "wav": "165166-8-0-3.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "165166-8-0-4": {
+    "wav": "165166-8-0-4.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "165166-8-0-5": {
+    "wav": "165166-8-0-5.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "165166-8-0-6": {
+    "wav": "165166-8-0-6.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "165166-8-0-7": {
+    "wav": "165166-8-0-7.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "165166-8-0-8": {
+    "wav": "165166-8-0-8.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "165640-4-0-0": {
+    "wav": "165640-4-0-0.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "165640-4-0-1": {
+    "wav": "165640-4-0-1.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "165640-4-0-2": {
+    "wav": "165640-4-0-2.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "167464-0-0-0": {
+    "wav": "167464-0-0-0.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "167464-0-0-1": {
+    "wav": "167464-0-0-1.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "167464-0-0-10": {
+    "wav": "167464-0-0-10.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "167464-0-0-11": {
+    "wav": "167464-0-0-11.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "167464-0-0-12": {
+    "wav": "167464-0-0-12.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "167464-0-0-13": {
+    "wav": "167464-0-0-13.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "167464-0-0-14": {
+    "wav": "167464-0-0-14.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "167464-0-0-15": {
+    "wav": "167464-0-0-15.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "167464-0-0-16": {
+    "wav": "167464-0-0-16.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "167464-0-0-17": {
+    "wav": "167464-0-0-17.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "167464-0-0-18": {
+    "wav": "167464-0-0-18.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "167464-0-0-19": {
+    "wav": "167464-0-0-19.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "167464-0-0-2": {
+    "wav": "167464-0-0-2.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "167464-0-0-20": {
+    "wav": "167464-0-0-20.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "167464-0-0-21": {
+    "wav": "167464-0-0-21.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "167464-0-0-22": {
+    "wav": "167464-0-0-22.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "167464-0-0-23": {
+    "wav": "167464-0-0-23.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "167464-0-0-24": {
+    "wav": "167464-0-0-24.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "167464-0-0-3": {
+    "wav": "167464-0-0-3.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "167464-0-0-4": {
+    "wav": "167464-0-0-4.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "167464-0-0-5": {
+    "wav": "167464-0-0-5.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "167464-0-0-6": {
+    "wav": "167464-0-0-6.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "167464-0-0-7": {
+    "wav": "167464-0-0-7.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "167464-0-0-8": {
+    "wav": "167464-0-0-8.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "167464-0-0-9": {
+    "wav": "167464-0-0-9.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "167750-4-0-0": {
+    "wav": "167750-4-0-0.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 2.5
+  },
+  "167750-4-1-0": {
+    "wav": "167750-4-1-0.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "167750-4-2-0": {
+    "wav": "167750-4-2-0.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.568639455782313
+  },
+  "167750-4-3-0": {
+    "wav": "167750-4-3-0.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.29
+  },
+  "169261-6-0-0": {
+    "wav": "169261-6-0-0.wav",
+    "classID": 6,
+    "class_string": "gun_shot",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.66
+  },
+  "17074-1-0-0": {
+    "wav": "17074-1-0-0.wav",
+    "classID": 1,
+    "class_string": "car_horn",
+    "salience": 2,
+    "fold": "10",
+    "duration": 0.86
+  },
+  "17124-1-0-0": {
+    "wav": "17124-1-0-0.wav",
+    "classID": 1,
+    "class_string": "car_horn",
+    "salience": 2,
+    "fold": "10",
+    "duration": 0.23870748299319727
+  },
+  "171478-9-0-26": {
+    "wav": "171478-9-0-26.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "171478-9-0-28": {
+    "wav": "171478-9-0-28.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "171478-9-0-38": {
+    "wav": "171478-9-0-38.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "171478-9-0-4": {
+    "wav": "171478-9-0-4.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "171478-9-0-55": {
+    "wav": "171478-9-0-55.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "171478-9-0-57": {
+    "wav": "171478-9-0-57.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "171478-9-0-58": {
+    "wav": "171478-9-0-58.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "172519-9-0-10": {
+    "wav": "172519-9-0-10.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "172519-9-0-13": {
+    "wav": "172519-9-0-13.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "172519-9-0-49": {
+    "wav": "172519-9-0-49.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "172519-9-0-53": {
+    "wav": "172519-9-0-53.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "172519-9-0-67": {
+    "wav": "172519-9-0-67.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "172519-9-0-8": {
+    "wav": "172519-9-0-8.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "174289-6-0-0": {
+    "wav": "174289-6-0-0.wav",
+    "classID": 6,
+    "class_string": "gun_shot",
+    "salience": 1,
+    "fold": "10",
+    "duration": 2.22
+  },
+  "174289-6-1-0": {
+    "wav": "174289-6-1-0.wav",
+    "classID": 6,
+    "class_string": "gun_shot",
+    "salience": 1,
+    "fold": "10",
+    "duration": 2.349291666666667
+  },
+  "174289-6-2-0": {
+    "wav": "174289-6-2-0.wav",
+    "classID": 6,
+    "class_string": "gun_shot",
+    "salience": 1,
+    "fold": "10",
+    "duration": 2.46
+  },
+  "174289-6-3-0": {
+    "wav": "174289-6-3-0.wav",
+    "classID": 6,
+    "class_string": "gun_shot",
+    "salience": 1,
+    "fold": "10",
+    "duration": 2.236645833333333
+  },
+  "174292-6-0-0": {
+    "wav": "174292-6-0-0.wav",
+    "classID": 6,
+    "class_string": "gun_shot",
+    "salience": 1,
+    "fold": "10",
+    "duration": 2.929375
+  },
+  "174292-6-1-0": {
+    "wav": "174292-6-1-0.wav",
+    "classID": 6,
+    "class_string": "gun_shot",
+    "salience": 1,
+    "fold": "10",
+    "duration": 2.89
+  },
+  "174292-6-2-0": {
+    "wav": "174292-6-2-0.wav",
+    "classID": 6,
+    "class_string": "gun_shot",
+    "salience": 1,
+    "fold": "10",
+    "duration": 3.4882708333333334
+  },
+  "17486-3-0-0": {
+    "wav": "17486-3-0-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 0.65
+  },
+  "17486-3-1-0": {
+    "wav": "17486-3-1-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.29
+  },
+  "17486-3-2-0": {
+    "wav": "17486-3-2-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 0.94
+  },
+  "175842-1-0-0": {
+    "wav": "175842-1-0-0.wav",
+    "classID": 1,
+    "class_string": "car_horn",
+    "salience": 1,
+    "fold": "10",
+    "duration": 0.48
+  },
+  "175850-1-0-0": {
+    "wav": "175850-1-0-0.wav",
+    "classID": 1,
+    "class_string": "car_horn",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.74
+  },
+  "178261-7-0-0": {
+    "wav": "178261-7-0-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.8
+  },
+  "178261-7-1-0": {
+    "wav": "178261-7-1-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "178261-7-2-0": {
+    "wav": "178261-7-2-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "178261-7-3-0": {
+    "wav": "178261-7-3-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "178261-7-3-1": {
+    "wav": "178261-7-3-1.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "178261-7-3-2": {
+    "wav": "178261-7-3-2.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "178261-7-3-3": {
+    "wav": "178261-7-3-3.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "178261-7-3-4": {
+    "wav": "178261-7-3-4.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "178261-7-3-5": {
+    "wav": "178261-7-3-5.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "178261-7-3-6": {
+    "wav": "178261-7-3-6.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "178402-1-0-0": {
+    "wav": "178402-1-0-0.wav",
+    "classID": 1,
+    "class_string": "car_horn",
+    "salience": 1,
+    "fold": "10",
+    "duration": 2.045145833333333
+  },
+  "178826-2-0-10": {
+    "wav": "178826-2-0-10.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "178826-2-0-12": {
+    "wav": "178826-2-0-12.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "178826-2-0-14": {
+    "wav": "178826-2-0-14.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "178826-2-0-16": {
+    "wav": "178826-2-0-16.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "178826-2-0-17": {
+    "wav": "178826-2-0-17.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "178826-2-0-20": {
+    "wav": "178826-2-0-20.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "178826-2-0-28": {
+    "wav": "178826-2-0-28.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "178826-2-0-39": {
+    "wav": "178826-2-0-39.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "179868-1-0-0": {
+    "wav": "179868-1-0-0.wav",
+    "classID": 1,
+    "class_string": "car_horn",
+    "salience": 1,
+    "fold": "10",
+    "duration": 2.15
+  },
+  "180127-4-0-0": {
+    "wav": "180127-4-0-0.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "180127-4-0-1": {
+    "wav": "180127-4-0-1.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "180127-4-0-10": {
+    "wav": "180127-4-0-10.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "180127-4-0-11": {
+    "wav": "180127-4-0-11.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "180127-4-0-12": {
+    "wav": "180127-4-0-12.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "180127-4-0-13": {
+    "wav": "180127-4-0-13.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "180127-4-0-14": {
+    "wav": "180127-4-0-14.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "180127-4-0-15": {
+    "wav": "180127-4-0-15.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "180127-4-0-16": {
+    "wav": "180127-4-0-16.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "180127-4-0-17": {
+    "wav": "180127-4-0-17.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "180127-4-0-18": {
+    "wav": "180127-4-0-18.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "180127-4-0-19": {
+    "wav": "180127-4-0-19.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "180127-4-0-2": {
+    "wav": "180127-4-0-2.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "180127-4-0-20": {
+    "wav": "180127-4-0-20.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "180127-4-0-21": {
+    "wav": "180127-4-0-21.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "180127-4-0-3": {
+    "wav": "180127-4-0-3.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "180127-4-0-4": {
+    "wav": "180127-4-0-4.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "180127-4-0-5": {
+    "wav": "180127-4-0-5.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "180127-4-0-6": {
+    "wav": "180127-4-0-6.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "180127-4-0-7": {
+    "wav": "180127-4-0-7.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "180127-4-0-8": {
+    "wav": "180127-4-0-8.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "180127-4-0-9": {
+    "wav": "180127-4-0-9.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "181624-4-0-0": {
+    "wav": "181624-4-0-0.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 2.3078004535147394
+  },
+  "181624-4-1-0": {
+    "wav": "181624-4-1-0.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "181624-4-10-0": {
+    "wav": "181624-4-10-0.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 2.28
+  },
+  "181624-4-2-0": {
+    "wav": "181624-4-2-0.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 2.65
+  },
+  "181624-4-3-0": {
+    "wav": "181624-4-3-0.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 0.6461678004535147
+  },
+  "181624-4-4-0": {
+    "wav": "181624-4-4-0.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.2
+  },
+  "181624-4-5-0": {
+    "wav": "181624-4-5-0.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 0.43848072562358276
+  },
+  "181624-4-6-0": {
+    "wav": "181624-4-6-0.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 0.55
+  },
+  "181624-4-7-0": {
+    "wav": "181624-4-7-0.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 0.46
+  },
+  "181624-4-8-0": {
+    "wav": "181624-4-8-0.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.73
+  },
+  "181624-4-9-0": {
+    "wav": "181624-4-9-0.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.96
+  },
+  "187110-2-0-1": {
+    "wav": "187110-2-0-1.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "187110-2-0-10": {
+    "wav": "187110-2-0-10.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "187110-2-0-12": {
+    "wav": "187110-2-0-12.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "187110-2-0-27": {
+    "wav": "187110-2-0-27.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "187110-2-0-30": {
+    "wav": "187110-2-0-30.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "187110-2-0-34": {
+    "wav": "187110-2-0-34.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "187110-2-0-6": {
+    "wav": "187110-2-0-6.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "187110-2-0-8": {
+    "wav": "187110-2-0-8.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "187863-4-0-0": {
+    "wav": "187863-4-0-0.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "187863-4-0-1": {
+    "wav": "187863-4-0-1.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "187863-4-0-2": {
+    "wav": "187863-4-0-2.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "187863-4-0-3": {
+    "wav": "187863-4-0-3.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "187863-4-0-4": {
+    "wav": "187863-4-0-4.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "187863-4-0-5": {
+    "wav": "187863-4-0-5.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "188497-2-0-0": {
+    "wav": "188497-2-0-0.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "188497-2-0-1": {
+    "wav": "188497-2-0-1.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "188497-2-0-11": {
+    "wav": "188497-2-0-11.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "188497-2-0-17": {
+    "wav": "188497-2-0-17.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "188497-2-0-19": {
+    "wav": "188497-2-0-19.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "188497-2-0-2": {
+    "wav": "188497-2-0-2.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "188497-2-0-23": {
+    "wav": "188497-2-0-23.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "188497-2-0-8": {
+    "wav": "188497-2-0-8.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "188813-7-0-0": {
+    "wav": "188813-7-0-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 0.84
+  },
+  "188813-7-1-0": {
+    "wav": "188813-7-1-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 2.0
+  },
+  "188813-7-10-0": {
+    "wav": "188813-7-10-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "188813-7-10-1": {
+    "wav": "188813-7-10-1.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "188813-7-10-2": {
+    "wav": "188813-7-10-2.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "188813-7-10-3": {
+    "wav": "188813-7-10-3.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "188813-7-11-0": {
+    "wav": "188813-7-11-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "188813-7-11-1": {
+    "wav": "188813-7-11-1.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "188813-7-12-0": {
+    "wav": "188813-7-12-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.03
+  },
+  "188813-7-13-0": {
+    "wav": "188813-7-13-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 2.6492604166666665
+  },
+  "188813-7-2-0": {
+    "wav": "188813-7-2-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.55
+  },
+  "188813-7-3-0": {
+    "wav": "188813-7-3-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 2.3261770833333335
+  },
+  "188813-7-4-0": {
+    "wav": "188813-7-4-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 3.03696875
+  },
+  "188813-7-5-0": {
+    "wav": "188813-7-5-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.87
+  },
+  "188813-7-6-0": {
+    "wav": "188813-7-6-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 2.26
+  },
+  "188813-7-7-0": {
+    "wav": "188813-7-7-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 3.2954270833333332
+  },
+  "188813-7-8-0": {
+    "wav": "188813-7-8-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 2.13
+  },
+  "188813-7-9-0": {
+    "wav": "188813-7-9-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 1,
+    "fold": "10",
+    "duration": 3.2954270833333332
+  },
+  "189982-0-0-11": {
+    "wav": "189982-0-0-11.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "189982-0-0-13": {
+    "wav": "189982-0-0-13.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "189982-0-0-16": {
+    "wav": "189982-0-0-16.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "189982-0-0-17": {
+    "wav": "189982-0-0-17.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "189982-0-0-18": {
+    "wav": "189982-0-0-18.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "189982-0-0-19": {
+    "wav": "189982-0-0-19.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "189982-0-0-2": {
+    "wav": "189982-0-0-2.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "189982-0-0-20": {
+    "wav": "189982-0-0-20.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "189982-0-0-23": {
+    "wav": "189982-0-0-23.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "189982-0-0-27": {
+    "wav": "189982-0-0-27.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "189982-0-0-28": {
+    "wav": "189982-0-0-28.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "189982-0-0-3": {
+    "wav": "189982-0-0-3.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "189982-0-0-30": {
+    "wav": "189982-0-0-30.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "189982-0-0-33": {
+    "wav": "189982-0-0-33.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "189982-0-0-35": {
+    "wav": "189982-0-0-35.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "189982-0-0-36": {
+    "wav": "189982-0-0-36.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "189982-0-0-38": {
+    "wav": "189982-0-0-38.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "189982-0-0-39": {
+    "wav": "189982-0-0-39.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "189982-0-0-4": {
+    "wav": "189982-0-0-4.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "189982-0-0-42": {
+    "wav": "189982-0-0-42.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "189982-0-0-43": {
+    "wav": "189982-0-0-43.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "189982-0-0-44": {
+    "wav": "189982-0-0-44.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "189982-0-0-45": {
+    "wav": "189982-0-0-45.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "189982-0-0-6": {
+    "wav": "189982-0-0-6.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "189982-0-0-7": {
+    "wav": "189982-0-0-7.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "189985-0-0-0": {
+    "wav": "189985-0-0-0.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "189985-0-0-1": {
+    "wav": "189985-0-0-1.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "189985-0-0-2": {
+    "wav": "189985-0-0-2.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "189985-0-0-3": {
+    "wav": "189985-0-0-3.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "189985-0-0-4": {
+    "wav": "189985-0-0-4.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "189985-0-0-5": {
+    "wav": "189985-0-0-5.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "189985-0-0-6": {
+    "wav": "189985-0-0-6.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "195063-4-0-0": {
+    "wav": "195063-4-0-0.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "195063-4-1-0": {
+    "wav": "195063-4-1-0.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "196069-2-0-0": {
+    "wav": "196069-2-0-0.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 3.1481632653061222
+  },
+  "196084-2-0-0": {
+    "wav": "196084-2-0-0.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "196084-2-0-1": {
+    "wav": "196084-2-0-1.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "196084-2-0-2": {
+    "wav": "196084-2-0-2.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "196086-2-0-0": {
+    "wav": "196086-2-0-0.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.04843537414966
+  },
+  "196127-3-0-0": {
+    "wav": "196127-3-0-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "196127-3-0-1": {
+    "wav": "196127-3-0-1.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "196127-3-0-3": {
+    "wav": "196127-3-0-3.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "196127-3-0-4": {
+    "wav": "196127-3-0-4.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "197554-2-0-23": {
+    "wav": "197554-2-0-23.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "197554-2-0-26": {
+    "wav": "197554-2-0-26.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "197554-2-0-28": {
+    "wav": "197554-2-0-28.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "197554-2-0-3": {
+    "wav": "197554-2-0-3.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "197554-2-0-60": {
+    "wav": "197554-2-0-60.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "197554-2-0-69": {
+    "wav": "197554-2-0-69.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "197554-2-0-74": {
+    "wav": "197554-2-0-74.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "197554-2-0-82": {
+    "wav": "197554-2-0-82.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "199261-3-0-0": {
+    "wav": "199261-3-0-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "199261-3-0-1": {
+    "wav": "199261-3-0-1.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "199261-3-0-2": {
+    "wav": "199261-3-0-2.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "199261-3-0-4": {
+    "wav": "199261-3-0-4.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "200460-6-0-0": {
+    "wav": "200460-6-0-0.wav",
+    "classID": 6,
+    "class_string": "gun_shot",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.8984353741496598
+  },
+  "200460-6-1-0": {
+    "wav": "200460-6-1-0.wav",
+    "classID": 6,
+    "class_string": "gun_shot",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.8060997732426305
+  },
+  "200460-6-2-0": {
+    "wav": "200460-6-2-0.wav",
+    "classID": 6,
+    "class_string": "gun_shot",
+    "salience": 1,
+    "fold": "10",
+    "duration": 0.86
+  },
+  "200460-6-3-0": {
+    "wav": "200460-6-3-0.wav",
+    "classID": 6,
+    "class_string": "gun_shot",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.2468253968253968
+  },
+  "200460-6-4-0": {
+    "wav": "200460-6-4-0.wav",
+    "classID": 6,
+    "class_string": "gun_shot",
+    "salience": 1,
+    "fold": "10",
+    "duration": 0.8568707482993198
+  },
+  "200460-6-5-0": {
+    "wav": "200460-6-5-0.wav",
+    "classID": 6,
+    "class_string": "gun_shot",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.0870294784580499
+  },
+  "200786-5-0-0": {
+    "wav": "200786-5-0-0.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "200786-5-1-0": {
+    "wav": "200786-5-1-0.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "200786-5-1-1": {
+    "wav": "200786-5-1-1.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "200786-5-1-2": {
+    "wav": "200786-5-1-2.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "200786-5-1-3": {
+    "wav": "200786-5-1-3.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "200786-5-1-4": {
+    "wav": "200786-5-1-4.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "200786-5-1-5": {
+    "wav": "200786-5-1-5.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "202334-9-0-105": {
+    "wav": "202334-9-0-105.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "202334-9-0-106": {
+    "wav": "202334-9-0-106.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "202334-9-0-137": {
+    "wav": "202334-9-0-137.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "202334-9-0-202": {
+    "wav": "202334-9-0-202.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "202334-9-0-63": {
+    "wav": "202334-9-0-63.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "202334-9-0-88": {
+    "wav": "202334-9-0-88.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "203424-9-0-15": {
+    "wav": "203424-9-0-15.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "203424-9-0-18": {
+    "wav": "203424-9-0-18.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "203424-9-0-26": {
+    "wav": "203424-9-0-26.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "203424-9-0-34": {
+    "wav": "203424-9-0-34.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "203424-9-0-4": {
+    "wav": "203424-9-0-4.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "203424-9-0-46": {
+    "wav": "203424-9-0-46.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "205013-6-0-0": {
+    "wav": "205013-6-0-0.wav",
+    "classID": 6,
+    "class_string": "gun_shot",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.49718820861678
+  },
+  "20571-3-0-0": {
+    "wav": "20571-3-0-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 2.946326530612245
+  },
+  "20571-3-1-0": {
+    "wav": "20571-3-1-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "207213-2-0-109": {
+    "wav": "207213-2-0-109.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "207213-2-0-130": {
+    "wav": "207213-2-0-130.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "207213-2-0-134": {
+    "wav": "207213-2-0-134.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "207213-2-0-41": {
+    "wav": "207213-2-0-41.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "207213-2-0-52": {
+    "wav": "207213-2-0-52.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "207213-2-0-73": {
+    "wav": "207213-2-0-73.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "207213-2-0-81": {
+    "wav": "207213-2-0-81.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "207213-2-0-85": {
+    "wav": "207213-2-0-85.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "208652-8-0-0": {
+    "wav": "208652-8-0-0.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "208652-8-2-0": {
+    "wav": "208652-8-2-0.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 1.4878231292517006
+  },
+  "208652-8-4-0": {
+    "wav": "208652-8-4-0.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 1.64
+  },
+  "208652-8-6-0": {
+    "wav": "208652-8-6-0.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 1.5264625850340137
+  },
+  "209672-3-0-0": {
+    "wav": "209672-3-0-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.52
+  },
+  "209672-3-3-0": {
+    "wav": "209672-3-3-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 0.577891156462585
+  },
+  "209672-3-6-0": {
+    "wav": "209672-3-6-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 0.7355102040816327
+  },
+  "209672-3-8-0": {
+    "wav": "209672-3-8-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.05
+  },
+  "22973-3-0-0": {
+    "wav": "22973-3-0-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "22973-3-0-1": {
+    "wav": "22973-3-0-1.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "22973-3-0-2": {
+    "wav": "22973-3-0-2.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "23218-5-0-0": {
+    "wav": "23218-5-0-0.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.52
+  },
+  "24076-1-0-0": {
+    "wav": "24076-1-0-0.wav",
+    "classID": 1,
+    "class_string": "car_horn",
+    "salience": 1,
+    "fold": "10",
+    "duration": 0.99
+  },
+  "24076-1-1-0": {
+    "wav": "24076-1-1-0.wav",
+    "classID": 1,
+    "class_string": "car_horn",
+    "salience": 1,
+    "fold": "10",
+    "duration": 3.15
+  },
+  "25037-6-0-0": {
+    "wav": "25037-6-0-0.wav",
+    "classID": 6,
+    "class_string": "gun_shot",
+    "salience": 2,
+    "fold": "10",
+    "duration": 1.33
+  },
+  "25037-6-1-0": {
+    "wav": "25037-6-1-0.wav",
+    "classID": 6,
+    "class_string": "gun_shot",
+    "salience": 2,
+    "fold": "10",
+    "duration": 1.3261224489795918
+  },
+  "26173-8-0-0": {
+    "wav": "26173-8-0-0.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 1,
+    "fold": "10",
+    "duration": 2.37
+  },
+  "26255-3-0-0": {
+    "wav": "26255-3-0-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 0.2493424036281179
+  },
+  "26255-3-13-1": {
+    "wav": "26255-3-13-1.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "26255-3-6-0": {
+    "wav": "26255-3-6-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 0.7180725623582767
+  },
+  "26255-3-8-0": {
+    "wav": "26255-3-8-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 0.5884353741496599
+  },
+  "26344-4-0-0": {
+    "wav": "26344-4-0-0.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 2.908548752834467
+  },
+  "26344-4-1-0": {
+    "wav": "26344-4-1-0.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 2.64
+  },
+  "27070-2-0-0": {
+    "wav": "27070-2-0-0.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "27070-2-0-2": {
+    "wav": "27070-2-0-2.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "27070-2-0-3": {
+    "wav": "27070-2-0-3.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "27070-2-0-4": {
+    "wav": "27070-2-0-4.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "27070-2-0-5": {
+    "wav": "27070-2-0-5.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "27070-2-0-7": {
+    "wav": "27070-2-0-7.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "27070-2-0-8": {
+    "wav": "27070-2-0-8.wav",
+    "classID": 2,
+    "class_string": "children_playing",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "28808-1-0-0": {
+    "wav": "28808-1-0-0.wav",
+    "classID": 1,
+    "class_string": "car_horn",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "28808-1-0-1": {
+    "wav": "28808-1-0-1.wav",
+    "classID": 1,
+    "class_string": "car_horn",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "28808-1-0-10": {
+    "wav": "28808-1-0-10.wav",
+    "classID": 1,
+    "class_string": "car_horn",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "28808-1-0-11": {
+    "wav": "28808-1-0-11.wav",
+    "classID": 1,
+    "class_string": "car_horn",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "28808-1-0-2": {
+    "wav": "28808-1-0-2.wav",
+    "classID": 1,
+    "class_string": "car_horn",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "28808-1-0-3": {
+    "wav": "28808-1-0-3.wav",
+    "classID": 1,
+    "class_string": "car_horn",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "28808-1-0-4": {
+    "wav": "28808-1-0-4.wav",
+    "classID": 1,
+    "class_string": "car_horn",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "28808-1-0-5": {
+    "wav": "28808-1-0-5.wav",
+    "classID": 1,
+    "class_string": "car_horn",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "28808-1-0-6": {
+    "wav": "28808-1-0-6.wav",
+    "classID": 1,
+    "class_string": "car_horn",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "28808-1-0-7": {
+    "wav": "28808-1-0-7.wav",
+    "classID": 1,
+    "class_string": "car_horn",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "28808-1-0-8": {
+    "wav": "28808-1-0-8.wav",
+    "classID": 1,
+    "class_string": "car_horn",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "28808-1-0-9": {
+    "wav": "28808-1-0-9.wav",
+    "classID": 1,
+    "class_string": "car_horn",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "28808-1-1-0": {
+    "wav": "28808-1-1-0.wav",
+    "classID": 1,
+    "class_string": "car_horn",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "28808-1-1-1": {
+    "wav": "28808-1-1-1.wav",
+    "classID": 1,
+    "class_string": "car_horn",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "2937-1-0-0": {
+    "wav": "2937-1-0-0.wav",
+    "classID": 1,
+    "class_string": "car_horn",
+    "salience": 1,
+    "fold": "10",
+    "duration": 0.47
+  },
+  "30344-3-0-0": {
+    "wav": "30344-3-0-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "30344-3-0-1": {
+    "wav": "30344-3-0-1.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "30344-3-0-3": {
+    "wav": "30344-3-0-3.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "30344-3-0-4": {
+    "wav": "30344-3-0-4.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "34050-7-0-0": {
+    "wav": "34050-7-0-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 2,
+    "fold": "10",
+    "duration": 3.498004535147392
+  },
+  "34050-7-1-0": {
+    "wav": "34050-7-1-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 2,
+    "fold": "10",
+    "duration": 1.38
+  },
+  "34050-7-2-0": {
+    "wav": "34050-7-2-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 2,
+    "fold": "10",
+    "duration": 1.438684807256236
+  },
+  "34050-7-3-0": {
+    "wav": "34050-7-3-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 2,
+    "fold": "10",
+    "duration": 1.89
+  },
+  "34050-7-4-0": {
+    "wav": "34050-7-4-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 2,
+    "fold": "10",
+    "duration": 2.62
+  },
+  "34050-7-5-0": {
+    "wav": "34050-7-5-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 2,
+    "fold": "10",
+    "duration": 2.2
+  },
+  "34050-7-6-0": {
+    "wav": "34050-7-6-0.wav",
+    "classID": 7,
+    "class_string": "jackhammer",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "35628-3-0-0": {
+    "wav": "35628-3-0-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "39847-5-0-0": {
+    "wav": "39847-5-0-0.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "39847-5-0-1": {
+    "wav": "39847-5-0-1.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "39847-5-0-10": {
+    "wav": "39847-5-0-10.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "39847-5-0-11": {
+    "wav": "39847-5-0-11.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "39847-5-0-12": {
+    "wav": "39847-5-0-12.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "39847-5-0-2": {
+    "wav": "39847-5-0-2.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "39847-5-0-3": {
+    "wav": "39847-5-0-3.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "39847-5-0-4": {
+    "wav": "39847-5-0-4.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "39847-5-0-5": {
+    "wav": "39847-5-0-5.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "39847-5-0-6": {
+    "wav": "39847-5-0-6.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "39847-5-0-7": {
+    "wav": "39847-5-0-7.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "39847-5-0-8": {
+    "wav": "39847-5-0-8.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "39847-5-0-9": {
+    "wav": "39847-5-0-9.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "39847-5-1-0": {
+    "wav": "39847-5-1-0.wav",
+    "classID": 5,
+    "class_string": "engine_idling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 2.8
+  },
+  "41306-3-0-10": {
+    "wav": "41306-3-0-10.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "41306-3-0-13": {
+    "wav": "41306-3-0-13.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "41306-3-0-4": {
+    "wav": "41306-3-0-4.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "51024-3-0-16": {
+    "wav": "51024-3-0-16.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "51024-3-0-2": {
+    "wav": "51024-3-0-2.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "51024-3-0-23": {
+    "wav": "51024-3-0-23.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "51024-3-0-3": {
+    "wav": "51024-3-0-3.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "54086-1-0-0": {
+    "wav": "54086-1-0-0.wav",
+    "classID": 1,
+    "class_string": "car_horn",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.16
+  },
+  "54086-1-1-0": {
+    "wav": "54086-1-1-0.wav",
+    "classID": 1,
+    "class_string": "car_horn",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.2
+  },
+  "54086-1-2-0": {
+    "wav": "54086-1-2-0.wav",
+    "classID": 1,
+    "class_string": "car_horn",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.2874603174603174
+  },
+  "59513-3-0-0": {
+    "wav": "59513-3-0-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "59513-3-0-1": {
+    "wav": "59513-3-0-1.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "59513-3-0-3": {
+    "wav": "59513-3-0-3.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "59513-3-0-4": {
+    "wav": "59513-3-0-4.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "66115-1-0-0": {
+    "wav": "66115-1-0-0.wav",
+    "classID": 1,
+    "class_string": "car_horn",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "66115-1-0-1": {
+    "wav": "66115-1-0-1.wav",
+    "classID": 1,
+    "class_string": "car_horn",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "69661-3-0-14": {
+    "wav": "69661-3-0-14.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "69661-3-0-23": {
+    "wav": "69661-3-0-23.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "69661-3-0-29": {
+    "wav": "69661-3-0-29.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "7062-6-0-0": {
+    "wav": "7062-6-0-0.wav",
+    "classID": 6,
+    "class_string": "gun_shot",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.3665986394557823
+  },
+  "71312-3-0-1": {
+    "wav": "71312-3-0-1.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "71312-3-0-2": {
+    "wav": "71312-3-0-2.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "71312-3-0-4": {
+    "wav": "71312-3-0-4.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "71312-3-0-5": {
+    "wav": "71312-3-0-5.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "72220-3-0-0": {
+    "wav": "72220-3-0-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 3.04
+  },
+  "72220-3-2-2": {
+    "wav": "72220-3-2-2.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "72220-3-2-3": {
+    "wav": "72220-3-2-3.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "72220-3-2-4": {
+    "wav": "72220-3-2-4.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "72538-3-0-0": {
+    "wav": "72538-3-0-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "72538-3-0-1": {
+    "wav": "72538-3-0-1.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "72538-3-0-3": {
+    "wav": "72538-3-0-3.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "72538-3-0-4": {
+    "wav": "72538-3-0-4.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "73524-0-0-0": {
+    "wav": "73524-0-0-0.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "73524-0-0-101": {
+    "wav": "73524-0-0-101.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "73524-0-0-105": {
+    "wav": "73524-0-0-105.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "73524-0-0-113": {
+    "wav": "73524-0-0-113.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "73524-0-0-114": {
+    "wav": "73524-0-0-114.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "73524-0-0-126": {
+    "wav": "73524-0-0-126.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "73524-0-0-127": {
+    "wav": "73524-0-0-127.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "73524-0-0-128": {
+    "wav": "73524-0-0-128.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "73524-0-0-133": {
+    "wav": "73524-0-0-133.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "73524-0-0-137": {
+    "wav": "73524-0-0-137.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "73524-0-0-2": {
+    "wav": "73524-0-0-2.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "73524-0-0-23": {
+    "wav": "73524-0-0-23.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "73524-0-0-30": {
+    "wav": "73524-0-0-30.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "73524-0-0-31": {
+    "wav": "73524-0-0-31.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "73524-0-0-32": {
+    "wav": "73524-0-0-32.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "73524-0-0-5": {
+    "wav": "73524-0-0-5.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "73524-0-0-52": {
+    "wav": "73524-0-0-52.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "73524-0-0-54": {
+    "wav": "73524-0-0-54.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "73524-0-0-6": {
+    "wav": "73524-0-0-6.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "73524-0-0-63": {
+    "wav": "73524-0-0-63.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "73524-0-0-73": {
+    "wav": "73524-0-0-73.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "73524-0-0-74": {
+    "wav": "73524-0-0-74.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "73524-0-0-8": {
+    "wav": "73524-0-0-8.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "73524-0-0-92": {
+    "wav": "73524-0-0-92.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "73524-0-0-98": {
+    "wav": "73524-0-0-98.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "73524-0-0-99": {
+    "wav": "73524-0-0-99.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74364-8-1-0": {
+    "wav": "74364-8-1-0.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74364-8-1-1": {
+    "wav": "74364-8-1-1.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74364-8-1-10": {
+    "wav": "74364-8-1-10.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74364-8-1-11": {
+    "wav": "74364-8-1-11.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74364-8-1-12": {
+    "wav": "74364-8-1-12.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74364-8-1-13": {
+    "wav": "74364-8-1-13.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74364-8-1-14": {
+    "wav": "74364-8-1-14.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74364-8-1-15": {
+    "wav": "74364-8-1-15.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74364-8-1-16": {
+    "wav": "74364-8-1-16.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74364-8-1-17": {
+    "wav": "74364-8-1-17.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74364-8-1-18": {
+    "wav": "74364-8-1-18.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74364-8-1-19": {
+    "wav": "74364-8-1-19.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74364-8-1-2": {
+    "wav": "74364-8-1-2.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74364-8-1-20": {
+    "wav": "74364-8-1-20.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74364-8-1-21": {
+    "wav": "74364-8-1-21.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74364-8-1-22": {
+    "wav": "74364-8-1-22.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74364-8-1-23": {
+    "wav": "74364-8-1-23.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74364-8-1-24": {
+    "wav": "74364-8-1-24.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74364-8-1-25": {
+    "wav": "74364-8-1-25.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74364-8-1-26": {
+    "wav": "74364-8-1-26.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74364-8-1-27": {
+    "wav": "74364-8-1-27.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74364-8-1-3": {
+    "wav": "74364-8-1-3.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74364-8-1-4": {
+    "wav": "74364-8-1-4.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74364-8-1-5": {
+    "wav": "74364-8-1-5.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74364-8-1-6": {
+    "wav": "74364-8-1-6.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74364-8-1-7": {
+    "wav": "74364-8-1-7.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74364-8-1-8": {
+    "wav": "74364-8-1-8.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74364-8-1-9": {
+    "wav": "74364-8-1-9.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74922-4-0-0": {
+    "wav": "74922-4-0-0.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74922-4-0-1": {
+    "wav": "74922-4-0-1.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74922-4-0-2": {
+    "wav": "74922-4-0-2.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74922-4-0-3": {
+    "wav": "74922-4-0-3.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74922-4-0-4": {
+    "wav": "74922-4-0-4.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74922-4-0-5": {
+    "wav": "74922-4-0-5.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74922-4-0-6": {
+    "wav": "74922-4-0-6.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "74922-4-0-7": {
+    "wav": "74922-4-0-7.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "77901-9-0-0": {
+    "wav": "77901-9-0-0.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "77901-9-0-1": {
+    "wav": "77901-9-0-1.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "77901-9-0-2": {
+    "wav": "77901-9-0-2.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "77901-9-0-3": {
+    "wav": "77901-9-0-3.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "77901-9-0-4": {
+    "wav": "77901-9-0-4.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "77901-9-0-6": {
+    "wav": "77901-9-0-6.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "77901-9-0-7": {
+    "wav": "77901-9-0-7.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "77927-3-0-0": {
+    "wav": "77927-3-0-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "77927-3-0-1": {
+    "wav": "77927-3-0-1.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "77927-3-0-2": {
+    "wav": "77927-3-0-2.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "77927-3-1-1": {
+    "wav": "77927-3-1-1.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "7913-3-0-0": {
+    "wav": "7913-3-0-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 0.9973242630385487
+  },
+  "7913-3-1-0": {
+    "wav": "7913-3-1-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 0.7561451247165533
+  },
+  "7913-3-2-0": {
+    "wav": "7913-3-2-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 0.7887301587301587
+  },
+  "7913-3-3-0": {
+    "wav": "7913-3-3-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 0.6974829931972789
+  },
+  "7965-3-11-0": {
+    "wav": "7965-3-11-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.3495691609977325
+  },
+  "7965-3-16-0": {
+    "wav": "7965-3-16-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 1.8789569160997732
+  },
+  "7965-3-22-0": {
+    "wav": "7965-3-22-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 2.925963718820862
+  },
+  "7965-3-3-0": {
+    "wav": "7965-3-3-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 1.1887301587301586
+  },
+  "81791-3-0-0": {
+    "wav": "81791-3-0-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "81791-3-0-1": {
+    "wav": "81791-3-0-1.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "81791-3-1-0": {
+    "wav": "81791-3-1-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 1.33
+  },
+  "83191-9-0-0": {
+    "wav": "83191-9-0-0.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "83191-9-0-11": {
+    "wav": "83191-9-0-11.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "83191-9-0-13": {
+    "wav": "83191-9-0-13.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "83191-9-0-17": {
+    "wav": "83191-9-0-17.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "83191-9-0-4": {
+    "wav": "83191-9-0-4.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "83191-9-0-6": {
+    "wav": "83191-9-0-6.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "83195-9-0-11": {
+    "wav": "83195-9-0-11.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "83195-9-0-14": {
+    "wav": "83195-9-0-14.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "83195-9-0-2": {
+    "wav": "83195-9-0-2.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "83195-9-0-3": {
+    "wav": "83195-9-0-3.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "83195-9-0-6": {
+    "wav": "83195-9-0-6.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "83195-9-0-7": {
+    "wav": "83195-9-0-7.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "83502-0-0-0": {
+    "wav": "83502-0-0-0.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "83502-0-0-1": {
+    "wav": "83502-0-0-1.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "83502-0-0-10": {
+    "wav": "83502-0-0-10.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "83502-0-0-11": {
+    "wav": "83502-0-0-11.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "83502-0-0-12": {
+    "wav": "83502-0-0-12.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "83502-0-0-13": {
+    "wav": "83502-0-0-13.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "83502-0-0-2": {
+    "wav": "83502-0-0-2.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "83502-0-0-3": {
+    "wav": "83502-0-0-3.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "83502-0-0-4": {
+    "wav": "83502-0-0-4.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "83502-0-0-5": {
+    "wav": "83502-0-0-5.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "83502-0-0-6": {
+    "wav": "83502-0-0-6.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "83502-0-0-7": {
+    "wav": "83502-0-0-7.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "83502-0-0-8": {
+    "wav": "83502-0-0-8.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "83502-0-0-9": {
+    "wav": "83502-0-0-9.wav",
+    "classID": 0,
+    "class_string": "air_conditioner",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "84249-9-0-10": {
+    "wav": "84249-9-0-10.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "84249-9-0-11": {
+    "wav": "84249-9-0-11.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "84249-9-0-3": {
+    "wav": "84249-9-0-3.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "84249-9-0-6": {
+    "wav": "84249-9-0-6.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "84249-9-0-7": {
+    "wav": "84249-9-0-7.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "84249-9-0-8": {
+    "wav": "84249-9-0-8.wav",
+    "classID": 9,
+    "class_string": "street_music",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "85574-3-0-0": {
+    "wav": "85574-3-0-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "85574-3-0-12": {
+    "wav": "85574-3-0-12.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "85574-3-0-2": {
+    "wav": "85574-3-0-2.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "85574-3-0-8": {
+    "wav": "85574-3-0-8.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "85665-3-0-0": {
+    "wav": "85665-3-0-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.3583673469387756
+  },
+  "88121-8-0-0": {
+    "wav": "88121-8-0-0.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "88121-8-0-1": {
+    "wav": "88121-8-0-1.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "88121-8-0-2": {
+    "wav": "88121-8-0-2.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "88121-8-0-3": {
+    "wav": "88121-8-0-3.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "88121-8-1-0": {
+    "wav": "88121-8-1-0.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 1.1
+  },
+  "88121-8-2-0": {
+    "wav": "88121-8-2-0.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 1.9484583333333334
+  },
+  "93567-8-0-0": {
+    "wav": "93567-8-0-0.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "93567-8-0-1": {
+    "wav": "93567-8-0-1.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "93567-8-0-10": {
+    "wav": "93567-8-0-10.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "93567-8-0-11": {
+    "wav": "93567-8-0-11.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "93567-8-0-12": {
+    "wav": "93567-8-0-12.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "93567-8-0-13": {
+    "wav": "93567-8-0-13.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "93567-8-0-14": {
+    "wav": "93567-8-0-14.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "93567-8-0-15": {
+    "wav": "93567-8-0-15.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "93567-8-0-16": {
+    "wav": "93567-8-0-16.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "93567-8-0-17": {
+    "wav": "93567-8-0-17.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "93567-8-0-18": {
+    "wav": "93567-8-0-18.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "93567-8-0-19": {
+    "wav": "93567-8-0-19.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "93567-8-0-2": {
+    "wav": "93567-8-0-2.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "93567-8-0-3": {
+    "wav": "93567-8-0-3.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "93567-8-0-4": {
+    "wav": "93567-8-0-4.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "93567-8-0-5": {
+    "wav": "93567-8-0-5.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "93567-8-0-6": {
+    "wav": "93567-8-0-6.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "93567-8-0-7": {
+    "wav": "93567-8-0-7.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "93567-8-0-8": {
+    "wav": "93567-8-0-8.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "93567-8-0-9": {
+    "wav": "93567-8-0-9.wav",
+    "classID": 8,
+    "class_string": "siren",
+    "salience": 2,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "97756-3-0-0": {
+    "wav": "97756-3-0-0.wav",
+    "classID": 3,
+    "class_string": "dog_bark",
+    "salience": 1,
+    "fold": "10",
+    "duration": 1.1487528344671203
+  },
+  "99192-4-0-0": {
+    "wav": "99192-4-0-0.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "99192-4-0-1": {
+    "wav": "99192-4-0-1.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "99192-4-0-12": {
+    "wav": "99192-4-0-12.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "99192-4-0-15": {
+    "wav": "99192-4-0-15.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "99192-4-0-17": {
+    "wav": "99192-4-0-17.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "99192-4-0-18": {
+    "wav": "99192-4-0-18.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "99192-4-0-20": {
+    "wav": "99192-4-0-20.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "99192-4-0-24": {
+    "wav": "99192-4-0-24.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "99192-4-0-26": {
+    "wav": "99192-4-0-26.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "99192-4-0-27": {
+    "wav": "99192-4-0-27.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "99192-4-0-28": {
+    "wav": "99192-4-0-28.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "99192-4-0-3": {
+    "wav": "99192-4-0-3.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "99192-4-0-30": {
+    "wav": "99192-4-0-30.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "99192-4-0-32": {
+    "wav": "99192-4-0-32.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "99192-4-0-33": {
+    "wav": "99192-4-0-33.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "99192-4-0-38": {
+    "wav": "99192-4-0-38.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "99192-4-0-40": {
+    "wav": "99192-4-0-40.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "99192-4-0-41": {
+    "wav": "99192-4-0-41.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "99192-4-0-43": {
+    "wav": "99192-4-0-43.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "99192-4-0-47": {
+    "wav": "99192-4-0-47.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "99192-4-0-48": {
+    "wav": "99192-4-0-48.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "99192-4-0-49": {
+    "wav": "99192-4-0-49.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "99192-4-0-52": {
+    "wav": "99192-4-0-52.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "99192-4-0-53": {
+    "wav": "99192-4-0-53.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "99192-4-0-54": {
+    "wav": "99192-4-0-54.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "99192-4-0-55": {
+    "wav": "99192-4-0-55.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  },
+  "99192-4-0-7": {
+    "wav": "99192-4-0-7.wav",
+    "classID": 4,
+    "class_string": "drilling",
+    "salience": 1,
+    "fold": "10",
+    "duration": 4.0
+  }
+}
