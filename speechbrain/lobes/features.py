@@ -13,7 +13,7 @@ from typing import Optional
 import os
 import torch
 import numpy as np
-import dac
+import speechbrain.lobes.models.discrete.dac
 
 from speechbrain.nnet.CNN import GaborConv1d
 from speechbrain.nnet.normalization import PCEN
