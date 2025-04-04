@@ -530,36 +530,6 @@ class ECAPA_TDNN(torch.nn.Module):
             out_channels=lin_neurons,
             kernel_size=1,
         )
-    def merge_adjacent_frames(self, tensor):
-        """
-        Merges every two adjacent frames across the time dimension of a tensor.
-
-        Arguments:
-        ----------
-        tensor : torch.Tensor
-            Input tensor of shape (B, T, D), where:
-            B = Batch size
-            T = Time dimension
-            D = Feature dimension
-
-        Returns:
-        --------
-        torch.Tensor
-            Output tensor of shape (B, T//2, D) if T is even, or (B, T//2 + 1, D) if T is odd.
-        """
-        # If T is odd, pad the last frame with zeros to make it even
-        if tensor.size(1) % 2 != 0:
-            tensor = torch.nn.functional.pad(tensor, (0, 0, 0, 1))  # Pad one frame along the time dimension
-
-        # Reshape to merge adjacent frames
-        B, T, D = tensor.size()
-        tensor = tensor.view(B, T // 2, 2, D)  # Reshape to (B, T//2, 2, D)
-
-        # Average the two adjacent frames
-        merged_tensor = tensor.mean(dim=2)  # Reduce the third dimension (2) by averaging
-
-        return merged_tensor
-
 
     def forward(self, x, lengths=None):
         """Returns the embedding vector.
@@ -589,9 +559,6 @@ class ECAPA_TDNN(torch.nn.Module):
 
         # Multi-layer feature aggregation
         x = torch.cat(xl[1:], dim=1)
-        if self.merge_feats:
-            # Merge adjacent frames if specified
-            x = self.merge_adjacent_frames(x)
         x = self.mfa(x)
 
         # Attentive Statistical Pooling
@@ -667,14 +634,16 @@ class ECAPA_TDNNQ(torch.nn.Module):
         codebook_dim=64,
         quantizer_dropout=0.0,
         quantize_layer=4,
-        merge_codes = False
+        reduction_type="projection",
+        proj_dim=4
                 ):
         super().__init__()
         assert len(channels) == len(kernel_sizes)
         assert len(channels) == len(dilations)
         self.channels = channels
         self.quantize_layer = quantize_layer
-        self.merge_codes = merge_codes
+        self.proj_dim = proj_dim
+        self.reduction_type = reduction_type
         self.blocks = nn.ModuleList()
 
         # The initial TDNN layer
@@ -690,11 +659,16 @@ class ECAPA_TDNNQ(torch.nn.Module):
             )
         )
 
-        self.quantizer = ResidualVectorQuantize(input_dim=channels[quantize_layer]//2 ,
+        self.quantizer = ResidualVectorQuantize(input_dim=channels[quantize_layer] ,
                                                 n_codebooks=num_codebooks,
                                                 codebook_size=codebook_size,
                                                 codebook_dim=codebook_dim,
                                                 quantizer_dropout=quantizer_dropout)
+        if reduction_type == "projection":
+            self.proj_in = nn.Linear(in_features=proj_dim,
+                                  out_features=1)
+            self.proj_out = nn.Linear(in_features=1,
+                                    out_features=proj_dim)
 
         # SE-Res2Net layers
         for i in range(1, len(channels) - 1):
@@ -713,11 +687,9 @@ class ECAPA_TDNNQ(torch.nn.Module):
             )
 
         # Multi-layer feature aggregation
-        if self.merge_codes:
-            self.mfa = TDNNBlock(
-            # channels[-2]//2 * (len(channels) - 2)
-            # Must be quantized layer dim + two preceeding dims
-            channels[-2]//2 * (len(channels) - 2),
+        
+        self.mfa = TDNNBlock(
+            channels[-2] * (len(channels) - 2),
             channels[-1],
             kernel_sizes[-1],
             dilations[-1],
@@ -725,16 +697,6 @@ class ECAPA_TDNNQ(torch.nn.Module):
             groups=groups[-1],
             dropout=dropout,
         )
-        else:
-            self.mfa = TDNNBlock(
-                channels[-2] * (len(channels) - 2),
-                channels[-1],
-                kernel_sizes[-1],
-                dilations[-1],
-                activation,
-                groups=groups[-1],
-                dropout=dropout,
-            )
 
         # Attentive Statistical Pooling
         self.asp = AttentiveStatisticsPooling(
@@ -750,36 +712,6 @@ class ECAPA_TDNNQ(torch.nn.Module):
             out_channels=lin_neurons,
             kernel_size=1,
         )
-
-    def merge_adjacent_frames(self,tensor):
-        """
-        Merges every two adjacent frames across the time dimension of a tensor.
-
-        Arguments:
-        ----------
-        tensor : torch.Tensor
-            Input tensor of shape (B, T, D), where:
-            B = Batch size
-            T = Time dimension
-            D = Feature dimension
-
-        Returns:
-        --------
-        torch.Tensor
-            Output tensor of shape (B, T//2, D) if T is even, or (B, T//2 + 1, D) if T is odd.
-        """
-        # If T is odd, pad the last frame with zeros to make it even
-        if tensor.size(1) % 2 != 0:
-            tensor = torch.nn.functional.pad(tensor, (0, 0, 0, 1))  # Pad one frame along the time dimension
-
-        # Reshape to merge adjacent frames
-        B, T, D = tensor.size()
-        tensor = tensor.view(B, T // 2, 2, D)  # Reshape to (B, T//2, 2, D)
-
-        # Average the two adjacent frames
-        merged_tensor = tensor.mean(dim=2)  # Reduce the third dimension (2) by averaging
-
-        return merged_tensor
 
 
     def forward(self, x, lengths=None):
@@ -808,15 +740,29 @@ class ECAPA_TDNNQ(torch.nn.Module):
                 x = layer(x)
 
             if i == self.quantize_layer:
-                z_q, _, _, commitment_loss, codebook_loss = self.quantizer(x)
-                x = z_q
-
+                # First reduce the frame rate of the encoder
+                if self.reduction_type == "projection":
+                    T_init = x.shape[-1]
+                    if T_init % self.proj_dim != 0:
+                        pad_length = self.proj_dim - (T_init % self.proj_dim)
+                        x = F.pad(x, (0, pad_length))
+                    
+                    B, D, T = x.shape
+                    x = x.view(B, D, T // self.proj_dim, self.proj_dim)
+                    x = self.proj_in(x)
+                    x = x.squeeze(-1)
+            
+                    z_q, _, _, commitment_loss, codebook_loss = self.quantizer(x)
+                    z_q_proj = []
+                    for frame in range(z_q.shape[2]):
+                        fram_proj = self.proj_out(z_q[:, :, frame].unsqueeze(-1))
+                        z_q_proj.append(fram_proj)
+                    z_q_proj = torch.cat(z_q_proj, dim=2)[:, :, :T_init]  # B x D x T
+                    x = z_q_proj
             xl.append(x)
 
         # Multi-layer feature aggregation
         x = torch.cat(xl[1:], dim=1)
-        if self.merge_codes:
-            x = self.merge_adjacent_frames(x)
         x = self.mfa(x)
 
         # Attentive Statistical Pooling
