@@ -67,7 +67,8 @@ if __name__ == "__main__":
 
     model = EncoderDecoderASR.from_hparams(source=model_folder,
                                         hparams_file=hparams_file,
-                                        savedir=save_folder)
+                                        savedir=save_folder, 
+                                        run_opts={"device":"cuda"})
     model.mods.eval()
 
     tot_entropy = 0

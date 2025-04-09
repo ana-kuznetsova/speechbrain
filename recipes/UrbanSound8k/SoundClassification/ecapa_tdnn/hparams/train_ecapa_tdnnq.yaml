@@ -64,7 +64,7 @@ n_codebooks: 1  # Number of codebooks for RVQ
 vocab_size: 1024
 quantize_layer_idx: 3
 vq_loss_weight: 0.01 #Regularization for codebook loss
-reduction_type: "projection"
+reduction_type: "avg_pool"
 
 # Feature parameters
 n_mels: 80

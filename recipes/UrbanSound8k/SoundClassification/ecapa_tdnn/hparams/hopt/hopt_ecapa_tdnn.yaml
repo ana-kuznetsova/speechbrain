@@ -24,8 +24,6 @@ save_folder: !ref <output_folder>/save
 train_log: !ref <output_folder>/train_log.txt
 cached_data_folder: !PLACEHOLDER
 
-pretrained_model_path: /data/anakuzne/speechbrain/recipes/UrbanSound8k/SoundClassification/ecapa_tdnn/results/urban_sound/1988/save/CKPT+2025-03-28+14-38-52+00
-
 # Data for augmentation
 NOISE_DATASET_URL: https://www.dropbox.com/scl/fi/a09pj97s5ifan81dqhi4n/noises.zip?rlkey=j8b0n9kdjdr32o1f06t0cw5b7&dl=1
 RIR_DATASET_URL: https://www.dropbox.com/scl/fi/linhy77c36mu10965a836/RIRs.zip?rlkey=pg9cu8vrpn2u173vhiqyu743u&dl=1
@@ -62,15 +60,6 @@ max_lr: !ref <lr>
 step_size: 65000
 sample_rate: 16000
 
-# RVQ parameters
-n_codebooks: 1  # Number of codebooks for RVQ
-vocab_size: 1024
-codebook_dim_exponent: 2 # @orion_step1: --codebook_dim_exponent~"uniform(1, 3,discrete=True)"
-reduction_type: "projection"
-
-quantize_layer_idx: 3
-vq_loss_weight: 0.01 # @orion_step1: --vq_loss_weight~"loguniform(0.00001,0.1)"
-
 # Feature parameters
 n_mels: 80
 left_frames: 0
@@ -101,19 +90,13 @@ compute_features: !new:speechbrain.lobes.features.Fbank
     right_frames: !ref <right_frames>
     deltas: !ref <deltas>
 
-embedding_model: !new:speechbrain.lobes.models.ECAPA_TDNN.ECAPA_TDNNQ
+embedding_model: !new:speechbrain.lobes.models.ECAPA_TDNN.ECAPA_TDNN
     input_size: !ref <n_mels>
     channels: [1024, 1024, 1024, 1024, 3072]  # Number of channels in each TDNN layer
     kernel_sizes: [5, 3, 3, 3, 1]
     dilations: [1, 2, 3, 4, 1]
     attention_channels: 128
     lin_neurons: 192
-    num_codebooks: !ref <n_codebooks>  # Number of codebooks for RVQ
-    codebook_size: !ref <vocab_size>  # Size of each codebook
-    quantize_layer: !ref <quantize_layer_idx>  # Layer index to apply RVQ
-    codebook_dim: !ref 8 ** <codebook_dim_exponent>  # Dimensionality of the codebook vectors
-    reduction_type: !ref <reduction_type>  # Type of reduction for RVQ
-    proj_dim: 4
 
 classifier: !new:speechbrain.lobes.models.ECAPA_TDNN.Classifier
     input_size: 192
@@ -247,12 +230,3 @@ checkpointer: !new:speechbrain.utils.checkpoints.Checkpointer
         classifier: !ref <classifier>
         normalizer: !ref <mean_var_norm>
         counter: !ref <epoch_counter>
-
-pretrainer: !new:speechbrain.utils.parameter_transfer.Pretrainer
-    collect_in: !ref <save_folder>
-    loadables:
-        embedding_model: !ref <embedding_model>
-        classifier: !ref <classifier>
-    paths:
-        embedding_model: !ref <pretrained_model_path>/embedding_model.ckpt
-        classifier: !ref <pretrained_model_path>/classifier.ckpt

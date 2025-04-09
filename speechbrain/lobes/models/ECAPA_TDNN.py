@@ -667,8 +667,10 @@ class ECAPA_TDNNQ(torch.nn.Module):
         if reduction_type == "projection":
             self.proj_in = nn.Linear(in_features=proj_dim,
                                   out_features=1)
-            self.proj_out = nn.Linear(in_features=1,
-                                    out_features=proj_dim)
+        elif reduction_type == "avg_pool":
+            self.proj_in = nn.AvgPool1d(kernel_size=proj_dim, stride=proj_dim)
+        self.proj_out = nn.Linear(in_features=1,
+                                out_features=proj_dim)
 
         # SE-Res2Net layers
         for i in range(1, len(channels) - 1):
@@ -740,25 +742,28 @@ class ECAPA_TDNNQ(torch.nn.Module):
                 x = layer(x)
 
             if i == self.quantize_layer:
-                # First reduce the frame rate of the encoder
+                T_init = x.shape[-1]
+                if T_init % self.proj_dim != 0:
+                    pad_length = self.proj_dim - (T_init % self.proj_dim)
+                    x = F.pad(x, (0, pad_length))
+
                 if self.reduction_type == "projection":
-                    T_init = x.shape[-1]
-                    if T_init % self.proj_dim != 0:
-                        pad_length = self.proj_dim - (T_init % self.proj_dim)
-                        x = F.pad(x, (0, pad_length))
-                    
                     B, D, T = x.shape
                     x = x.view(B, D, T // self.proj_dim, self.proj_dim)
                     x = self.proj_in(x)
                     x = x.squeeze(-1)
             
-                    z_q, _, _, commitment_loss, codebook_loss = self.quantizer(x)
-                    z_q_proj = []
-                    for frame in range(z_q.shape[2]):
-                        fram_proj = self.proj_out(z_q[:, :, frame].unsqueeze(-1))
-                        z_q_proj.append(fram_proj)
-                    z_q_proj = torch.cat(z_q_proj, dim=2)[:, :, :T_init]  # B x D x T
-                    x = z_q_proj
+                elif self.reduction_type == "avg_pool":
+                    x = self.proj_in(x)
+            
+                z_q, _, _, commitment_loss, codebook_loss = self.quantizer(x)
+                z_q_proj = []
+                for frame in range(z_q.shape[2]):
+                    fram_proj = self.proj_out(z_q[:, :, frame].unsqueeze(-1))
+                    z_q_proj.append(fram_proj)
+                z_q_proj = torch.cat(z_q_proj, dim=2)[:, :, :T_init]  # B x D x T
+                x = z_q_proj
+
             xl.append(x)
 
         # Multi-layer feature aggregation
