@@ -166,24 +166,4 @@ if __name__ == "__main__":
     print(f"Total entropy: {tot_entropy}")
     print(f"Average entropy: {tot_entropy / len(dataset)}")
     print(f"Number of files: {len(dataset)}")
-    
-    '''
-    
-
-    tot_entropy = 0
-
-    for f in tqdm(files):
-        aud = model.load_audio(f)
-        feats = model.hparams.compute_features(aud.unsqueeze(0))
-        feat_lens = torch.tensor([feats.shape[1]])
-        feats = model.mods.CNN(feats)
-        z, codes = model.encode_batch(feats, feat_lens)
-        e = compute_entropy(
-            codes.squeeze(0), codebook_size=args.vocab_size
-        )
-        tot_entropy += e
-    print("ASR Quantized Layer Index:", args.quantize_layer_idx)
-    print(f"Total entropy: {tot_entropy}")
-    print(f"Average entropy: {tot_entropy / len(files)}")
-    print(f"Number of files: {len(files)}")
-    '''
+  
