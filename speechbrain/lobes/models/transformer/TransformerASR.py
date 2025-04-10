@@ -276,6 +276,7 @@ class TransformerASR(TransformerInterface):
         codebook_size: Optional[int] = 1024,
         codebook_dim: Optional[int] = 64,
         quantize_layer: Optional[int] = 0,
+        mode:Optional[str] = "train",
         output_hidden_states=False,
         layerdrop_prob=0.0,
     ):
@@ -306,6 +307,7 @@ class TransformerASR(TransformerInterface):
             codebook_size=codebook_size,
             codebook_dim=codebook_dim,
             quantizer_dropout=quantizer_dropout,
+            mode=mode,
             conformer_activation=conformer_activation,
             branchformer_activation=branchformer_activation,
             attention_type=attention_type,
@@ -534,6 +536,16 @@ class TransformerASR(TransformerInterface):
             src = src + self.positional_encoding(src)
             pos_embs_source = None
 
+        if self.encoder_module == "conformerq":
+            encoder_out = self.encoder(
+                src=src,
+                src_mask=src_mask,
+                src_key_padding_mask=src_key_padding_mask,
+                pos_embs=pos_embs_source,
+                dynchunktrain_config=dynchunktrain_config,
+            )
+            return encoder_out
+
         outputs = self.encoder(
             src=src,
             src_mask=src_mask,
@@ -542,12 +554,7 @@ class TransformerASR(TransformerInterface):
             dynchunktrain_config=dynchunktrain_config,
         )
         encoder_out, _ = outputs
-        # if self.use_quantizer:
-        z, codes, _, commitment_loss, codebook_loss = self.quantizer(encoder_out.transpose(1, 2))
-        z = z.transpose(1, 2)
-        encoder_out = z
-
-        return encoder_out, codes
+        return encoder_out
 
     def encode_streaming(self, src, context: TransformerASRStreamingContext):
         """

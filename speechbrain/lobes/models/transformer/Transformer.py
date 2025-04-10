@@ -129,6 +129,7 @@ class TransformerInterface(nn.Module):
         num_codebooks:Optional[int] = None,
         codebook_size:Optional[int] = None,
         codebook_dim:Optional[int] = None,
+        mode:Optional[str] = "train",
         quantizer_dropout=0.0,
     ):
         super().__init__()
@@ -146,6 +147,7 @@ class TransformerInterface(nn.Module):
         self.codebook_size = codebook_size
         self.codebook_dim = codebook_dim
         self.quantizer_dropout = quantizer_dropout
+        self.mode = mode
 
         assert attention_type in ["regularMHA", "RelPosMHAXL", "hypermixing"]
         assert positional_encoding in ["fixed_abs_sine", None]
@@ -206,6 +208,7 @@ class TransformerInterface(nn.Module):
                     codebook_size=self.codebook_size,
                     codebook_dim=self.codebook_dim,
                     quantizer_dropout=self.quantizer_dropout,
+                    mode=self.mode,
                 )
                 assert (
                     normalize_before

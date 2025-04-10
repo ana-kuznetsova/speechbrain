@@ -66,7 +66,7 @@ if __name__ == "__main__":
 
     # Load pretrained model
     model_folder = args.model_path
-    save_folder = f"{model_folder}/inference"
+    save_folder = f"{model_folder}"
     hparams_file = f"{model_folder}/../../hyperparams.yaml"
 
     model = EncoderDecoderASR.from_hparams(source=model_folder,

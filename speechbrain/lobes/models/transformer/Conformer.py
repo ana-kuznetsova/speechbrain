@@ -913,6 +913,7 @@ class ConformerEncoderQuantized(nn.Module):
         codebook_size=1024,
         codebook_dim=128,
         quantizer_dropout=0.0,
+        mode="train",
     ):
         super().__init__()
 
@@ -944,6 +945,7 @@ class ConformerEncoderQuantized(nn.Module):
         self.layerdrop_prob = layerdrop_prob
         self.attention_type = attention_type
         self.output_hidden_states = output_hidden_states
+        self.mode = mode
 
     def forward(
         self,
@@ -1016,8 +1018,12 @@ class ConformerEncoderQuantized(nn.Module):
                 if i == self.quantize_layer:
                     # RVQ output (z_q, codes, latents, commitment_loss, codebook_loss)
                     output = output.transpose(1, 2)
-                    output, _, _, commitment_loss, codebook_loss = self.quantizer(output)
+                    output, codes, _, commitment_loss, codebook_loss = self.quantizer(output)
                     output = output.transpose(1, 2)
+                    if self.mode =="quantize":
+                        return output, codes
+
+                    
 
         output = self.norm(output)
 
