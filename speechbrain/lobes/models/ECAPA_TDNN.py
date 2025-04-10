@@ -634,6 +634,7 @@ class ECAPA_TDNNQ(torch.nn.Module):
         codebook_dim=64,
         quantizer_dropout=0.0,
         quantize_layer=4,
+        mode="train",
         reduction_type="projection",
         proj_dim=4
                 ):
@@ -644,6 +645,7 @@ class ECAPA_TDNNQ(torch.nn.Module):
         self.quantize_layer = quantize_layer
         self.proj_dim = proj_dim
         self.reduction_type = reduction_type
+        self.mode = mode
         self.blocks = nn.ModuleList()
 
         # The initial TDNN layer
@@ -756,7 +758,9 @@ class ECAPA_TDNNQ(torch.nn.Module):
                 elif self.reduction_type == "avg_pool":
                     x = self.proj_in(x)
             
-                z_q, _, _, commitment_loss, codebook_loss = self.quantizer(x)
+                z_q, codes, _, commitment_loss, codebook_loss = self.quantizer(x)
+                if self.mode == "quantize":
+                    return z_q, codes
                 z_q_proj = []
                 for frame in range(z_q.shape[2]):
                     fram_proj = self.proj_out(z_q[:, :, frame].unsqueeze(-1))
