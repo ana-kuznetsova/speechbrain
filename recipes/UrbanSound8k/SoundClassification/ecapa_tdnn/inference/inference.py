@@ -93,10 +93,7 @@ def compute_entropy(codes: torch.Tensor, codebook_size: int):
     num_codebooks, T = codes.shape
     probs = torch.zeros(num_codebooks, codebook_size).float()
     for i in range(num_codebooks):
-        probs[i] = torch.histc(
-            codes[i].float(), bins=codebook_size, min=0, max=codebook_size - 1
-        )
-
+        probs[i] = torch.bincount(codes[i].detach().cpu(), minlength=codebook_size).float()
     # Normalize to get probabilities
     probs = probs / T
 
@@ -116,13 +113,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model_path", type=str, required=True, help="Path to the pretrained model."
     )
-    #parser.add_argument(
-    #    "--vocab_size", type=int, required=True, help="Size of the codebook."
-    #)
 
-    #parser.add_argument(
-    #    "--quantize_layer_idx", type=int, default=11, help="Index of the quantized layer."
-    #)
     args = parser.parse_args()
 
     # Collect audio files
