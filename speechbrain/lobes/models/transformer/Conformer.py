@@ -941,6 +941,7 @@ class ConformerEncoderQuantized(nn.Module):
                                                 codebook_dim=codebook_dim,
                                                 quantizer_dropout=quantizer_dropout)
         self.quantize_layer = quantize_layer
+        self.rvq_proj = nn.Linear(d_model, d_model)
         self.norm = LayerNorm(d_model, eps=1e-6)
         self.layerdrop_prob = layerdrop_prob
         self.attention_type = attention_type
@@ -1022,8 +1023,8 @@ class ConformerEncoderQuantized(nn.Module):
                     output = output.transpose(1, 2)
                     if self.mode =="quantize":
                         return output, codes
-
-                    
+                    if i == len(self.layers) - 1:
+                        output = self.rvq_proj(output)
 
         output = self.norm(output)
 
