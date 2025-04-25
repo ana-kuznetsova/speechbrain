@@ -1016,17 +1016,25 @@ class ConformerEncoderQuantized(nn.Module):
 
                 if self.output_hidden_states:
                     hidden_state_lst.append(output)
-                if i == self.quantize_layer:
+                if i == self.quantize_layer and i != len(self.layers) - 1:
                     # RVQ output (z_q, codes, latents, commitment_loss, codebook_loss)
                     output = output.transpose(1, 2)
                     output, codes, _, commitment_loss, codebook_loss = self.quantizer(output)
                     output = output.transpose(1, 2)
                     if self.mode =="quantize":
                         return output, codes
-                    if i == len(self.layers) - 1:
-                        output = self.rvq_proj(output)
+                    #if i == len(self.layers) - 1:
+                    #    output = self.rvq_proj(output)
+                elif i == self.quantize_layer and i == len(self.layers) - 1:
+                    output = self.norm(output)
+                    output = output.transpose(1, 2)
+                    output, codes, _, commitment_loss, codebook_loss = self.quantizer(output)
+                    output = output.transpose(1, 2)
+                    if self.mode =="quantize":
+                        return output, codes
 
-        output = self.norm(output)
+        if self.quantize_layer != len(self.layers) - 1:
+            output = self.norm(output)
 
         if self.output_hidden_states:
             return output, attention_lst, hidden_state_lst, commitment_loss, codebook_loss
