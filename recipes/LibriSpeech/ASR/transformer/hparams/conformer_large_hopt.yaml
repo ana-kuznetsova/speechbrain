@@ -52,7 +52,7 @@ precision: fp32 # bf16, fp16 or fp32
 avg_checkpoints: 10 # Number of checkpoints to average for evaluation
 
 # stages related parameters
-lr_adam: 0.0008 # @orion_step1: --lr_adam~"loguniform(0.00001,0.1)"
+lr_adam: 0.0008 # @orion_step1: --lr_adam~"loguniform(0.0000001,0.1)"
 
 # Feature parameters
 sample_rate: 16000
