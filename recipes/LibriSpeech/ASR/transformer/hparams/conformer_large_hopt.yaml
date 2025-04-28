@@ -39,7 +39,8 @@ testing: True
 # Empirically, we found that this value should be >= 128.
 # Please, set your parameters accordingly.
 number_of_epochs: 20
-batch_size: 8
+batch_size_exponent: 3 # @orion_step1: --batch_size_exponent~"uniform(3, 6,discrete=True)"
+batch_size: 2 ** !ref <batch_size_exponent>
 ctc_weight: 0.3
 seq_weight: 0.7
 codec_loss_weight: 0.2
