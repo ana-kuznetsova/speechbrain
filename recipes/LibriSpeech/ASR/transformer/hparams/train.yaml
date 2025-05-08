@@ -10,17 +10,17 @@
 
 seed: 3407
 __set_seed: !apply:torch.manual_seed [!ref <seed>]
-output_folder: !PLACEHOLDER
+output_folder: /workspace/speechbrain/recipes/LibriSpeech/ASR/transformer/output
 output_wer_folder: !ref <output_folder>/
 save_folder: !ref <output_folder>/save
 train_log: !ref <output_folder>/train_log.txt
 
 # Load the pretrained Conformer and LM from Huggingface
-pretrained_model_path: /data/anakuzne/speechbrain/recipes/LibriSpeech/ASR/transformer/results/conformer_ls960_pretrained
+pretrained_model_path:  speechbrain/asr-conformer-transformerlm-librispeech
 pretrained_lm_tokenizer_path: speechbrain/asr-transformer-transformerlm-librispeech
 
-data_folder: /data/anakuzne/LibriSpeech
-train_splits: ["train-clean-100", "train-clean-360", "train-other-500"]
+data_folder: /workspace/data_speechbrain
+train_splits: ["train-clean-100"]
 dev_splits: ["dev-clean"]
 test_splits: ["dev-clean", "test-clean", "test-other"]
 skip_prep: False
@@ -345,5 +345,5 @@ pretrainer: !new:speechbrain.utils.parameter_transfer.Pretrainer
     paths:
         lm: !ref <pretrained_lm_tokenizer_path>/lm.ckpt
         tokenizer: !ref <pretrained_lm_tokenizer_path>/tokenizer.ckpt
-        model: !ref <pretrained_model_path>/model.ckpt
+        model: !ref <pretrained_model_path>/asr.ckpt
 eval_only: False
