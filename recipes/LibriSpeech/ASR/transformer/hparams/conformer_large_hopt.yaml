@@ -15,10 +15,9 @@ output_wer_folder: !ref <output_folder>/
 save_folder: !ref <output_folder>/save
 train_log: !ref <output_folder>/train_log.txt
 cached_data_folder: !PLACEHOLDER
-run_name: !PLACEHOLDER
 
 # Load the pretrained Conformer and LM from Huggingface
-pretrained_model_path: !PLACEHOLDER
+pretrained_model_path: /data/anakuzne/speechbrain/recipes/LibriSpeech/ASR/transformer/pretrained_models/asr-conformer-transformerlm-librispeech
 pretrained_lm_tokenizer_path: speechbrain/asr-transformer-transformerlm-librispeech
 
 data_folder: /data/anakuzne/LibriSpeech
@@ -349,5 +348,5 @@ pretrainer: !new:speechbrain.utils.parameter_transfer.Pretrainer
     paths:
         lm: !ref <pretrained_lm_tokenizer_path>/lm.ckpt
         tokenizer: !ref <pretrained_lm_tokenizer_path>/tokenizer.ckpt
-        model: !ref <pretrained_model_path>/model.ckpt
+        model: !ref <pretrained_model_path>/asr.ckpt
 eval_only: False

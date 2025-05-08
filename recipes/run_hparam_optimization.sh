@@ -69,7 +69,7 @@ print_argument_descriptions() {
     echo "Usage: $0 [options]"
     echo "Options:"
     echo "  --exp_name Name                       Name that Orion gives to the experiment"
-    echo "  --hparms hparam_file                  YAML file containing the hparam to optimize. The hyperparameters decorated with @orion_step1 or @orion_step1 in the YAML file will be used"
+    echo "  --hparams hparam_file                  YAML file containing the hparam to optimize. The hyperparameters decorated with @orion_step1 or @orion_step1 in the YAML file will be used"
     echo "  --data_folder data_path               Folder were the data are stored. If not available, they will be downloaded there."
     echo "  --cached_data_folder path [Optional]  Folder were the data in pkl format will be cached."
     echo "  --output_folder output_path           Output folder were the results will be stored"
