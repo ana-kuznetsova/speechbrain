@@ -40,10 +40,12 @@ from pathlib import Path
 
 import torch
 from hyperpyyaml import load_hyperpyyaml
+from audiotools import AudioSignal
 
 import speechbrain as sb
 from speechbrain.utils.distributed import if_main_process, run_on_main
 import logging
+from speechbrain.lobes.models.discrete.dac import DAC, Encoder, ResidualVectorQuantize
 
 logger = logging.getLogger(__name__)
 
@@ -57,22 +59,25 @@ class ASR(sb.core.Brain):
         tokens_bos, _ = batch.tokens_bos
 
         # compute features
-        feats = self.hparams.compute_features(wavs)
-        current_epoch = self.hparams.epoch_counter.current
-        feats = self.modules.normalize(feats, wav_lens, epoch=current_epoch)
+        # feats = self.hparams.compute_features(wavs)
+        # current_epoch = self.hparams.epoch_counter.current
+        # feats = self.modules.normalize(feats, wav_lens, epoch=current_epoch)
 
         # Add feature augmentation if specified.
-        if stage == sb.Stage.TRAIN and hasattr(self.hparams, "fea_augment"):
-            feats, fea_lens = self.hparams.fea_augment(feats, wav_lens)
-            tokens_bos = self.hparams.fea_augment.replicate_labels(tokens_bos)
+        # if stage == sb.Stage.TRAIN and hasattr(self.hparams, "fea_augment"):
+        #     feats, fea_lens = self.hparams.fea_augment(feats, wav_lens)
+        #     tokens_bos = self.hparams.fea_augment.replicate_labels(tokens_bos)
 
         # forward modules
-        if hasattr(self.hparams, "CNN"):
-            src = self.modules.CNN(feats)
+        # if hasattr(self.hparams, "CNN"):
+        #     src = self.modules.CNN(feats)
         #    print("DEBUG FEATS after CNN:", src.shape)
         if hasattr(self.hparams, "Codec"):
-            codes, z = self.modules.Codec(feats)
+            logger.info(f'wavs shape - {wavs.shape}')
+            z, codes = self.modules.Codec.forward(wavs)
+            logger.info(f'z shape - {z.shape}')
             src = z.transpose(1, 2)
+            logger.info(f'src shape - {src.shape}')
 
         enc_out, pred, commitment_loss, codebook_loss = (
             self.modules.Transformer(
@@ -123,18 +128,18 @@ class ASR(sb.core.Brain):
         tokens_eos, tokens_eos_lens = batch.tokens_eos
         tokens, tokens_lens = batch.tokens
 
-        if stage == sb.Stage.TRAIN:
-            # Labels must be extended if parallel augmentation or concatenated
-            # augmentation was performed on the input (increasing the time dimension)
-            if hasattr(self.hparams, "fea_augment"):
-                (
-                    tokens,
-                    tokens_lens,
-                    tokens_eos,
-                    tokens_eos_lens,
-                ) = self.hparams.fea_augment.replicate_multiple_labels(
-                    tokens, tokens_lens, tokens_eos, tokens_eos_lens
-                )
+        # if stage == sb.Stage.TRAIN:
+        #     # Labels must be extended if parallel augmentation or concatenated
+        #     # augmentation was performed on the input (increasing the time dimension)
+        #     if hasattr(self.hparams, "fea_augment"):
+        #         (
+        #             tokens,
+        #             tokens_lens,
+        #             tokens_eos,
+        #             tokens_eos_lens,
+        #         ) = self.hparams.fea_augment.replicate_multiple_labels(
+        #             tokens, tokens_lens, tokens_eos, tokens_eos_lens
+        #         )
 
         loss_seq = self.hparams.seq_cost(
             p_seq, tokens_eos, length=tokens_eos_lens
@@ -268,7 +273,6 @@ class ASR(sb.core.Brain):
         if should_step:
             self.hparams.noam_annealing(self.optimizer)
 
-
 def dataio_prepare(hparams):
     """This function prepares the datasets to be used in the brain class.
     It also defines the data processing pipeline through user-defined functions.
@@ -328,7 +332,12 @@ def dataio_prepare(hparams):
     @sb.utils.data_pipeline.takes("wav")
     @sb.utils.data_pipeline.provides("sig")
     def audio_pipeline(wav):
-        sig = sb.dataio.dataio.read_audio(wav)
+        # logger.info(f'wav read_audio - {wav}')
+        # sig = sb.dataio.dataio.read_audio(wav)
+        sig = AudioSignal(wav)
+        sig = sig.audio_data
+        # sig.to('cuda')
+        # logger.info(f'sig read_audio - {sig}, shape - {sig.shape}')
         return sig
 
     sb.dataio.dataset.add_dynamic_item(valtest_datasets, audio_pipeline)
@@ -336,14 +345,20 @@ def dataio_prepare(hparams):
     @sb.utils.data_pipeline.takes("wav")
     @sb.utils.data_pipeline.provides("sig")
     def audio_pipeline_train(wav):
+        # logger.info(f'wav read_audio - {wav}')
         # Speed Perturb is done here so it is multi-threaded with the
         # workers of the dataloader (faster).
         if "speed_perturb" in hparams:
-            sig = sb.dataio.dataio.read_audio(wav)
-
+            # sig = sb.dataio.dataio.read_audio(wav)
+            sig = AudioSignal(wav)
+            sig = sig.audio_data
             sig = hparams["speed_perturb"](sig.unsqueeze(0)).squeeze(0)
         else:
-            sig = sb.dataio.dataio.read_audio(wav)
+            # sig = sb.dataio.dataio.read_audio(wav)
+            sig = AudioSignal(wav)
+            sig = sig.audio_data
+            # sig.to('cuda')
+        # logger.info(f'sig read_audio - {sig}, shape - {sig.shape}')
         return sig
 
     sb.dataio.dataset.add_dynamic_item([train_data], audio_pipeline_train)
@@ -446,6 +461,8 @@ if __name__ == "__main__":
         valid_bsampler,
     ) = dataio_prepare(hparams)
 
+    # logger.info(f'train_data -  {train_data}')
+    
     # We download the pretrained LM from HuggingFace (or elsewhere depending on
     # the path given in the YAML file). The tokenizer is loaded at the same time.
     hparams["pretrainer"].collect_files()

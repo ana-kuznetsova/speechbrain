@@ -19,7 +19,7 @@ train_log: !ref <output_folder>/train_log.txt
 pretrained_model_path:  speechbrain/asr-conformer-transformerlm-librispeech
 pretrained_lm_tokenizer_path: speechbrain/asr-transformer-transformerlm-librispeech
 
-data_folder: /workspace/data_speechbrain
+data_folder: /workspace/data_speechbrain/data_speechbrain/LibriSpeech
 train_splits: ["train-clean-100"]
 dev_splits: ["dev-clean"]
 test_splits: ["dev-clean", "test-clean", "test-other"]
@@ -131,14 +131,34 @@ ctc_weight_decode: 0.40
 
 ############################## Models ##########################################
 
-CNN: !new:speechbrain.lobes.models.convolution.ConvolutionFrontEnd
-    input_shape: (8, 10, 80)
-    num_blocks: 2
-    num_layers_per_block: 1
-    out_channels: (64, 32)
-    kernel_sizes: (3, 3)
-    strides: (2, 2)
-    residuals: (False, False)
+# CNN: !new:speechbrain.lobes.models.convolution.ConvolutionFrontEnd
+#     input_shape: (8, 10, 80)
+#     num_blocks: 2
+#     num_layers_per_block: 1
+#     out_channels: (64, 32)
+#     kernel_sizes: (3, 3)
+#     strides: (2, 2)
+#     residuals: (False, False)
+
+Codec: !new:speechbrain.lobes.models.discrete.dac.DAC
+    encoder_dim: 64
+    encoder_rates: [2, 4, 8, 8]
+    # latent_dim: None
+    decoder_dim: 1536
+    decoder_rates: [8, 8, 4, 2]
+    n_codebooks: 8
+    codebook_size: 1024
+    codebook_dim: 8
+    quantizer_dropout: False
+    sample_rate: 44100
+    model_type: 44khz
+    model_bitrate: 8kbps
+    tag: latest
+    # load_path: dac.utils.download(model_type="44khz")
+    strict: False
+    load_pretrained: False
+    freeze_codec: False
+    max_duration: 10
 
 Transformer: !new:speechbrain.lobes.models.transformer.TransformerASR.TransformerASR # yamllint disable-line rule:line-length
     input_size: 640
@@ -191,7 +211,7 @@ normalize: !new:speechbrain.processing.features.InputNormalization
     update_until_epoch: 4
 
 modules:
-    CNN: !ref <CNN>
+    Codec: !ref <Codec>
     Transformer: !ref <Transformer>
     seq_lin: !ref <seq_lin>
     ctc_lin: !ref <ctc_lin>
@@ -204,7 +224,7 @@ Adam: !name:torch.optim.AdamW
     eps: 0.000000001
 
 model: !new:torch.nn.ModuleList
-    - [!ref <CNN>, !ref <Transformer>, !ref <seq_lin>, !ref <ctc_lin>]
+    - [!ref <Codec>, !ref <Transformer>, !ref <seq_lin>, !ref <ctc_lin>]
 
 ####################### Decoding & optimiser ###########################
 
@@ -281,9 +301,9 @@ epoch_counter: !new:speechbrain.utils.epoch_loop.EpochCounter
 ############################## Augmentations ###################################
 
 # Speed perturbation
-speed_perturb: !new:speechbrain.augment.time_domain.SpeedPerturb
-    orig_freq: !ref <sample_rate>
-    speeds: [95, 100, 105]
+# speed_perturb: !new:speechbrain.augment.time_domain.SpeedPerturb
+#     orig_freq: !ref <sample_rate>
+#     speeds: [95, 100, 105]
 
 # Time Drop
 time_drop: !new:speechbrain.augment.freq_domain.SpectrogramDrop
