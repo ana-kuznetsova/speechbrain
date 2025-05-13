@@ -10,17 +10,17 @@
 
 seed: 3407
 __set_seed: !apply:torch.manual_seed [!ref <seed>]
-output_folder: !PLACEHOLDER
+output_folder: /workspace/speechbrain/recipes/LibriSpeech/ASR/transformer/output
 output_wer_folder: !ref <output_folder>/
 save_folder: !ref <output_folder>/save
 train_log: !ref <output_folder>/train_log.txt
 
 # Load the pretrained Conformer and LM from Huggingface
-pretrained_model_path: /data/anakuzne/speechbrain/recipes/LibriSpeech/ASR/transformer/results/conformer_ls960_pretrained
+pretrained_model_path: speechbrain/asr-conformer-transformerlm-librispeech
 pretrained_lm_tokenizer_path: speechbrain/asr-transformer-transformerlm-librispeech
 
-data_folder: /data/anakuzne/LibriSpeech
-train_splits: ["train-clean-100", "train-clean-360", "train-other-500"]
+data_folder: /workspace/data_speechbrain/data_speechbrain/LibriSpeech
+train_splits: ["train-clean-100"]
 dev_splits: ["dev-clean"]
 test_splits: ["dev-clean", "test-clean", "test-other"]
 skip_prep: False
@@ -131,14 +131,34 @@ ctc_weight_decode: 0.40
 
 ############################## Models ##########################################
 
-CNN: !new:speechbrain.lobes.models.convolution.ConvolutionFrontEnd
-    input_shape: (8, 10, 80)
-    num_blocks: 2
-    num_layers_per_block: 1
-    out_channels: (64, 32)
-    kernel_sizes: (3, 3)
-    strides: (2, 2)
-    residuals: (False, False)
+# CNN: !new:speechbrain.lobes.models.convolution.ConvolutionFrontEnd
+#     input_shape: (8, 10, 80)
+#     num_blocks: 2
+#     num_layers_per_block: 1
+#     out_channels: (64, 32)
+#     kernel_sizes: (3, 3)
+#     strides: (2, 2)
+#     residuals: (False, False)
+
+Codec: !new:speechbrain.lobes.models.discrete.dac.DAC
+    encoder_dim: 64
+    encoder_rates: [2, 4, 8, 8]
+    # latent_dim: None
+    decoder_dim: 1536
+    decoder_rates: [8, 8, 4, 2]
+    n_codebooks: 8
+    codebook_size: 1024
+    codebook_dim: 8
+    quantizer_dropout: False
+    sample_rate: 16000
+    model_type: 16khz
+    model_bitrate: 8kbps
+    tag: latest
+    load_path: dac.utils.download(model_type="16khz")
+    strict: False
+    load_pretrained: False
+    freeze_codec: False
+    max_duration: 10
 
 Transformer: !new:speechbrain.lobes.models.transformer.TransformerASR.TransformerASR # yamllint disable-line rule:line-length
     input_size: 640
@@ -191,7 +211,7 @@ normalize: !new:speechbrain.processing.features.InputNormalization
     update_until_epoch: 4
 
 modules:
-    CNN: !ref <CNN>
+    Codec: !ref <Codec>
     Transformer: !ref <Transformer>
     seq_lin: !ref <seq_lin>
     ctc_lin: !ref <ctc_lin>
@@ -204,7 +224,7 @@ Adam: !name:torch.optim.AdamW
     eps: 0.000000001
 
 model: !new:torch.nn.ModuleList
-    - [!ref <CNN>, !ref <Transformer>, !ref <seq_lin>, !ref <ctc_lin>]
+    - [!ref <Codec>, !ref <Transformer>, !ref <seq_lin>, !ref <ctc_lin>]
 
 ####################### Decoding & optimiser ###########################
 
@@ -345,5 +365,5 @@ pretrainer: !new:speechbrain.utils.parameter_transfer.Pretrainer
     paths:
         lm: !ref <pretrained_lm_tokenizer_path>/lm.ckpt
         tokenizer: !ref <pretrained_lm_tokenizer_path>/tokenizer.ckpt
-        model: !ref <pretrained_model_path>/model.ckpt
+        model: !ref <pretrained_model_path>/asr.ckpt
 eval_only: False
