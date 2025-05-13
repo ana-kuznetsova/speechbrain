@@ -41,6 +41,7 @@ from pathlib import Path
 import torch
 from hyperpyyaml import load_hyperpyyaml
 from audiotools import AudioSignal
+from audiotools import AudioSignal
 
 import speechbrain as sb
 from speechbrain.utils.distributed import if_main_process, run_on_main
@@ -73,8 +74,9 @@ class ASR(sb.core.Brain):
         #     src = self.modules.CNN(feats)
         #    print("DEBUG FEATS after CNN:", src.shape)
         if hasattr(self.hparams, "Codec"):
+            wavs = wavs.unsqueeze(1)
             logger.info(f'wavs shape - {wavs.shape}')
-            z, codes = self.modules.Codec.forward(wavs)
+            z, codes = self.modules.Codec.encode(wavs, n_quantizers=1)
             logger.info(f'z shape - {z.shape}')
             src = z.transpose(1, 2)
             logger.info(f'src shape - {src.shape}')
@@ -349,14 +351,12 @@ def dataio_prepare(hparams):
         # Speed Perturb is done here so it is multi-threaded with the
         # workers of the dataloader (faster).
         if "speed_perturb" in hparams:
-            # sig = sb.dataio.dataio.read_audio(wav)
-            sig = AudioSignal(wav)
-            sig = sig.audio_data
+            sig = sb.dataio.dataio.read_audio(wav)
             sig = hparams["speed_perturb"](sig.unsqueeze(0)).squeeze(0)
         else:
-            # sig = sb.dataio.dataio.read_audio(wav)
-            sig = AudioSignal(wav)
-            sig = sig.audio_data
+            sig = sb.dataio.dataio.read_audio(wav)
+            #sig = AudioSignal(wav)
+            #sig = sig.audio_data
             # sig.to('cuda')
         # logger.info(f'sig read_audio - {sig}, shape - {sig.shape}')
         return sig

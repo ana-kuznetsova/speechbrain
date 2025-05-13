@@ -16,7 +16,7 @@ save_folder: !ref <output_folder>/save
 train_log: !ref <output_folder>/train_log.txt
 
 # Load the pretrained Conformer and LM from Huggingface
-pretrained_model_path:  speechbrain/asr-conformer-transformerlm-librispeech
+pretrained_model_path: speechbrain/asr-conformer-transformerlm-librispeech
 pretrained_lm_tokenizer_path: speechbrain/asr-transformer-transformerlm-librispeech
 
 data_folder: /workspace/data_speechbrain/data_speechbrain/LibriSpeech
@@ -154,7 +154,7 @@ Codec: !new:speechbrain.lobes.models.discrete.dac.DAC
     model_type: 16khz
     model_bitrate: 8kbps
     tag: latest
-    # load_path: dac.utils.download(model_type="16khz")
+    load_path: dac.utils.download(model_type="16khz")
     strict: False
     load_pretrained: False
     freeze_codec: False
