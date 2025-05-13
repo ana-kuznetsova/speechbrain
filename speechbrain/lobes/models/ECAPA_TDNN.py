@@ -740,6 +740,7 @@ class ECAPA_TDNNQ(torch.nn.Module):
         for i, layer in enumerate(self.blocks):
             try:
                 x = layer(x, lengths=lengths)
+                #x = layer(x)
             except TypeError:
                 x = layer(x)
 

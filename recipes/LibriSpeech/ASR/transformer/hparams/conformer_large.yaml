@@ -32,6 +32,7 @@ data_folder: !PLACEHOLDER  # e.g., /path/to/LibriSpeech
 # otherwise the dataset will automatically be downloaded
 # data_folder_rirs: !ref <data_folder>
 train_splits: ["train-clean-100", "train-clean-360", "train-other-500"]
+#train_splits: ["train-clean-100"]
 dev_splits: ["dev-clean"]
 test_splits: ["dev-clean", "test-clean", "test-other"]
 skip_prep: False
@@ -41,6 +42,8 @@ test_csv:
     - !ref <output_folder>/dev-clean.csv
     - !ref <output_folder>/test-clean.csv
     - !ref <output_folder>/test-other.csv
+
+testing: True
 
 ####################### Training Parameters ####################################
 
