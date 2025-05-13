@@ -73,7 +73,7 @@ max_batch_length_val: 100 # we reduce it as the beam is much wider (VRAM)
 num_bucket: 200
 shuffle: True # if true re-creates batches at each epoch shuffling examples.
 batch_ordering: random
-max_batch_ex: 256
+max_batch_ex: 4
 
 dynamic_batch_sampler_train:
     max_batch_length: !ref <max_batch_length_train>
@@ -301,9 +301,9 @@ epoch_counter: !new:speechbrain.utils.epoch_loop.EpochCounter
 ############################## Augmentations ###################################
 
 # Speed perturbation
-# speed_perturb: !new:speechbrain.augment.time_domain.SpeedPerturb
-#     orig_freq: !ref <sample_rate>
-#     speeds: [95, 100, 105]
+speed_perturb: !new:speechbrain.augment.time_domain.SpeedPerturb
+    orig_freq: !ref <sample_rate>
+    speeds: [95, 100, 105]
 
 # Time Drop
 time_drop: !new:speechbrain.augment.freq_domain.SpectrogramDrop

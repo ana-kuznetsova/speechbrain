@@ -75,7 +75,7 @@ class ASR(sb.core.Brain):
         if hasattr(self.hparams, "Codec"):
             wavs = wavs.unsqueeze(1)
             logger.info(f'wavs shape - {wavs.shape}')
-            z, codes = self.modules.Codec.encode(wavs, n_quantizers=1)
+            z, codes = self.modules.Codec.encode(wavs)
             logger.info(f'z shape - {z.shape}')
             src = z.transpose(1, 2)
             logger.info(f'src shape - {src.shape}')
@@ -334,9 +334,9 @@ def dataio_prepare(hparams):
     @sb.utils.data_pipeline.provides("sig")
     def audio_pipeline(wav):
         # logger.info(f'wav read_audio - {wav}')
-        # sig = sb.dataio.dataio.read_audio(wav)
-        sig = AudioSignal(wav)
-        sig = sig.audio_data
+        sig = sb.dataio.dataio.read_audio(wav)
+        #sig = AudioSignal(wav)
+        #sig = sig.audio_data
         # sig.to('cuda')
         # logger.info(f'sig read_audio - {sig}, shape - {sig.shape}')
         return sig
