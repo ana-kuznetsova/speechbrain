@@ -497,13 +497,13 @@ def batch_pad_right(tensors: list, mode="constant", value=0):
     # need to remove this when feat extraction is updated to handle multichannel.
     max_shape = []
     for dim in range(tensors[0].ndim):
-        if dim != 0:
-            if not all(
-                [x.shape[dim] == tensors[0].shape[dim] for x in tensors[1:]]
-            ):
-                raise EnvironmentError(
-                    "Tensors should have same dimensions except for the first one"
-                )
+        # if dim != 0:
+        #     if not all(
+        #         [x.shape[dim] == tensors[0].shape[dim] for x in tensors[1:]]
+        #     ):
+        #         raise EnvironmentError(
+        #             "Tensors should have same dimensions except for the first one"
+        #         )
         max_shape.append(max([x.shape[dim] for x in tensors]))
 
     batched = []
