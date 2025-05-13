@@ -150,11 +150,11 @@ Codec: !new:speechbrain.lobes.models.discrete.dac.DAC
     codebook_size: 1024
     codebook_dim: 8
     quantizer_dropout: False
-    sample_rate: 44100
-    model_type: 44khz
+    sample_rate: 16000
+    model_type: 16khz
     model_bitrate: 8kbps
     tag: latest
-    # load_path: dac.utils.download(model_type="44khz")
+    # load_path: dac.utils.download(model_type="16khz")
     strict: False
     load_pretrained: False
     freeze_codec: False
