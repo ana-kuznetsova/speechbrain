@@ -21,7 +21,7 @@ pretrained_lm_tokenizer_path: speechbrain/asr-transformer-transformerlm-librispe
 
 data_folder: /data/anakuzne/LibriSpeech
 cached_data_folder: !PLACEHOLDER
-train_splits: ["train-clean-100", "train-clean-360", "train-other-500"]
+train_splits: ["train-clean-100"]
 dev_splits: ["dev-clean"]
 test_splits: ["dev-clean", "test-clean", "test-other"]
 skip_prep: False
