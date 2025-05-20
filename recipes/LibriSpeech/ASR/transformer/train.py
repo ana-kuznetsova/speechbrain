@@ -39,6 +39,7 @@ import sys
 from pathlib import Path
 
 import torch
+import torch.nn as nn
 from hyperpyyaml import load_hyperpyyaml
 from audiotools import AudioSignal
 from audiotools import AudioSignal
@@ -54,6 +55,8 @@ logger = logging.getLogger(__name__)
 # Define training procedure
 class ASR(sb.core.Brain):
     def compute_forward(self, batch, stage):
+
+        torch.cuda.empty_cache()
         """Forward computations from the waveform batches to the output probabilities."""
         batch = batch.to(self.device)
         wavs, wav_lens = batch.sig
@@ -76,10 +79,10 @@ class ASR(sb.core.Brain):
         if hasattr(self.hparams, "Codec"):
             wavs = wavs.unsqueeze(1)
             logger.info(f'wavs shape - {wavs.shape}')
-            z, codes = self.modules.Codec.encode(wavs, n_quantizers=1)
+            z, codes, latents, commitment_loss, codebook_loss = self.modules.Codec.encode(wavs, n_quantizers=1)
             logger.info(f'z shape - {z.shape}')
-            src = z.transpose(1, 2)
-            logger.info(f'src shape - {src.shape}')
+            self.proj = nn.Linear(1024, 640).to("cuda")
+            src = self.proj(z.transpose(1, 2))
 
         enc_out, pred, commitment_loss, codebook_loss = (
             self.modules.Transformer(
