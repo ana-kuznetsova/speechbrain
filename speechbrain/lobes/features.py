@@ -46,19 +46,19 @@ class Codec(torch.nn.Module):
     def __init__(self, 
                  model_type="16khz",
                  trainable=True,
-                 num_quantizers=None, 
+                 n_codebooks=None, 
                  device="cuda"):
         super().__init__()
         model_path = dac.utils.download(model_type=model_type)
         model = dac.DAC.load(model_path)
         self.model = model
         self.trainable = trainable
-        self.num_quantizers = num_quantizers
+        self.num_quantizers = n_codebooks
         if not trainable:
             for param in self.model.parameters():
                 param.requires_grad = False
-        self.model.eval()
-        self.model.quantizer.num_quantizers = num_quantizers
+            self.model.eval()
+        self.model.quantizer.num_quantizers = n_codebooks
         self.model.to(device)
 
     def forward(self, x):
@@ -68,7 +68,7 @@ class Codec(torch.nn.Module):
         """
         x = x.to(self.model.device)
         if not self.trainable and self.num_quantizers:
-            z, codes, latents, codebook_loss, commitment_loss = self.model.encode(x, n=self.num_quantizers)
+            z, codes, latents, codebook_loss, commitment_loss = self.model.encode(x, n_quantizers=self.num_quantizers)
         else:
             z, codes, latents, codebook_loss, commitment_loss = self.model.encode(x)
         return z, codebook_loss, commitment_loss

@@ -74,7 +74,7 @@ max_batch_length_val: 100 # we reduce it as the beam is much wider (VRAM)
 num_bucket: 200
 shuffle: True # if true re-creates batches at each epoch shuffling examples.
 batch_ordering: random
-max_batch_ex: 1
+max_batch_ex: 4
 
 dynamic_batch_sampler_train:
     max_batch_length: !ref <max_batch_length_train>
@@ -317,7 +317,8 @@ fea_augment: !new:speechbrain.augment.augmenter.Augmenter
 
 
 compute_features: !new:speechbrain.lobes.features.Codec
-    trainable: False
+    trainable: True
+    n_codebooks: 4
 
 ############################## Logging and Pretrainer ##########################
 
