@@ -43,7 +43,7 @@ batch_size_exponent: 2
 batch_size: 16
 ctc_weight: 0.3
 seq_weight: 0.7
-codec_loss_weight: 0.2
+codec_loss_weight: 0.2 # @orion_step1: --codec_loss_weight~"loguniform(0.1,0.9)"
 grad_accumulation_factor: 1
 max_grad_norm: 5.0
 loss_reduction: 'batchmean'
@@ -53,7 +53,7 @@ precision: fp32 # bf16, fp16 or fp32
 avg_checkpoints: 10 # Number of checkpoints to average for evaluation
 
 # stages related parameters
-lr_adam: 0.0008
+lr_adam: 0.0008 # @orion_step1: --lr_adam~"loguniform(0.00001,0.1)"
 warmup: 50000
 augment_warmup: 8000
 
@@ -81,7 +81,8 @@ dynamic_batch_sampler_train:
     num_buckets: !ref <num_bucket>
     shuffle: !ref <shuffle>
     batch_ordering: !ref <batch_ordering>
-    max_batch_ex: !ref <max_batch_ex> 
+    max_batch_ex: !ref <max_batch_ex>
+
 
 dynamic_batch_sampler_valid:
     max_batch_length: !ref <max_batch_length_val>
