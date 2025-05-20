@@ -338,9 +338,9 @@ def dataio_prepare(hparams):
     @sb.utils.data_pipeline.provides("sig")
     def audio_pipeline(wav):
         # logger.info(f'wav read_audio - {wav}')
-        # sig = sb.dataio.dataio.read_audio(wav)
-        sig = AudioSignal(wav)
-        sig = sig.audio_data
+        sig = sb.dataio.dataio.read_audio(wav)
+        #sig = AudioSignal(wav)
+        #sig = sig.audio_data
         # sig.to('cuda')
         # logger.info(f'sig read_audio - {sig}, shape - {sig.shape}')
         return sig
