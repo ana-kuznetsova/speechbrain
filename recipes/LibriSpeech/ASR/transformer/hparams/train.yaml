@@ -16,11 +16,12 @@ save_folder: !ref <output_folder>/save
 train_log: !ref <output_folder>/train_log.txt
 
 # Load the pretrained Conformer and LM from Huggingface
-pretrained_model_path: /data/anakuzne/speechbrain/recipes/LibriSpeech/ASR/transformer/results/conformer_ls960_pretrained
+pretrained_model_path: speechbrain/asr-transformer-transformerlm-librispeech
 pretrained_lm_tokenizer_path: speechbrain/asr-transformer-transformerlm-librispeech
 
 data_folder: /data/anakuzne/LibriSpeech
-train_splits: ["train-clean-100", "train-clean-360", "train-other-500"]
+#train_splits: ["train-clean-100", "train-clean-360", "train-other-500"]
+train_splits: ["train-clean-100"]
 dev_splits: ["dev-clean"]
 test_splits: ["dev-clean", "test-clean", "test-other"]
 skip_prep: False
@@ -73,14 +74,14 @@ max_batch_length_val: 100 # we reduce it as the beam is much wider (VRAM)
 num_bucket: 200
 shuffle: True # if true re-creates batches at each epoch shuffling examples.
 batch_ordering: random
-max_batch_ex: 256
+max_batch_ex: 1
 
 dynamic_batch_sampler_train:
     max_batch_length: !ref <max_batch_length_train>
     num_buckets: !ref <num_bucket>
     shuffle: !ref <shuffle>
     batch_ordering: !ref <batch_ordering>
-    max_batch_ex: !ref <max_batch_ex>
+    max_batch_ex: !ref <max_batch_ex> 
 
 dynamic_batch_sampler_valid:
     max_batch_length: !ref <max_batch_length_val>
@@ -102,10 +103,10 @@ test_dataloader_opts:
     batch_size: 1
 
 ####################### Model Parameters #######################################
-
 # Transformer
+
 d_model: 512
-nhead: 8
+nhead: 4
 num_encoder_layers: 12
 num_decoder_layers: 6
 d_ffn: 2048
@@ -115,7 +116,7 @@ output_neurons: 5000
 
 # Outputs
 blank_index: 0
-label_smoothing: 0.1
+label_smoothing: 0.0
 pad_index: 0
 bos_index: 1
 eos_index: 2
@@ -123,25 +124,30 @@ eos_index: 2
 # Decoding parameters
 min_decode_ratio: 0.0
 max_decode_ratio: 1.0
-valid_search_interval: 1
+valid_search_interval: 10
 valid_beam_size: 10
 test_beam_size: 66
 lm_weight: 0.60
 ctc_weight_decode: 0.40
 
-############################## Models ##########################################
+############################## models ################################
 
-CNN: !new:speechbrain.lobes.models.convolution.ConvolutionFrontEnd
-    input_shape: (8, 10, 80)
-    num_blocks: 2
-    num_layers_per_block: 1
-    out_channels: (64, 32)
-    kernel_sizes: (3, 3)
-    strides: (2, 2)
-    residuals: (False, False)
+#CNN: !new:speechbrain.lobes.models.convolution.ConvolutionFrontEnd
+#    input_shape: (8, 10, 1024)
+#    num_blocks: 3
+#    num_layers_per_block: 1
+#    out_channels: (64, 64, 64)
+#    kernel_sizes: (5, 5, 1)
+#    strides: (2, 2, 1)
+#    residuals: (False, False, True)
+#    norm: !name:speechbrain.nnet.normalization.LayerNorm
 
-Transformer: !new:speechbrain.lobes.models.transformer.TransformerASR.TransformerASR # yamllint disable-line rule:line-length
-    input_size: 640
+Projection: !new:speechbrain.lobes.models.VanillaNN.VanillaNN
+    input_shape: [8, 10, 1024]
+    dnn_neurons: 1280
+
+Transformer: !new:speechbrain.lobes.models.transformer.TransformerASR.TransformerASR
+    input_size: 1280
     tgt_vocab: !ref <output_neurons>
     d_model: !ref <d_model>
     nhead: !ref <nhead>
@@ -150,16 +156,10 @@ Transformer: !new:speechbrain.lobes.models.transformer.TransformerASR.Transforme
     d_ffn: !ref <d_ffn>
     dropout: !ref <transformer_dropout>
     activation: !ref <activation>
-    encoder_module: conformer
-    attention_type: RelPosMHAXL
+    encoder_module: transformer
+    attention_type: regularMHA
     normalize_before: True
     causal: False
-    use_quantizer: True
-    freeze_encoder: False
-    freeze_decoder: False
-    num_codebooks: !ref <n_codebooks>
-    codebook_size: !ref <vocab_size>
-    codebook_dim: 128
 
 # This is the TransformerLM that is used according to the Huggingface repository
 # Visit the HuggingFace model corresponding to the pretrained_lm_tokenizer_path
@@ -191,7 +191,8 @@ normalize: !new:speechbrain.processing.features.InputNormalization
     update_until_epoch: 4
 
 modules:
-    CNN: !ref <CNN>
+    #CNN: !ref <CNN>
+    Projection: !ref <Projection>
     Transformer: !ref <Transformer>
     seq_lin: !ref <seq_lin>
     ctc_lin: !ref <ctc_lin>
@@ -204,7 +205,7 @@ Adam: !name:torch.optim.AdamW
     eps: 0.000000001
 
 model: !new:torch.nn.ModuleList
-    - [!ref <CNN>, !ref <Transformer>, !ref <seq_lin>, !ref <ctc_lin>]
+    - [!ref <Projection>, !ref <Transformer>, !ref <seq_lin>, !ref <ctc_lin>]
 
 ####################### Decoding & optimiser ###########################
 
@@ -314,11 +315,9 @@ fea_augment: !new:speechbrain.augment.augmenter.Augmenter
         !ref <freq_drop>,
         !ref <time_warp>]
 
-compute_features: !new:speechbrain.lobes.features.Fbank
-    sample_rate: !ref <sample_rate>
-    n_fft: !ref <n_fft>
-    n_mels: !ref <n_mels>
-    win_length: !ref <win_length>
+
+compute_features: !new:speechbrain.lobes.features.Codec
+    trainable: False
 
 ############################## Logging and Pretrainer ##########################
 
@@ -345,5 +344,5 @@ pretrainer: !new:speechbrain.utils.parameter_transfer.Pretrainer
     paths:
         lm: !ref <pretrained_lm_tokenizer_path>/lm.ckpt
         tokenizer: !ref <pretrained_lm_tokenizer_path>/tokenizer.ckpt
-        model: !ref <pretrained_model_path>/model.ckpt
+        model: !ref <pretrained_model_path>/asr.ckpt
 eval_only: False

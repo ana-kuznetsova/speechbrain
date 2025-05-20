@@ -57,9 +57,11 @@ class ASR(sb.core.Brain):
         tokens_bos, _ = batch.tokens_bos
 
         # compute features
-        feats = self.hparams.compute_features(wavs)
+        wavs = wavs.unsqueeze(1)
+        feats, codebook_loss, commitment_loss = self.hparams.compute_features(wavs)
         current_epoch = self.hparams.epoch_counter.current
-        feats = self.modules.normalize(feats, wav_lens, epoch=current_epoch)
+        if not isinstance(self.hparams.compute_features, sb.lobes.features.Codec):
+            feats = self.modules.normalize(feats, wav_lens, epoch=current_epoch)
 
         # Add feature augmentation if specified.
         if stage == sb.Stage.TRAIN and hasattr(self.hparams, "fea_augment"):
@@ -69,12 +71,13 @@ class ASR(sb.core.Brain):
         # forward modules
         if hasattr(self.hparams, "CNN"):
             src = self.modules.CNN(feats)
-        #    print("DEBUG FEATS after CNN:", src.shape)
-        if hasattr(self.hparams, "Codec"):
-            codes, z = self.modules.Codec(feats)
-            src = z.transpose(1, 2)
+       
+        if isinstance(self.hparams.compute_features, sb.lobes.features.Codec):
+            feats = feats.transpose(1, 2)
+            src = self.modules.Projection(feats)
 
-        enc_out, pred, commitment_loss, codebook_loss = (
+        
+        enc_out, pred, _, _ = (
             self.modules.Transformer(
                 src, tokens_bos, wav_lens, pad_idx=self.hparams.pad_index
             )

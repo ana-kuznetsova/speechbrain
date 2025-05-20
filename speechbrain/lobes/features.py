@@ -39,6 +39,39 @@ class RawAudio(torch.nn.Module):
     def forward(self, x):
         """Returns the input tensor unchanged."""
         return x
+    
+class Codec(torch.nn.Module):
+    """Wrapper class to get codes from raw audio using DAC.
+    """
+    def __init__(self, 
+                 model_type="16khz",
+                 trainable=True,
+                 num_quantizers=None, 
+                 device="cuda"):
+        super().__init__()
+        model_path = dac.utils.download(model_type=model_type)
+        model = dac.DAC.load(model_path)
+        self.model = model
+        self.trainable = trainable
+        self.num_quantizers = num_quantizers
+        if not trainable:
+            for param in self.model.parameters():
+                param.requires_grad = False
+        self.model.eval()
+        self.model.quantizer.num_quantizers = num_quantizers
+        self.model.to(device)
+
+    def forward(self, x):
+        """Input must be of size (batch, channel, time).
+        Returns: quantized discrete embeddings of size (batch, code_dim, time);
+                 codebook_loss, commitment_loss.
+        """
+        x = x.to(self.model.device)
+        if not self.trainable and self.num_quantizers:
+            z, codes, latents, codebook_loss, commitment_loss = self.model.encode(x, n=self.num_quantizers)
+        else:
+            z, codes, latents, codebook_loss, commitment_loss = self.model.encode(x)
+        return z, codebook_loss, commitment_loss
 
 class Fbank(torch.nn.Module):
     """Generate features for input to the speech pipeline.
