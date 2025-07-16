@@ -3,7 +3,28 @@ This fork of SpeechBrain framework repository contains the implementation of the
 
 ## ASR
 
-The ASR quantization approach is implemented in
+The quantizied version of the Conformer encoder is implemented within the following class `sb.lobes.models.transformer.Transformer.ConformerEncoderQuantized`. 
+And can be utilized withing the standard SpeechBrain recipe for LibriSpeech ASR by providing the new quantization parameters to the config file `recipes/LibriSpeech/ASR/transformer/hparams/conformerq.yaml` file.
+
+```yaml
+Transformer: !new:speechbrain.lobes.models.transformer.TransformerASR.TransformerASR
+    ...
+    encoder_module: conformerq
+    num_codebooks: !ref <n_codebooks>
+    codebook_size: !ref <vocab_size>
+    codebook_dim: !ref 8 ** <codebook_dim_exponent>
+    quantize_layer: !ref <quantize_layer_idx>
+```
+where `conformerq` is used as an ASR encoder, `num_codebooks` is the number of codebooks used by residual vector quantizer (RVQ) module, `codebook_size` and `codebook_dim` are the desired codebook size and and dmension respectively. To control which of the layers of the Conformer encoder to quantize, pass `quantize_layer` parameter as an index of the layer being quantized.
+
+To run the experiment run the command below:
+
+```shell
+cd recipes/LibriSpeech/ASR/transformer
+python train.py recipes/LibriSpeech/ASR/transformer/hparams/conformerq.yaml
+```
+Output folders can be specified direcly in the `recipes/LibriSpeech/ASR/transformer/hparams/conformerq.yaml` or overriden as command line arguments.
+
 
 
 
