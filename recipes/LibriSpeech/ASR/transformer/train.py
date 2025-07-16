@@ -118,7 +118,6 @@ class ASR(sb.core.Brain):
         (p_ctc, p_seq, wav_lens, hyps, commitment_loss, codebook_loss) = (
             predictions
         )
-
         ids = batch.id
         tokens_eos, tokens_eos_lens = batch.tokens_eos
         tokens, tokens_lens = batch.tokens
@@ -155,7 +154,17 @@ class ASR(sb.core.Brain):
             )
 
         if stage != sb.Stage.TRAIN:
-            self.hparams.train_logger.log_stats(
+            if self.modules.Transformer.encoder_module != "conformerq":
+                self.hparams.train_logger.log_stats(
+                stats_meta={"epoch": self.hparams.epoch_counter.current},
+                train_stats={
+                    "loss_ctc": loss_ctc.item(),
+                    "loss_seq": loss_seq.item(),
+                },
+                verbose=True,
+                )
+            else:
+                self.hparams.train_logger.log_stats(
                 stats_meta={"epoch": self.hparams.epoch_counter.current},
                 train_stats={
                     "loss_ctc": loss_ctc.item(),
@@ -164,7 +173,7 @@ class ASR(sb.core.Brain):
                     "commitment_loss": commitment_loss.item(),
                 },
                 verbose=True,
-            )
+                )
             current_epoch = self.hparams.epoch_counter.current
             valid_search_interval = self.hparams.valid_search_interval
             if current_epoch % valid_search_interval == 0 or (

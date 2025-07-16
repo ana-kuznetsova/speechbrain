@@ -1,3 +1,21 @@
+# Task-Specific Audio Coding for Machines
+This fork of SpeechBrain framework repository contains the implementation of the Audio Coding for the Machines (ACoM) for automatic spech recognition (ASR) and audio classification tasks using SpeechBrain recipies.
+
+## ASR
+
+The ASR quantization approach is implemented in
+
+
+
+
+## Citation
+```bibtex
+
+```
+
+
+
+## BELOW IS THE ORIGINAL README OF SPEECHBRAIN REPO
 <p align="center">
   <img src="https://raw.githubusercontent.com/speechbrain/speechbrain/develop/docs/images/speechbrain-logo.svg" alt="SpeechBrain Logo"/>
 </p>

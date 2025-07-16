@@ -25,6 +25,7 @@ from speechbrain.nnet.attention import (
 from speechbrain.nnet.hypermixing import HyperMixing
 from speechbrain.nnet.normalization import LayerNorm
 from speechbrain.utils.dynamic_chunk_training import DynChunkTrainConfig
+from speechbrain.lobes.models.discrete.dac import ResidualVectorQuantize
 
 
 @dataclass
@@ -832,6 +833,212 @@ class ConformerEncoder(nn.Module):
                 for layer in self.layers
             ],
         )
+
+
+class ConformerEncoderQuantized(nn.Module):
+    """Note (anakuzne): This class is a placeholder for the quantized version of ConformerEncoder.
+
+    This class implements the Conformer encoder where N-th Conformer layer can be quantized.
+
+    Arguments
+    ---------
+    num_layers : int
+        Number of layers.
+    d_model : int
+        Embedding dimension size.
+    d_ffn : int
+        Hidden size of self-attention Feed Forward layer.
+    nhead : int
+        Number of attention heads.
+    kernel_size : int, optional
+        Kernel size of convolution model.
+    kdim : int, optional
+        Dimension of the key.
+    vdim : int, optional
+        Dimension of the value.
+    activation: torch.nn.Module
+         Activation function used in each Confomer layer.
+    bias : bool, optional
+        Whether  convolution module.
+    dropout : int, optional
+        Dropout for the encoder.
+    causal: bool, optional
+        Whether the convolutions should be causal or not.
+    attention_type: str, optional
+        type of attention layer, e.g. regulaMHA for regular MultiHeadAttention.
+    output_hidden_states: bool, optional
+        Whether the model should output the hidden states as a list of tensor.
+    layerdrop_prob: float
+        The probability to drop an entire layer.
+    quantize_layer: int The number of the layer to quantize
+
+    Example
+    -------
+    >>> import torch
+    >>> x = torch.rand((8, 60, 512))
+    >>> pos_emb = torch.rand((1, 2*60-1, 512))
+    >>> net = ConformerEncoder(1, 512, 512, 8)
+    >>> output, _ = net(x, pos_embs=pos_emb)
+    >>> output.shape
+    torch.Size([8, 60, 512])
+
+    >>> import torch
+    >>> from speechbrain.lobes.models.transformer.Conformer import ConformerEncoder
+    >>> x = torch.rand((8, 60, 512)); pos_emb = torch.rand((1, 2*60-1, 512));
+    >>> net = ConformerEncoder(4, 512, 512, 8, output_hidden_states=True)
+    >>> output, _, hs = net(x, pos_embs=pos_emb)
+    >>> hs[0].shape
+    torch.Size([8, 60, 512])
+
+    """
+
+    def __init__(
+        self,
+        num_layers,
+        d_model,
+        d_ffn,
+        nhead,
+        kernel_size=31,
+        kdim=None,
+        vdim=None,
+        activation=Swish,
+        bias=True,
+        dropout=0.0,
+        causal=False,
+        attention_type="RelPosMHAXL",
+        output_hidden_states=False,
+        layerdrop_prob=0.0,
+        quantize_layer=11,
+        num_codebooks=1,
+        codebook_size=1024,
+        codebook_dim=128,
+        quantizer_dropout=0.0,
+        mode="train",
+    ):
+        super().__init__()
+
+        self.layers = torch.nn.ModuleList(
+            [
+                ConformerEncoderLayer(
+                    d_ffn=d_ffn,
+                    nhead=nhead,
+                    d_model=d_model,
+                    kdim=kdim,
+                    vdim=vdim,
+                    dropout=dropout,
+                    activation=activation,
+                    kernel_size=kernel_size,
+                    bias=bias,
+                    causal=causal,
+                    attention_type=attention_type,
+                )
+                for i in range(num_layers)
+            ]
+        )
+        self.quantizer = ResidualVectorQuantize(input_dim=d_model,
+                                                n_codebooks=num_codebooks,
+                                                codebook_size=codebook_size,
+                                                codebook_dim=codebook_dim,
+                                                quantizer_dropout=quantizer_dropout)
+        self.quantize_layer = quantize_layer
+        self.rvq_proj = nn.Linear(d_model, d_model)
+        self.norm = LayerNorm(d_model, eps=1e-6)
+        self.layerdrop_prob = layerdrop_prob
+        self.attention_type = attention_type
+        self.output_hidden_states = output_hidden_states
+        self.mode = mode
+
+    def forward(
+        self,
+        src,
+        src_mask: Optional[torch.Tensor] = None,
+        src_key_padding_mask: Optional[torch.Tensor] = None,
+        pos_embs: Optional[torch.Tensor] = None,
+        dynchunktrain_config: Optional[DynChunkTrainConfig] = None,
+    ):
+        """
+        Arguments
+        ---------
+        src : torch.Tensor
+            The sequence to the encoder layer.
+        src_mask : torch.Tensor, optional
+            The mask for the src sequence.
+        src_key_padding_mask : torch.Tensor, optional
+            The mask for the src keys per batch.
+        pos_embs: torch.Tensor, torch.nn.Module,
+            Module or tensor containing the input sequence positional embeddings
+            If custom pos_embs are given it needs to have the shape (1, 2*S-1, E)
+            where S is the sequence length, and E is the embedding dimension.
+        dynchunktrain_config: Optional[DynChunkTrainConfig]
+            Dynamic Chunk Training configuration object for streaming,
+            specifically involved here to apply Dynamic Chunk Convolution to the
+            convolution module.
+
+        Returns
+        -------
+        output : torch.Tensor
+            The output of the Conformer.
+        attention_lst : list
+            The attention values.
+        hidden_state_lst : list, optional
+            The output of the hidden layers of the encoder.
+            Only works if output_hidden_states is set to true.
+        """
+        if self.attention_type == "RelPosMHAXL":
+            if pos_embs is None:
+                raise ValueError(
+                    "The chosen attention type for the Conformer is RelPosMHAXL. For this attention type, the positional embeddings are mandatory"
+                )
+
+        output = src
+
+        if self.layerdrop_prob > 0.0:
+            keep_probs = torch.rand(len(self.layers))
+
+        attention_lst = []
+        if self.output_hidden_states:
+            hidden_state_lst = [output]
+
+        for i, enc_layer in enumerate(self.layers):
+            if (
+                not self.training
+                or self.layerdrop_prob == 0.0
+                or keep_probs[i] > self.layerdrop_prob
+            ):
+                output, attention = enc_layer(
+                    output,
+                    src_mask=src_mask,
+                    src_key_padding_mask=src_key_padding_mask,
+                    pos_embs=pos_embs,
+                    dynchunktrain_config=dynchunktrain_config,
+                )
+                attention_lst.append(attention)
+
+                if self.output_hidden_states:
+                    hidden_state_lst.append(output)
+                if i == self.quantize_layer and i != len(self.layers) - 1:
+                    # RVQ output (z_q, codes, latents, commitment_loss, codebook_loss)
+                    output = output.transpose(1, 2)
+                    output, codes, _, commitment_loss, codebook_loss = self.quantizer(output)
+                    output = output.transpose(1, 2)
+                    if self.mode =="quantize":
+                        return output, codes
+                    #if i == len(self.layers) - 1:
+                    #    output = self.rvq_proj(output)
+                elif i == self.quantize_layer and i == len(self.layers) - 1:
+                    output = self.norm(output)
+                    output = output.transpose(1, 2)
+                    output, codes, _, commitment_loss, codebook_loss = self.quantizer(output)
+                    output = output.transpose(1, 2)
+                    if self.mode =="quantize":
+                        return output, codes
+
+        if self.quantize_layer != len(self.layers) - 1:
+            output = self.norm(output)
+
+        if self.output_hidden_states:
+            return output, attention_lst, hidden_state_lst, commitment_loss, codebook_loss
+        return output, attention_lst, commitment_loss, codebook_loss
 
 
 class ConformerDecoderLayer(nn.Module):

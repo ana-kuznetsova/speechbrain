@@ -22,6 +22,7 @@ audio_data_folder: !ref <data_folder>/audio
 output_folder: !ref ./results/urban_sound/<seed>
 save_folder: !ref <output_folder>/save
 train_log: !ref <output_folder>/train_log.txt
+cached_data_folder: !PLACEHOLDER
 
 # Data for augmentation
 NOISE_DATASET_URL: https://www.dropbox.com/scl/fi/a09pj97s5ifan81dqhi4n/noises.zip?rlkey=j8b0n9kdjdr32o1f06t0cw5b7&dl=1
@@ -45,13 +46,15 @@ train_fold_nums: [1, 2, 3, 4, 5, 6, 7, 8]
 valid_fold_nums: [9]
 test_fold_nums: [10]
 skip_manifest_creation: False
+testing: True
 
 ckpt_interval_minutes: 15 # save checkpoint every N min
 
 ####################### Training Parameters ####################################
 number_of_epochs: 25
-batch_size: 32
-lr: 0.001
+batch_size_exponent: 4 # @orion_step1: --batch_size_exponent~"uniform(2, 4,discrete=True)"
+batch_size: !ref 2** <batch_size_exponent>
+lr: 0.001 # @orion_step1: --lr~"loguniform(0.00001,0.1)"
 base_lr: 0.00000001
 max_lr: !ref <lr>
 step_size: 65000
@@ -89,7 +92,7 @@ compute_features: !new:speechbrain.lobes.features.Fbank
 
 embedding_model: !new:speechbrain.lobes.models.ECAPA_TDNN.ECAPA_TDNN
     input_size: !ref <n_mels>
-    channels: [1024, 1024, 1024, 1024, 3072]
+    channels: [1024, 1024, 1024, 1024, 3072]  # Number of channels in each TDNN layer
     kernel_sizes: [5, 3, 3, 3, 1]
     dilations: [1, 2, 3, 4, 1]
     attention_channels: 128

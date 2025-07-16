@@ -19,7 +19,6 @@ from speechbrain.lobes.models.transformer.Transformer import (
     get_key_padding_mask,
     get_lookahead_mask,
 )
-from speechbrain.lobes.models.discrete.dac import ResidualVectorQuantize
 from speechbrain.nnet.activations import Swish
 from speechbrain.nnet.containers import ModuleList
 from speechbrain.nnet.linear import Linear
@@ -271,13 +270,13 @@ class TransformerASR(TransformerInterface):
         use_quantizer: Optional[bool] = False,
         freeze_encoder: Optional[bool] = False,
         freeze_decoder: Optional[bool] = False,
-        freeze_quantizer: Optional[bool] = False,
-        quantizer_init: Optional[str] = "kmeans",
         quantizer_dropout: Optional[float] = 0.0,
         n_quantizers: Optional[int] = None,
         num_codebooks: Optional[int] = 12,
         codebook_size: Optional[int] = 1024,
         codebook_dim: Optional[int] = 64,
+        quantize_layer: Optional[int] = 0,
+        mode:Optional[str] = "train",
         output_hidden_states=False,
         layerdrop_prob=0.0,
     ):
@@ -303,6 +302,12 @@ class TransformerASR(TransformerInterface):
             kernel_size=kernel_size,
             bias=bias,
             encoder_module=encoder_module,
+            quantize_layer=quantize_layer,
+            num_codebooks=num_codebooks,
+            codebook_size=codebook_size,
+            codebook_dim=codebook_dim,
+            quantizer_dropout=quantizer_dropout,
+            mode=mode,
             conformer_activation=conformer_activation,
             branchformer_activation=branchformer_activation,
             attention_type=attention_type,
@@ -324,10 +329,6 @@ class TransformerASR(TransformerInterface):
             torch.nn.Dropout(dropout),
         )
 
-        self.use_quantizer = use_quantizer
-        # This is only used for the inference on the models with quantizer dropout
-        self.n_quantizers = n_quantizers
-
         if num_decoder_layers > 0:
             self.custom_tgt_module = ModuleList(
                 NormalizedEmbedding(d_model, tgt_vocab)
@@ -336,16 +337,7 @@ class TransformerASR(TransformerInterface):
             self.__freeze_parameters(freeze_encoder, "encoder")
         if freeze_decoder:
             self.__freeze_parameters(freeze_decoder, "decoder")
-
-        if self.use_quantizer:
-            self.quantizer = ResidualVectorQuantize(input_dim=d_model,
-                                                    n_codebooks=num_codebooks,
-                                                    codebook_size=codebook_size,
-                                                    codebook_dim=codebook_dim,
-                                                    quantizer_dropout=quantizer_dropout,)
-            self.quantizer_init = quantizer_init
-            if freeze_quantizer:
-                self.__freeze_parameters(freeze_quantizer, "quantizer")
+        self.encoder_module = encoder_module
 
         # reset parameters using xavier_normal_
         self._init_params()
@@ -403,23 +395,20 @@ class TransformerASR(TransformerInterface):
             src_key_padding_mask=src_key_padding_mask,
             pos_embs=pos_embs_encoder,
         )
-        
-        if self.use_quantizer:
-            encoder_out, encoder_lens = outputs
-            z, codes, _, commitment_loss, codebook_loss = self.quantizer(
-                encoder_out.transpose(1, 2), self.n_quantizers
-            )
-            z = z.transpose(1, 2)
-            encoder_out = z
 
         # if encoder only, we return the output of the encoder
         if tgt is None:
             return outputs
-
-        if self.output_hidden_states:
-            encoder_out, _, hidden_states = outputs
+        if self.encoder_module == "conformerq":
+            if self.output_hidden_states:
+                encoder_out, _, hidden_states, commitment_loss, codebook_loss = outputs
+            else:
+                encoder_out, _, commitment_loss, codebook_loss = outputs
         else:
-            encoder_out, _ = outputs
+            if self.output_hidden_states:
+                encoder_out, _, hidden_states = outputs
+            else:
+                encoder_out, _ = outputs
 
         tgt = self.custom_tgt_module(tgt)
 
@@ -445,7 +434,7 @@ class TransformerASR(TransformerInterface):
             pos_embs_tgt=pos_embs_target,
             pos_embs_src=pos_embs_encoder,
         )
-        if self.use_quantizer:
+        if self.encoder_module == "conformerq":
             return encoder_out, decoder_out, commitment_loss, codebook_loss
         return encoder_out, decoder_out, None, None
 
@@ -547,6 +536,16 @@ class TransformerASR(TransformerInterface):
             src = src + self.positional_encoding(src)
             pos_embs_source = None
 
+        if self.encoder_module == "conformerq":
+            encoder_out = self.encoder(
+                src=src,
+                src_mask=src_mask,
+                src_key_padding_mask=src_key_padding_mask,
+                pos_embs=pos_embs_source,
+                dynchunktrain_config=dynchunktrain_config,
+            )
+            return encoder_out
+
         outputs = self.encoder(
             src=src,
             src_mask=src_mask,
@@ -555,12 +554,7 @@ class TransformerASR(TransformerInterface):
             dynchunktrain_config=dynchunktrain_config,
         )
         encoder_out, _ = outputs
-        # if self.use_quantizer:
-        z, codes, _, commitment_loss, codebook_loss = self.quantizer(encoder_out.transpose(1, 2))
-        z = z.transpose(1, 2)
-        encoder_out = z
-
-        return encoder_out, codes
+        return encoder_out
 
     def encode_streaming(self, src, context: TransformerASRStreamingContext):
         """

@@ -12,6 +12,7 @@ from speechbrain.dataio.dataio import length_to_mask
 from speechbrain.nnet.CNN import Conv1d as _Conv1d
 from speechbrain.nnet.linear import Linear
 from speechbrain.nnet.normalization import BatchNorm1d as _BatchNorm1d
+from speechbrain.lobes.models.discrete.dac import ResidualVectorQuantize
 
 
 # Skip transpose as much as possible for efficiency
@@ -492,6 +493,19 @@ class ECAPA_TDNN(torch.nn.Module):
             )
 
         # Multi-layer feature aggregation
+        #if self.merge_feats:
+        #    self.mfa = TDNNBlock(
+        #        channels[-2]//2 * (len(channels) - 2),
+        #        channels[-1],
+        #        kernel_sizes[-1],
+        #        dilations[-1],
+        #        activation,
+        #        groups=groups[-1],
+        #        dropout=dropout,
+        #    )
+        #else:
+        #if reduction == "avg_pool":
+        #    self.mfa = nn.AvgPool1d(kernel_size=k_reduction, stride=k_reduction)
         self.mfa = TDNNBlock(
             channels[-2] * (len(channels) - 2),
             channels[-1],
@@ -556,6 +570,221 @@ class ECAPA_TDNN(torch.nn.Module):
 
         x = x.transpose(1, 2)
         return x
+
+class ECAPA_TDNNQ(torch.nn.Module):
+    """An implementation of the quantized speaker embedding model based on a paper.
+    "ECAPA-TDNN: Emphasized Channel Attention, Propagation and Aggregation in
+    TDNN Based Speaker Verification" (https://arxiv.org/abs/2005.07143).
+
+    Arguments
+    ---------
+    input_size : int
+        Expected size of the input dimension.
+    device : str
+        Device used, e.g., "cpu" or "cuda".
+    lin_neurons : int
+        Number of neurons in linear layers.
+    activation : torch class
+        A class for constructing the activation layers.
+    channels : list of ints
+        Output channels for TDNN/SERes2Net layer.
+    kernel_sizes : list of ints
+        List of kernel sizes for each layer.
+    dilations : list of ints
+        List of dilations for kernels in each layer.
+    attention_channels: int
+        The number of attention channels.
+    res2net_scale : int
+        The scale of the Res2Net block.
+    se_channels : int
+        The number of output channels after squeeze.
+    global_context: bool
+        Whether to use global context.
+    groups : list of ints
+        List of groups for kernels in each layer.
+    dropout : float
+        Rate of channel dropout during training.
+
+    Example
+    -------
+    >>> input_feats = torch.rand([5, 120, 80])
+    >>> compute_embedding = ECAPA_TDNN(80, lin_neurons=192)
+    >>> outputs = compute_embedding(input_feats)
+    >>> outputs.shape
+    torch.Size([5, 1, 192])
+    """
+
+    def __init__(
+        self,
+        input_size,
+        device="cpu",
+        lin_neurons=192,
+        activation=torch.nn.ReLU,
+        channels=[512, 512, 512, 512, 1536],
+        kernel_sizes=[5, 3, 3, 3, 1],
+        dilations=[1, 2, 3, 4, 1],
+        attention_channels=128,
+        res2net_scale=8,
+        se_channels=128,
+        global_context=True,
+        groups=[1, 1, 1, 1, 1],
+        dropout=0.0,
+        num_codebooks=4,
+        codebook_size=512,
+        codebook_dim=64,
+        quantizer_dropout=0.0,
+        quantize_layer=4,
+        mode="train",
+        reduction_type="projection",
+        proj_dim=4
+                ):
+        super().__init__()
+        assert len(channels) == len(kernel_sizes)
+        assert len(channels) == len(dilations)
+        self.channels = channels
+        self.quantize_layer = quantize_layer
+        self.proj_dim = proj_dim
+        self.reduction_type = reduction_type
+        self.mode = mode
+        self.blocks = nn.ModuleList()
+
+        # The initial TDNN layer
+        self.blocks.append(
+            TDNNBlock(
+                input_size,
+                channels[0],
+                kernel_sizes[0],
+                dilations[0],
+                activation,
+                groups[0],
+                dropout,
+            )
+        )
+
+        self.quantizer = ResidualVectorQuantize(input_dim=channels[quantize_layer] ,
+                                                n_codebooks=num_codebooks,
+                                                codebook_size=codebook_size,
+                                                codebook_dim=codebook_dim,
+                                                quantizer_dropout=quantizer_dropout)
+        if reduction_type == "projection":
+            self.proj_in = nn.Linear(in_features=proj_dim,
+                                  out_features=1)
+        elif reduction_type == "avg_pool":
+            self.proj_in = nn.AvgPool1d(kernel_size=proj_dim, stride=proj_dim)
+        self.proj_out = nn.Linear(in_features=1,
+                                out_features=proj_dim)
+
+        # SE-Res2Net layers
+        for i in range(1, len(channels) - 1):
+            self.blocks.append(
+                SERes2NetBlock(
+                    channels[i - 1],
+                    channels[i],
+                    res2net_scale=res2net_scale,
+                    se_channels=se_channels,
+                    kernel_size=kernel_sizes[i],
+                    dilation=dilations[i],
+                    activation=activation,
+                    groups=groups[i],
+                    dropout=dropout,
+                )
+            )
+
+        # Multi-layer feature aggregation
+        
+        self.mfa = TDNNBlock(
+            channels[-2] * (len(channels) - 2),
+            channels[-1],
+            kernel_sizes[-1],
+            dilations[-1],
+            activation,
+            groups=groups[-1],
+            dropout=dropout,
+        )
+
+        # Attentive Statistical Pooling
+        self.asp = AttentiveStatisticsPooling(
+            channels[-1],
+            attention_channels=attention_channels,
+            global_context=global_context,
+        )
+        self.asp_bn = BatchNorm1d(input_size=channels[-1] * 2)
+
+        # Final linear transformation
+        self.fc = Conv1d(
+            in_channels=channels[-1] * 2,
+            out_channels=lin_neurons,
+            kernel_size=1,
+        )
+
+
+    def forward(self, x, lengths=None):
+        """Returns the embedding vector.
+
+        Arguments
+        ---------
+        x : torch.Tensor
+            Tensor of shape (batch, time, channel).
+        lengths : torch.Tensor
+            Corresponding relative lengths of inputs.
+
+        Returns
+        -------
+        x : torch.Tensor
+            Embedding vector.
+        """
+        # Minimize transpose for efficiency
+        x = x.transpose(1, 2)
+        xl = []
+      
+        for i, layer in enumerate(self.blocks):
+            try:
+                x = layer(x, lengths=lengths)
+                #x = layer(x)
+            except TypeError:
+                x = layer(x)
+
+            if i == self.quantize_layer:
+                T_init = x.shape[-1]
+                if T_init % self.proj_dim != 0:
+                    pad_length = self.proj_dim - (T_init % self.proj_dim)
+                    x = F.pad(x, (0, pad_length))
+
+                if self.reduction_type == "projection":
+                    B, D, T = x.shape
+                    x = x.view(B, D, T // self.proj_dim, self.proj_dim)
+                    x = self.proj_in(x)
+                    x = x.squeeze(-1)
+            
+                elif self.reduction_type == "avg_pool":
+                    x = self.proj_in(x)
+            
+                z_q, codes, _, commitment_loss, codebook_loss = self.quantizer(x)
+                if self.mode == "quantize":
+                    return z_q, codes
+                z_q_proj = []
+                for frame in range(z_q.shape[2]):
+                    fram_proj = self.proj_out(z_q[:, :, frame].unsqueeze(-1))
+                    z_q_proj.append(fram_proj)
+                z_q_proj = torch.cat(z_q_proj, dim=2)[:, :, :T_init]  # B x D x T
+                x = z_q_proj
+
+            xl.append(x)
+
+        # Multi-layer feature aggregation
+        x = torch.cat(xl[1:], dim=1)
+        x = self.mfa(x)
+
+        # Attentive Statistical Pooling
+        x = self.asp(x, lengths=lengths)
+        x = self.asp_bn(x)
+
+        # Final linear transformation
+        x = self.fc(x)
+
+        x = x.transpose(1, 2)
+        return x, commitment_loss, codebook_loss
+
 
 
 class Classifier(torch.nn.Module):

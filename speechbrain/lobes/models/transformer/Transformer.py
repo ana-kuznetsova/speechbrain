@@ -17,7 +17,7 @@ from speechbrain.nnet.CNN import Conv1d
 from speechbrain.utils.checkpoints import map_old_state_dict_weights
 
 from .Branchformer import BranchformerEncoder
-from .Conformer import ConformerEncoder
+from .Conformer import ConformerEncoder, ConformerEncoderQuantized
 
 
 class TransformerInterface(nn.Module):
@@ -125,6 +125,12 @@ class TransformerInterface(nn.Module):
         use_linear_after_conv: Optional[bool] = False,
         output_hidden_states=False,
         layerdrop_prob=0.0,
+        quantize_layer:Optional[int] = None,
+        num_codebooks:Optional[int] = None,
+        codebook_size:Optional[int] = None,
+        codebook_dim:Optional[int] = None,
+        mode:Optional[str] = "train",
+        quantizer_dropout=0.0,
     ):
         super().__init__()
         self.causal = causal
@@ -136,6 +142,12 @@ class TransformerInterface(nn.Module):
         self.decoder_vdim = decoder_vdim
         self.output_hidden_states = output_hidden_states
         self.layerdrop_prob = layerdrop_prob
+        self.quantize_layer = quantize_layer
+        self.num_codebooks = num_codebooks
+        self.codebook_size = codebook_size
+        self.codebook_dim = codebook_dim
+        self.quantizer_dropout = quantizer_dropout
+        self.mode = mode
 
         assert attention_type in ["regularMHA", "RelPosMHAXL", "hypermixing"]
         assert positional_encoding in ["fixed_abs_sine", None]
@@ -177,6 +189,34 @@ class TransformerInterface(nn.Module):
                     output_hidden_states=self.output_hidden_states,
                     layerdrop_prob=self.layerdrop_prob,
                 )
+            elif encoder_module == "conformerq":
+                self.encoder = ConformerEncoderQuantized(
+                    nhead=nhead,
+                    num_layers=num_encoder_layers,
+                    d_ffn=d_ffn,
+                    d_model=d_model,
+                    dropout=dropout,
+                    activation=conformer_activation,
+                    kernel_size=kernel_size,
+                    bias=bias,
+                    causal=self.causal,
+                    attention_type=self.attention_type,
+                    output_hidden_states=self.output_hidden_states,
+                    layerdrop_prob=self.layerdrop_prob,
+                    quantize_layer=self.quantize_layer,
+                    num_codebooks=self.num_codebooks,
+                    codebook_size=self.codebook_size,
+                    codebook_dim=self.codebook_dim,
+                    quantizer_dropout=self.quantizer_dropout,
+                    mode=self.mode,
+                )
+                assert (
+                    normalize_before
+                ), "normalize_before must be True for Conformer"
+
+                assert (
+                    conformer_activation is not None
+                ), "conformer_activation must not be None"
             elif encoder_module == "conformer":
                 self.encoder = ConformerEncoder(
                     nhead=nhead,

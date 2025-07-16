@@ -52,7 +52,8 @@ cached_data_folder=""
 output_folder=""
 task=""
 dataset=""
-seed=3407
+architecture=""
+seed=1988
 nruns=""
 nruns_eval=10
 eval_metric="acc"
@@ -74,6 +75,7 @@ print_argument_descriptions() {
     echo "  --cached_data_folder path [Optional]  Folder were the data in pkl format will be cached."
     echo "  --output_folder output_path           Output folder were the results will be stored"
     echo "  --task task                           downstream task"
+    echo "  --architecture architecture           Model architecture (e.g., LSTM, Transformer)"
     echo "  --dataset dataset                     dataset"
     echo "  --seed random_seed [Optional]         Seed (random if not specified)"
     echo "  --nruns num_runs                      Number of runs for each hparam selection."
@@ -126,6 +128,12 @@ while [[ $# -gt 0 ]]; do
 
     --task)
       task="$2"
+      shift
+      shift
+      ;;
+
+    --architecture)
+      architecture="$2"
       shift
       shift
       ;;
@@ -252,6 +260,7 @@ echo "Data Folder: $data_folder"
 echo "Cached Data Folder: $cached_data_folder"
 echo "task: $task"
 echo "dataset: $dataset"
+echo "Architecture: $architecture"
 echo "Hparam File: $hparams"
 echo "Number of Runs: $nruns"
 echo "Number of Eval Runs: $nruns_eval"
@@ -352,7 +361,7 @@ while [ -n "$opt_flags" ]; do
     # Setting up orion command
     orion_hunt_command="orion hunt -n $exp_name_step -c $config_file --exp-max-trials $exp_max_trials \
     	./run_experiments.sh --hparams $hparams_step --data_folder $data_folder --cached_data_folder $cached_data_folder \
-    	--output_folder $output_folder_step/exp   --task $task   --dataset $dataset  --seed $seed --nruns $nruns \
+    	--output_folder $output_folder_step/exp   --task $task --architecture $architecture  --dataset $dataset  --seed $seed --nruns $nruns \
     	--eval_metric $eval_metric --eval_set dev  --rnd_dir $store_all  $additional_flags"
 
     #--testing False
@@ -414,7 +423,7 @@ scp $best_yaml_file $final_yaml_file
 # Running evaluation on the test set for the best models
 # Running evaluation on the test set for the best models
 ./run_experiments.sh --hparams $final_yaml_file --data_folder $data_folder  --cached_data_folder $cached_data_folder \
-  --output_folder $output_folder/best --task $task   --dataset $dataset  --seed $seed\
+  --output_folder $output_folder/best --task $task --architecture $architecture  --dataset $dataset  --seed $seed\
   --nruns $nruns_eval --eval_metric $eval_metric --eval_set test \
   --rnd_dir False --testing True $additional_flags
 

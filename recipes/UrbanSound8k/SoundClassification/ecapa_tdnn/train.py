@@ -62,14 +62,22 @@ class UrbanSound8kBrain(sb.core.Brain):
             feats = self.modules.mean_var_norm(feats, lens)
 
         # Embeddings + sound classifier
-        embeddings = self.modules.embedding_model(feats)
+        if  hasattr(self.modules.embedding_model, "quantizer"):
+            embeddings, commitment_loss, codebook_loss = self.modules.embedding_model(feats)
+        else:
+            embeddings = self.modules.embedding_model(feats)
         outputs = self.modules.classifier(embeddings)
 
+        if  hasattr(self.modules.embedding_model, "quantizer"):
+            return outputs, lens, commitment_loss, codebook_loss
         return outputs, lens
 
     def compute_objectives(self, predictions, batch, stage):
         """Computes the loss using class-id as label."""
-        predictions, lens = predictions
+        if  hasattr(self.modules.embedding_model, "quantizer"):
+            predictions, lens, commitment_loss, codebook_loss = predictions
+        else:
+            predictions, lens = predictions
         uttid = batch.id
         classid, _ = batch.class_string_encoded
 
@@ -78,7 +86,11 @@ class UrbanSound8kBrain(sb.core.Brain):
         if stage == sb.Stage.TRAIN and hasattr(self.hparams, "wav_augment"):
             classid = self.hparams.wav_augment.replicate_labels(classid)
 
-        loss = self.hparams.compute_cost(predictions, classid, lens)
+        if  hasattr(self.modules.embedding_model, "quantizer"):
+            rvq_loss = self.hparams.vq_loss_weight * 0.5 * (codebook_loss + commitment_loss)
+            loss = self.hparams.compute_cost(predictions, classid, lens) + rvq_loss
+        else:
+            loss = self.hparams.compute_cost(predictions, classid, lens)
 
         if hasattr(self.hparams.lr_annealing, "on_batch_end"):
             self.hparams.lr_annealing.on_batch_end(self.optimizer)
@@ -402,6 +414,10 @@ if __name__ == "__main__":
 
     class_labels = list(label_encoder.ind2lab.values())
     print("Class Labels:", class_labels)
+    # Load pre-trained modules if specified
+    if "pretrainer" in hparams:
+        hparams["pretrainer"].collect_files()
+        hparams["pretrainer"].load_collected()
 
     urban_sound_8k_brain = UrbanSound8kBrain(
         modules=hparams["modules"],
