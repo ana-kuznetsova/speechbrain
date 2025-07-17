@@ -1,10 +1,14 @@
 # Task-Specific Audio Coding for Machines
 This fork of SpeechBrain framework repository contains the implementation of the Audio Coding for the Machines (ACoM) for automatic spech recognition (ASR) and audio classification tasks using SpeechBrain recipies.
 
-## ASR
+## Speech Recognition
 
-The quantizied version of the Conformer encoder is implemented within the following class `sb.lobes.models.transformer.Transformer.ConformerEncoderQuantized`. 
-And can be utilized withing the standard SpeechBrain recipe for LibriSpeech ASR by providing the new quantization parameters to the config file `recipes/LibriSpeech/ASR/transformer/hparams/conformerq.yaml` file.
+The quantizied version of the Conformer encoder is implemented within the following class:
+```python
+impport speechbrain as sb
+from sb.lobes.models.transformer.Transformer import ConformerEncoderQuantized
+``` 
+It can be utilized within the standard SpeechBrain recipe for LibriSpeech ASR by providing the new quantization parameters to the config file `recipes/LibriSpeech/ASR/transformer/hparams/conformerq.yaml` file.
 
 ```yaml
 Transformer: !new:speechbrain.lobes.models.transformer.TransformerASR.TransformerASR
@@ -25,13 +29,37 @@ python train.py recipes/LibriSpeech/ASR/transformer/hparams/conformerq.yaml
 ```
 Output folders can be specified direcly in the `recipes/LibriSpeech/ASR/transformer/hparams/conformerq.yaml` or overriden as command line arguments.
 
+## Audio Classificatoin
+In the same manner as quantized ASR confromer we implemented quantized version of ECAPA-TDNN model and used it withing UrbanSound8k recipe.
 
+The quantized ECAPA-TDNN can be found as:
+```python
+from sb.lobes.models.ECAPA_TDD import ECAPA_TDNNQ
+```
+The config file for the recipe can be found in `recipes/UrbanSound8k/SoundClassification/ecapa_tdnn/hparams/train_ecapa_tdnnq.yaml` which contains the same additional quantization parameters as the quantized ASR conformer.
 
+```yaml
+embedding_model: !new:speechbrain.lobes.models.ECAPA_TDNN.ECAPA_TDNNQ
+    ...
+    num_codebooks: !ref <n_codebooks>  # Number of codebooks for RVQ
+    codebook_size: !ref <vocab_size>  # Size of each codebook
+    quantize_layer: !ref <quantize_layer_idx>  # Layer index to apply RVQ
+    codebook_dim: 128
+    reduction_type: !ref <reduction_type>  # Type of reduction for RVQ
+    proj_dim: 4
+```
+Because the frame rate of the AC model is 4 times higher than ASR we match it by reducing it via projection or average pooling layers. Thus `reduction_type` can be set to `proj` for projection or `avg_pool` for average pooling.
 
+To run the experiment:
+```shell
+cd recipes/UrbanSound8k/SoundClassification/
+train.py recipes/UrbanSound8k/SoundClassification/ecapa_tdnn/hparams/train_ecapa_tdnnq.yaml
+
+```
 
 ## Citation
 ```bibtex
-
+TBD
 ```
 
 
