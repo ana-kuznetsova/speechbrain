@@ -58,9 +58,11 @@ train.py recipes/UrbanSound8k/SoundClassification/ecapa_tdnn/hparams/train_ecapa
 ```
 
 ## Citation
-```bibtex
-TBD
-```
+Anastasia Kuznetsova, Inseon Jang, Wootaek Lim, and Minje Kim,
+“Task-Specific Audio Coding for Machines: Machine-Learned Latent Features Are Codes for That Machine,”
+in Proceedings of the *IEEE Workshop on Applications of Signal Processing to Audio and Acoustics (WASPAA)*,
+Tahoe City, CA, Oct. 12-15, 2025.
+
 
 
 
