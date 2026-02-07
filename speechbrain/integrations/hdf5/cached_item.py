@@ -7,9 +7,10 @@ Authors:
 
 from pathlib import Path
 
-import h5py
-
 from speechbrain.utils.data_pipeline import CachedDynamicItem, DynamicItem
+from speechbrain.utils.importutils import LazyModule
+
+h5py = LazyModule("h5py", "h5py", None)
 
 
 class CachedHDF5DynamicItem(CachedDynamicItem):
@@ -63,7 +64,9 @@ class CachedHDF5DynamicItem(CachedDynamicItem):
 
     def _cache(self, result, uid):
         """Save the result to the cache"""
-        self.hdf5file.create_dataset(uid, data=result)
+        self.hdf5file.create_dataset(
+            uid, data=result, compression=self.compression
+        )
 
     @property
     def hdf5_path(self):

@@ -114,7 +114,7 @@ ignore = [
 combine-as-imports = true
 force-wrap-aliases = true
 known-first-party = ["speechbrain"]
-known-third-party = ["torch", "torchaudio", "numpy", "scipy", "hyperpyyaml", "joblib", "packaging", "sentencepiece", "tqdm", "huggingface_hub"]
+known-third-party = ["torch", "torchaudio", "numpy", "scipy", "hyperpyyaml", "joblib", "packaging", "requests", "sentencepiece", "tqdm", "huggingface_hub"]
 split-on-trailing-comma = false
 
 [tool.ruff.lint.per-file-ignores]
