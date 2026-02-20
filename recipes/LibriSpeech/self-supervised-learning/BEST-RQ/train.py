@@ -3,8 +3,9 @@
 
 To run this recipe call python train.py BEST-RQ.yaml --find_unused_parameters
 
-Authors
-    * Ryan Whetten 2023
+Authors:
+ * Ryan Whetten, 2023
+ * Jarod Duret, 2024
 """
 
 import sys
@@ -26,11 +27,18 @@ logger = get_logger(__name__)
 
 
 class BestRQBrain(sb.core.Brain):
-
     def compute_forward(self, batch, stage):
         """Computes forward pass through BestRQ model and returns encoded and
         target embeddings as well as other metrics of interest.
         """
+
+        if self.hparams.streaming:
+            dynchunktrain_config = self.hparams.dynchunktrain_config_sampler(
+                stage
+            )
+        else:
+            dynchunktrain_config = None
+
         # get batch and mask
         wavs, wav_lens, mask = batch
         wavs, wav_lens, mask = (
@@ -53,9 +61,10 @@ class BestRQBrain(sb.core.Brain):
         feats = pad_feats(feats, divis_by)
 
         # get targets from quantizer and stack the frames!
+        mask_idx = mask[::4] // 4
         B, T, C = feats.shape
         targets = self.modules.Quantizer(
-            feats.view(B, feats.shape[1] // divis_by, -1)
+            feats.view(B, feats.shape[1] // divis_by, -1)[:, mask_idx, :]
         )
 
         # generate random noise
@@ -72,15 +81,15 @@ class BestRQBrain(sb.core.Brain):
         src = self.modules.CNN(feats)
 
         ##### transformer
-        enc_out = self.modules.wrapper(src, wav_lens)  # only use encoder
+        enc_out = self.modules.wrapper(
+            src, wav_lens, dynchunktrain_config=dynchunktrain_config
+        )  # only use encoder
 
         ##### linear
         logits = self.modules.linear(enc_out)
 
         ##### get masked region for loss computation only over these.
-        mask_idx = mask[::divis_by] // divis_by
         logits = logits[:, mask_idx, :]
-        targets = targets[:, mask_idx]
 
         B, T, C = logits.shape
         return logits.view(B * T, C), targets.view(B * T)
@@ -109,7 +118,6 @@ class BestRQBrain(sb.core.Brain):
             hasattr(self.hparams, "log_interval")
             and self.optimizer_step % self.hparams.log_interval == 0
         ):
-
             # Create a dictionary and fill it with everything we
             # want to log such as contrastive loss, diversity loss,
             # learning rate etc.
@@ -136,14 +144,12 @@ class BestRQBrain(sb.core.Brain):
             self.acc_metric = []
 
     def on_stage_end(self, stage, stage_loss, epoch=None):
-
         stage_stats = {"loss": stage_loss}
         if stage == sb.Stage.TRAIN:
             self.train_stats = stage_stats
 
         if stage == sb.Stage.VALID:
             if self.acc_metric:
-
                 stage_stats["accuracy"] = sum(self.acc_metric) / len(
                     self.acc_metric
                 )
@@ -160,8 +166,13 @@ class BestRQBrain(sb.core.Brain):
 
             self.checkpointer.save_and_keep_only(
                 end_of_epoch=True,
-                num_to_keep=4,
-                meta={"valid_loss": stage_loss},
+                num_to_keep=3,
+                meta={
+                    "valid_loss": stage_loss,
+                    "epoch": epoch,
+                    "steps": self.optimizer_step,
+                    **stage_stats,
+                },
             )
 
 
@@ -250,7 +261,7 @@ def dataio_prepare(hparams):
     # We create the DynamicBatch Sampler
     train_sampler = DynamicBatchSampler(
         train_data,
-        hparams["seconds_per_batch"],
+        hparams["max_batch_len"],
         num_buckets=hparams["train_num_buckets"],
         length_func=lambda x: x["duration"],
         batch_ordering="random",

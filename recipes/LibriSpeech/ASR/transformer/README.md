@@ -7,7 +7,6 @@ You can download LibriSpeech at http://www.openslr.org/12
 ```shell
 python train_with_whisper.py hparams/train_hf_whisper.yaml
 python train.py hparams/transformer.yaml
-
 ```
 
 # How to run on test sets only
@@ -23,6 +22,20 @@ installed in your environment (see extra-requirements.txt)**
 
 # Results
 
+## SpeechLLM with SSL features
+
+Two SpeechLLM modes are supported:
+- SpeechLLM with SSL features
+- SpeechLLM with E2E features
+
+In the first mode, the speech features are extracted from the audio waveforms using a pre-trained SSL model, and then projected to the LLM embedding space using a linear layer projection, where everything is trained jointly.
+
+In the second mode, the speech features are already being extracted offline (see: `extract_ssl_feats.py` script). The LLM is then trained on the frozen SSL representations. This mode is more efficient and faster to train, but at the cost of flexibility on the frozen SSL model.
+
+| Release | Model | hyperparams file | Dev Clean WER | Dev Other WER | Test Clean WER | Test Other WER | HuggingFace link | Model link | GPUs |
+|:-------------:|:-------------:|:-------------:|:---------------------------:| :-----:| :-----:| :-----:| :-----:| :--------:|
+| 29-01-26 | WavLM Large + LLama 3.2 1B + LoRA | speechllm_e2e.yaml | 2.79 | 5.03 | 2.72 | 5.34 | [HuggingFace](https://huggingface.co/speechbrain/asr-wavlm-large-llama3.2-1b-lora-librispeech) | - | 1xA100 80GB |
+
 ## Whisper Finetuning Result:
 
 Following table contains whisper-finetuning results for 1 epoch using Whisper model, freezing encoder and finetuning decoder.
@@ -37,7 +50,9 @@ Following table contains whisper-finetuning results for 1 epoch using Whisper mo
 
 | Release | hyperparams file | Dev Clean WER (No LM, small beam) | Test Clean WER (Transformer LM) | Test Other WER (Transformer LM) | HuggingFace link | Model link | GPUs |
 |:-------------:|:-------------:|:-------------:|:---------------------------:| :-----:| :-----:| :-----:| :--------:|
+| 30-09-24 | conformer_large.yaml (new RoPE version) |1.85 with LM | 1.96 | 4.50 | Not Avail. | Not Avail. | 4xA40 46GB |
 | 23-05-23 | branchformer_large.yaml | 2.72 (1.9 with LM) | 2.04 | 4.13 | Not Avail. | [DropBox](https://www.dropbox.com/scl/fo/qhtds5rrdvhhhjywa7ovw/AMiIL5YvQENw5JKVpzXlP5o?rlkey=hz8vlpy3qf9kcyfx0cox089e6&st=ufckv6tb&dl=0) | 4xA100 80GB |
+| 10-02-25 | conformer_large.yaml | 1.85 with LM | 1.97 | 4.50 | N/A | N/A | 4xA100 80GB |
 | 23-05-23 | conformer_large.yaml | 2.62 (1.9 with LM) | 2.01 | 4.52 | [HuggingFace](https://huggingface.co/speechbrain/asr-conformer-transformerlm-librispeech) | [DropBox](https://www.dropbox.com/scl/fo/9we244tgdf47ay20hrdoz/AKnoqQ13nLwSv1ITeJEQ3wY?rlkey=05o5jiszr8rhj6dlprw87t2x4&st=u2odesyk&dl=0) | 4xA100 80GB |
 | 24-03-22 | transformer.yaml | 3.32 | 2.27 | 5.53 | [HuggingFace](https://huggingface.co/speechbrain/asr-transformer-transformerlm-librispeech) | [DropBox](https://www.dropbox.com/sh/653kq8h2k87md4p/AAByAaAryXtQKpRzYtzV9ih5a?dl=0) | 4xV100 32GB |
 | 24-03-22 | conformer_small.yaml | 4.05 | 2.49 | 6.1 (**only 13.3M parameters**) | [HuggingFace](https://huggingface.co/speechbrain/asr-conformersmall-transformerlm-librispeech) | [DropBox](https://www.dropbox.com/sh/s0x6ni124858b8i/AAALaCH6sGTMRUVTjh8Tm8Jwa?dl=0) | 1xV100 32GB |
@@ -47,25 +62,6 @@ Following table contains whisper-finetuning results for 1 epoch using Whisper mo
 | 03-09-23 | hyperbranchformer_25M.yaml | NA | 2.36 | 5.89 | Not Avail. | Not Avail. | 1xP40 24GB
 | 05-01-24 | bayesspeech.yaml | 4.28 | 2.84 | 6.27 | Not Avail. | [DropBox](https://www.dropbox.com/scl/fo/cdken4jqfj96ev1v84jxm/h?rlkey=25eu1ytgm5ac51zqj8p65zwxd&dl=0) | 1xV100 32GB |
 
-# **About HyperConformer**
-HyperConformer is a new architecture, which replaces the self-attention mechanism of Conformer with the linear-time token mixing architecture HyperMixer.
-It achieves competitive or better results than Conformer while requiring less memory and compute.
-
-- Paper: https://arxiv.org/abs/2305.18281
-- HyperMixer code: https://github.com/idiap/hypermixing
-
-Please cite HyperConformer if you use it for your research or business.
-
-```bibtex
-@inproceedings{mai23_interspeech,
-  author={Florian Mai and Juan Zuluaga-Gomez and Titouan Parcollet and Petr Motlicek},
-  title={{HyperConformer}: Multi-head HyperMixer for Efficient Speech Recognition},
-  year=2023,
-  booktitle={Proc. Interspeech 2023},
-  pages={2213--2217},
-  doi={10.21437/Interspeech.2023-1611}
-}
-```
 
 # **About SpeechBrain**
 - Website: https://speechbrain.github.io/

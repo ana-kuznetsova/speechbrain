@@ -68,8 +68,8 @@ def prepare_data(
 
     Example
     -------
-    >>> data_original = '/path/to/iemocap/IEMOCAP_full_release'
-    >>> prepare_data(data_original, 'train.json', 'valid.json', 'test.json')
+    >>> data_original = "/path/to/iemocap/IEMOCAP_full_release"
+    >>> prepare_data(data_original, "train.json", "valid.json", "test.json")
     """
     data_original = data_original + "/Session"
     # setting seeds for reproducible code.
@@ -147,7 +147,7 @@ def skip(*filenames):
     Arguments
     ---------
     *filenames : tuple
-        List of paths to check for existence.
+        A list of paths to check for existence.
 
     Returns
     -------
@@ -212,7 +212,7 @@ def split_sets(speaker_dict, split_ratio):
     ---------
     speaker_dict : list
         a dictionary of speaker id and its corresponding audio information
-    split_ratio: list
+    split_ratio : list
         List composed of three integers that sets split ratios for train,
         valid, and test sets, respectively.
         For instance split_ratio=[80, 10, 10] will assign 80% of the sentences
@@ -256,12 +256,12 @@ def transform_data(path_loadSession):
     Returns
     -------
     speaker_dict : dict
-        Mapping from speaker id to waveform.
+        Map from speaker id to wav.
 
     Example
     -------
-    >>> data_original = '/path/to/iemocap/IEMOCAP_full_release/Session'
-    >>> data_transformed = '/path/to/iemocap/IEMOCAP_ahsn_leave-two-speaker-out'
+    >>> data_original = "/path/to/iemocap/IEMOCAP_full_release/Session"
+    >>> data_transformed = "/path/to/iemocap/IEMOCAP_ahsn_leave-two-speaker-out"
     >>> transform_data(data_original, data_transformed)
     """
 
@@ -292,7 +292,7 @@ def load_utterInfo(inputFile):
         r"[\[]*[0-9]*[.][0-9]*[ -]*[0-9]*[.][0-9]*[\]][\t][a-z0-9_]*[\t][a-z]{3}[\t][\[][0-9]*[.][0-9]*[, ]+[0-9]*[.][0-9]*[, ]+[0-9]*[.][0-9]*[\]]",
         re.IGNORECASE,
     )  # noqa
-    with open(inputFile, "r", encoding="utf-8") as myfile:
+    with open(inputFile, encoding="utf-8") as myfile:
         data = myfile.read().replace("\n", " ")
     result = pattern.findall(data)
     out = []
@@ -312,12 +312,12 @@ def load_session(pathSession):
 
     Arguments
     ---------
-        pathSession: str
-            Path folder of IEMOCAP session.
+    pathSession: str
+        Path folder of IEMOCAP session.
     Returns
     -------
-        improvisedUtteranceList: list
-            List of improvised utterancefor IEMOCAP session.
+    improvisedUtteranceList: list
+        List of improvised utterancefor IEMOCAP session.
     """
     pathEmo = pathSession + "/dialog/EmoEvaluation/"
     pathWavFolder = pathSession + "/sentences/wav/"

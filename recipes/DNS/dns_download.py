@@ -164,7 +164,9 @@ BLOB_NAMES = [
     "datasets_fullband.dev_testset_000.tar.bz2",
 ]
 
-AZURE_URL = "https://dns4public.blob.core.windows.net/dns4archive/datasets_fullband"  # noqa ignore-url-check
+AZURE_URL = (
+    "https://dns4public.blob.core.windows.net/dns4archive/datasets_fullband"  # noqa ignore-url-check
+)
 
 # Impulse response and Blind testset
 OTHER_URLS = {
@@ -463,7 +465,6 @@ def decompress_file(file, decompress_path, split_name):
         tar.close()
     else:
         print("Unsupported file format. Only zip and bz2 files are supported.")
-    # os.remove(file)
 
 
 def rename_rirs(decompress_path):
@@ -473,11 +474,8 @@ def rename_rirs(decompress_path):
 
     Arguments
     ---------
-        decompress_path (str): The path to the directory containing the RIRs
-
-    Returns
-    -------
-        None
+    decompress_path : str
+        The path to the directory containing the RIRs
     """
     try:
         os.rename(

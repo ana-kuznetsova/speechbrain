@@ -16,7 +16,7 @@ from time import time
 from hyperpyyaml import load_hyperpyyaml
 
 from speechbrain.utils.data_utils import download_file  # noqa: F401
-from speechbrain.utils.logger import get_logger
+from speechbrain.utils.logger import get_logger, setup_logging
 
 __skip_list = ["README.md", "setup"]
 
@@ -284,7 +284,6 @@ def check_performance(
         return False
 
     for line in lines_filt:
-
         # Search variable value
         var_value = extract_value(line, variable)
 
@@ -336,9 +335,7 @@ def extract_value(string, key):
 
     # Create the regular expression pattern to match the argument and its corresponding value
     pattern = (
-        r"(?P<key>{})\s*:\s*(?P<value>[-+]?\d*\.\d+([eE][-+]?\d+)?)".format(
-            escaped_key
-        )
+        rf"(?P<key>{escaped_key})\s*:\s*(?P<value>[-+]?\d*\.\d+([eE][-+]?\d+)?)"
     )
 
     # Search for the pattern in the input string
@@ -476,6 +473,8 @@ def run_recipe_tests(
     -------
     python -c 'from speechbrain.utils.recipe_tests import run_recipe_tests; print("TEST FAILED!") if not(run_recipe_tests(filters_fields=["Dataset", "Task"], filters=[["AISHELL-1", "CommonVoice"], "SSL"])) else print("TEST PASSED")'
     """
+    setup_logging()
+
     # Create the output folder (where the tests results will be saved)
     os.makedirs(output_folder, exist_ok=True)
     logger.info("Test outputs will be put in %s", output_folder)
@@ -521,7 +520,6 @@ def run_recipe_tests(
     # Run  script (check how to get std out, std err and save them in files)
     check = True
     for i, recipe_id in enumerate(sorted(test_script.keys())):
-
         # Check if the output folder is specified in test_field
         spec_outfold = False
         if "--output_folder" in test_flag[recipe_id]:

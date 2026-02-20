@@ -2,6 +2,7 @@
 Authors
 * Jianyuan Zhong 2020
 * Samuele Cornell 2021
+* Shucong Zhang 2024
 """
 
 import math
@@ -103,26 +104,26 @@ class TransformerInterface(nn.Module):
         num_decoder_layers=6,
         d_ffn=2048,
         dropout=0.1,
-        activation=nn.ReLU,
+        activation: type = nn.ReLU,
         custom_src_module=None,
         custom_tgt_module=None,
         positional_encoding="fixed_abs_sine",
         normalize_before=True,
-        kernel_size: Optional[int] = 31,
-        bias: Optional[bool] = True,
-        encoder_module: Optional[str] = "transformer",
-        conformer_activation: Optional[nn.Module] = Swish,
-        branchformer_activation: Optional[nn.Module] = nn.GELU,
-        attention_type: Optional[str] = "regularMHA",
-        max_length: Optional[int] = 2500,
-        causal: Optional[bool] = False,
+        kernel_size: int = 31,
+        bias: bool = True,
+        encoder_module: str = "transformer",
+        conformer_activation: type = Swish,
+        branchformer_activation: type = nn.GELU,
+        attention_type: str = "regularMHA",
+        max_length: int = 2500,
+        causal: bool = False,
         encoder_kdim: Optional[int] = None,
         encoder_vdim: Optional[int] = None,
         decoder_kdim: Optional[int] = None,
         decoder_vdim: Optional[int] = None,
-        csgu_linear_units: Optional[int] = 3072,
-        gate_activation: Optional[nn.Module] = nn.Identity,
-        use_linear_after_conv: Optional[bool] = False,
+        csgu_linear_units: int = 3072,
+        gate_activation: type = nn.Identity,
+        use_linear_after_conv: bool = False,
         output_hidden_states=False,
         layerdrop_prob=0.0,
         quantize_layer:Optional[int] = None,
@@ -149,12 +150,17 @@ class TransformerInterface(nn.Module):
         self.quantizer_dropout = quantizer_dropout
         self.mode = mode
 
-        assert attention_type in ["regularMHA", "RelPosMHAXL", "hypermixing"]
+        assert attention_type in [
+            "regularMHA",
+            "RelPosMHAXL",
+            "hypermixing",
+            "RoPEMHA",
+        ]
         assert positional_encoding in ["fixed_abs_sine", None]
 
-        assert (
-            num_encoder_layers + num_decoder_layers > 0
-        ), "number of encoder layers and number of decoder layers cannot both be 0!"
+        assert num_encoder_layers + num_decoder_layers > 0, (
+            "number of encoder layers and number of decoder layers cannot both be 0!"
+        )
 
         if positional_encoding == "fixed_abs_sine":
             self.positional_encoding = PositionalEncoding(d_model, max_length)
@@ -165,6 +171,11 @@ class TransformerInterface(nn.Module):
         # overrides any other pos_embedding
         if attention_type == "RelPosMHAXL":
             self.positional_encoding = RelPosEncXL(d_model)
+            self.positional_encoding_decoder = PositionalEncoding(
+                d_model, max_length
+            )
+
+        if attention_type == "RoPEMHA":
             self.positional_encoding_decoder = PositionalEncoding(
                 d_model, max_length
             )
@@ -232,13 +243,13 @@ class TransformerInterface(nn.Module):
                     output_hidden_states=self.output_hidden_states,
                     layerdrop_prob=self.layerdrop_prob,
                 )
-                assert (
-                    normalize_before
-                ), "normalize_before must be True for Conformer"
+                assert normalize_before, (
+                    "normalize_before must be True for Conformer"
+                )
 
-                assert (
-                    conformer_activation is not None
-                ), "conformer_activation must not be None"
+                assert conformer_activation is not None, (
+                    "conformer_activation must not be None"
+                )
             elif encoder_module == "branchformer":
                 self.encoder = BranchformerEncoder(
                     nhead=nhead,
@@ -384,7 +395,7 @@ class TransformerEncoderLayer(nn.Module):
         kdim=None,
         vdim=None,
         dropout=0.0,
-        activation=nn.ReLU,
+        activation: type = nn.ReLU,
         normalize_before=False,
         attention_type="regularMHA",
         ffn_type="regularFFN",
@@ -413,6 +424,12 @@ class TransformerEncoderLayer(nn.Module):
                 tied=False,
                 num_heads=nhead,
                 fix_tm_hidden_size=False,
+            )
+        elif attention_type == "RoPEMHA":
+            self.self_att = sb.nnet.attention.RoPEMHA(
+                d_model,
+                nhead,
+                dropout,
             )
 
         if ffn_type == "regularFFN":
@@ -557,7 +574,9 @@ class TransformerEncoder(nn.Module):
 
     >>> import torch
     >>> x = torch.rand((8, 60, 512))
-    >>> net = TransformerEncoder(1, 8, 512, d_model=512, output_hidden_states=True)
+    >>> net = TransformerEncoder(
+    ...     1, 8, 512, d_model=512, output_hidden_states=True
+    ... )
     >>> output, attn_list, hidden_list = net(x)
     >>> hidden_list[0].shape
     torch.Size([8, 60, 512])
@@ -641,9 +660,9 @@ class TransformerEncoder(nn.Module):
             The output of the hidden layers of the encoder.
             Only works if output_hidden_states is set to true.
         """
-        assert (
-            dynchunktrain_config is None
-        ), "Dynamic Chunk Training unsupported for this encoder"
+        assert dynchunktrain_config is None, (
+            "Dynamic Chunk Training unsupported for this encoder"
+        )
 
         output = src
 
@@ -744,7 +763,6 @@ class TransformerDecoderLayer(nn.Module):
                 vdim=vdim,
                 dropout=dropout,
             )
-
         elif attention_type == "RelPosMHAXL":
             self.self_attn = sb.nnet.attention.RelPosMHAXL(
                 d_model, nhead, dropout, mask_pos_future=causal
@@ -827,7 +845,6 @@ class TransformerDecoderLayer(nn.Module):
             tgt1 = tgt
 
         # multi-head attention over the target sequence and encoder states
-
         tgt2, multihead_attention = self.multihead_attn(
             query=tgt1,
             key=memory,
@@ -1036,7 +1053,7 @@ def get_key_padding_mask(padded_input, pad_idx):
 
     Example
     -------
-    >>> a = torch.LongTensor([[1,1,0], [2,3,0], [4,5,0]])
+    >>> a = torch.LongTensor([[1, 1, 0], [2, 3, 0], [4, 5, 0]])
     >>> get_key_padding_mask(a, pad_idx=0)
     tensor([[False, False,  True],
             [False, False,  True],
@@ -1072,7 +1089,7 @@ def get_lookahead_mask(padded_input):
 
     Example
     -------
-    >>> a = torch.LongTensor([[1,1,0], [2,3,0], [4,5,0]])
+    >>> a = torch.LongTensor([[1, 1, 0], [2, 3, 0], [4, 5, 0]])
     >>> get_lookahead_mask(a)
     tensor([[0., -inf, -inf],
             [0., 0., -inf],
@@ -1086,7 +1103,7 @@ def get_lookahead_mask(padded_input):
     mask = (
         mask.float()
         .masked_fill(mask == 0, float("-inf"))
-        .masked_fill(mask == 1, float(0.0))
+        .masked_fill(mask == 1, 0.0)
     )
     return mask.detach().to(padded_input.device)
 

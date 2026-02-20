@@ -106,4 +106,26 @@ ignore = [
     "B011",  # Do not `assert False` (`python -O` removes these calls), raise `AssertionError()`
     "B019",  # Use of `functools.lru_cache` or `functools.cache` on methods can lead to memory leaks
     "B023",  # Function definition does not bind loop variable
-    
+    "B026",  # Star-arg unpacking after a keyword argument is strongly discouraged
+]
+
+[tool.ruff.lint.isort]
+# Import sorting configuration (black-compatible)
+combine-as-imports = true
+force-wrap-aliases = true
+known-first-party = ["speechbrain"]
+known-third-party = ["torch", "torchaudio", "numpy", "scipy", "hyperpyyaml", "joblib", "packaging", "requests", "sentencepiece", "tqdm", "huggingface_hub"]
+split-on-trailing-comma = false
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = true
+
+[tool.codespell]
+skip = "./tests/tmp,./**/result,*.csv,*train.txt,*test.txt"
