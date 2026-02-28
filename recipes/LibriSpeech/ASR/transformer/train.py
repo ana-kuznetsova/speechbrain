@@ -114,7 +114,7 @@ class ASR(sb.core.Brain):
                 hyps, _, _, _ = self.hparams.test_search(
                     enc_out.detach(), wav_lens
                 )
-
+        logging.info("Commitment loss: {}".format(commitment_loss))
         return p_ctc, p_seq, wav_lens, hyps, commitment_loss, codebook_loss
 
     def compute_objectives(self, predictions, batch, stage):
