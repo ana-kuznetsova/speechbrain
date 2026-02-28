@@ -85,6 +85,8 @@ class ASR(sb.core.Brain):
                 src, tokens_bos, wav_lens, pad_idx=self.hparams.pad_index
             )
         )
+        import logging
+        logging.info("Commitment loss: {}, Codebook loss: {}".format(commitment_loss, codebook_loss))
         # output layer for ctc log-probabilities
         logits = self.modules.ctc_lin(enc_out)
         p_ctc = self.hparams.log_softmax(logits)
