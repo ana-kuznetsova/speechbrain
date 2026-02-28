@@ -293,7 +293,7 @@ class LSRow:
 
 
 def process_line(wav_file, text_dict) -> LSRow:
-    snt_id = wav_file.split("/")[-1].replace(".flac", "")
+    snt_id = wav_file.split("/")[-1].replace(".wav", "")
     spk_id = "-".join(snt_id.split("-")[0:2])
     wrds = text_dict[snt_id]
     wrds = " ".join(wrds.split("_"))
