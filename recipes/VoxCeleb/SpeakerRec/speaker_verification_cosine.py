@@ -48,8 +48,9 @@ def compute_embedding(wavs, wav_lens):
     with torch.no_grad():
         feats = params["compute_features"](wavs)
         feats = params["mean_var_norm"](feats, wav_lens)
+
         embeddings = params["embedding_model"](feats, wav_lens)
-    return embeddings.squeeze(1)
+        return embeddings.squeeze(1)
 
 
 def compute_embedding_loop(data_loader):
@@ -163,7 +164,7 @@ def dataio_prep(params):
 
     # Train data (used for normalization)
     train_data = sb.dataio.dataset.DynamicItemDataset.from_csv(
-        csv_path=params["train_data"],
+        csv_path=params["train_csv"],
         replacements={"data_root": data_folder},
     )
     train_data = train_data.filtered_sorted(
@@ -172,14 +173,14 @@ def dataio_prep(params):
 
     # Enrol data
     enrol_data = sb.dataio.dataset.DynamicItemDataset.from_csv(
-        csv_path=params["enrol_data"],
+        csv_path=params["enrol_csv"],
         replacements={"data_root": data_folder},
     )
     enrol_data = enrol_data.filtered_sorted(sort_key="duration")
 
     # Test data
     test_data = sb.dataio.dataset.DynamicItemDataset.from_csv(
-        csv_path=params["test_data"],
+        csv_path=params["test_csv"],
         replacements={"data_root": data_folder},
     )
     test_data = test_data.filtered_sorted(sort_key="duration")
@@ -223,7 +224,7 @@ if __name__ == "__main__":
     sys.path.append(os.path.dirname(current_dir))
 
     # Load hyperparameters file with command-line overrides
-    params_file, run_opts, overrides = sb.core.parse_arguments(sys.argv[1:])
+    params_file, run_opts, overrides = sb.parse_arguments(sys.argv[1:])
     with open(params_file, encoding="utf-8") as fin:
         params = load_hyperpyyaml(fin, overrides)
 

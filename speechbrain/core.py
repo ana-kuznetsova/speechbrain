@@ -24,6 +24,8 @@ from datetime import date
 from enum import Enum, auto
 from types import SimpleNamespace
 
+from attr import dataclass
+
 import torch
 import yaml
 from hyperpyyaml import resolve_references
@@ -58,7 +60,6 @@ INTRA_EPOCH_CKPT_FLAG = "brain_intra_epoch_ckpt"
 PYTHON_VERSION_MAJOR = 3
 PYTHON_VERSION_MINOR = 8
 
-<<<<<<< HEAD
 # Arguments passed via the run opts dictionary
 run_opt_defaults = {
     "test_only": False,
@@ -136,8 +137,6 @@ class AMPConfig:
                 f"Specified autocast mode ({name}) incorrect, expected one of `fp32`, `fp16`, `bf16`."
             )
 
-=======
->>>>>>> upstream/develop
 
 def create_experiment_directory(
     experiment_directory,

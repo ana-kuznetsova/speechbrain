@@ -265,7 +265,6 @@ class TransformerASR(TransformerInterface):
         attention_type: str = "regularMHA",
         max_length: int = 2500,
         causal: Optional[bool] = None,
-<<<<<<< HEAD
         csgu_linear_units: Optional[int] = 3072,
         gate_activation: Optional[nn.Module] = nn.Identity,
         use_linear_after_conv: Optional[bool] = False,
@@ -279,11 +278,6 @@ class TransformerASR(TransformerInterface):
         codebook_dim: Optional[int] = 64,
         quantize_layer: Optional[int] = 0,
         mode:Optional[str] = "train",
-=======
-        csgu_linear_units: int = 3072,
-        gate_activation: type = nn.Identity,
-        use_linear_after_conv: bool = False,
->>>>>>> upstream/develop
         output_hidden_states=False,
         layerdrop_prob=0.0,
     ):

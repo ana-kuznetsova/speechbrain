@@ -6,19 +6,16 @@
 # Basic parameters
 seed: 1986
 __set_seed: !apply:speechbrain.utils.seed_everything [!ref <seed>]
-output_folder: !PLACEHOLDER
+output_folder: !ref results/ecapa_augment/<seed>
 save_folder: !ref <output_folder>/save
 train_log: !ref <output_folder>/train_log.txt
-train_data: !ref <save_folder>/train.csv
-test_data: !ref <save_folder>/dev.csv
-enrol_data: !ref <save_folder>/enrol.csv
 
 # Data for augmentation
 NOISE_DATASET_URL: https://www.dropbox.com/scl/fi/a09pj97s5ifan81dqhi4n/noises.zip?rlkey=j8b0n9kdjdr32o1f06t0cw5b7&dl=1
 RIR_DATASET_URL: https://www.dropbox.com/scl/fi/linhy77c36mu10965a836/RIRs.zip?rlkey=pg9cu8vrpn2u173vhiqyu743u&dl=1
 
 # Data files
-data_folder: /storage/anakuzne/dataset/voxceleb/voxceleb2  # e.g. /path/to/Voxceleb
+data_folder: !PLACEHOLDER  # e.g. /path/to/Voxceleb
 data_folder_noise: !ref <data_folder>/noise # The noisy sequences for data augmentation will automatically be downloaded here.
 data_folder_rir: !ref <data_folder>/rir # The impulse responses used for data augmentation will automatically be downloaded here.
 train_annotation: !ref <save_folder>/train.csv
@@ -37,7 +34,6 @@ verification_file: https://www.robots.ox.ac.uk/~vgg/data/voxceleb/meta/veri_test
 split_ratio: [90, 10]
 skip_prep: False
 ckpt_interval_minutes: 15 # save checkpoint every N min
-n_train_snts: null # used for normalization stats
 
 # Training parameters
 number_of_epochs: 10
@@ -52,32 +48,18 @@ shuffle: True
 random_chunk: True
 
 # Feature parameters
+n_mels: 80
 left_frames: 0
 right_frames: 0
 deltas: False
-
-n_fft: 512
-n_mels: 80
-win_length: 32
 
 # Number of speakers
 out_n_neurons: 7205 #1211 for vox1  # 5994 for vox2, 7205 for vox1+vox2
 
 num_workers: 4
-
-train_dataloader_opts:
+dataloader_options:
     batch_size: !ref <batch_size>
     shuffle: !ref <shuffle>
-    num_workers: !ref <num_workers>
-
-enrol_dataloader_opts:
-    batch_size: !ref <batch_size>
-    shuffle: !ref <shuffle>
-    num_workers: !ref <num_workers>
-
-test_dataloader_opts:
-    batch_size: !ref <batch_size>
-    shuffle: False
     num_workers: !ref <num_workers>
 
 # Functions
@@ -87,68 +69,10 @@ compute_features: !new:speechbrain.lobes.features.Fbank
     right_frames: !ref <right_frames>
     deltas: !ref <deltas>
 
-
-### Define full ASR model to extract local embeddings from the intermediate layers
-
-d_model: 512
-output_neurons: 5000
-
-CNN: !new:speechbrain.lobes.models.convolution.ConvolutionFrontEnd
-  input_shape: (8, 10, 80)
-  num_blocks: 2
-  num_layers_per_block: 1
-  out_channels: (64, 32)
-  kernel_sizes: (3, 3)
-  strides: (2, 2)
-  residuals: (False, False)
-
-seq_lin: !new:speechbrain.nnet.linear.Linear
-    input_size: !ref <d_model>
-    n_neurons: !ref <output_neurons>
-
-ctc_lin: !new:speechbrain.nnet.linear.Linear
-    input_size: !ref <d_model>
-    n_neurons: !ref <output_neurons>
-
-normalize: !new:speechbrain.processing.features.InputNormalization
-    norm_type: global
-    update_until_epoch: 4
-
-#modules:
-#    CNN: !ref <CNN>
-#    Transformer: !ref <Transformer>
-#    seq_lin: !ref <seq_lin>
-#    ctc_lin: !ref <ctc_lin>
-#    normalize: !ref <normalize>
-
-
-PretrainedTransformerASR: !new:speechbrain.lobes.models.transformer.TransformerASR.TransformerASR                                                                         # yamllint disable-line rule:line-length
-  input_size: 640
-  tgt_vocab: 5000
-  d_model: !ref <d_model>
-  nhead: 8
-  num_encoder_layers: 12
-  num_decoder_layers: 6
-  d_ffn: 2048
-  dropout: 0.1
-  activation: !name:torch.nn.GELU
-  encoder_module: conformerq
-  attention_type: RelPosMHAXL
-  normalize_before: true
-  causal: false
-  use_quantizer: true
-  freeze_encoder: false
-  freeze_decoder: false
-  num_codebooks: 4
-  codebook_size: 1024
-  codebook_dim: 512
-
-
-asr_model: !new:torch.nn.ModuleList
-    - [!ref <CNN>, !ref <PretrainedTransformerASR>, !ref <seq_lin>, !ref <ctc_lin>]
-
-
-#### Define the speaker recognition model
+embedding_model: !new:speechbrain.lobes.models.discrete.DAC
+    load_pretrained: True
+    model_type: "16KHz"
+    sample_rate: !ref <sample_rate>
 
 classifier: !new:speechbrain.lobes.models.ECAPA_TDNN.Classifier
     input_size: 192
@@ -222,8 +146,9 @@ mean_var_norm: !new:speechbrain.processing.features.InputNormalization
     norm_type: sentence
     std_norm: False
 
-speaker_ver_modules:
+modules:
     compute_features: !ref <compute_features>
+    embedding_model: !ref <embedding_model>
     classifier: !ref <classifier>
     mean_var_norm: !ref <mean_var_norm>
 
@@ -254,15 +179,8 @@ error_stats: !name:speechbrain.utils.metric_stats.MetricStats
 checkpointer: !new:speechbrain.utils.checkpoints.Checkpointer
     checkpoints_dir: !ref <save_folder>
     recoverables:
-        embedding_model: !ref <asr_model>
+        embedding_model: !ref <embedding_model>
         classifier: !ref <classifier>
         normalizer: !ref <mean_var_norm>
         counter: !ref <epoch_counter>
         lr_annealing: !ref <lr_annealing>
-
-pretrainer: !new:speechbrain.utils.parameter_transfer.Pretrainer
-    collect_in: !ref <save_folder>
-    loadables:
-        asr_model: !ref <asr_model>
-    paths:
-        asr_model: /storage/anakuzne/exp/results/optimized-conformer-1kbps/save/CKPT+2025-04-14+23-18-57+00/model.ckpt
