@@ -1009,8 +1009,7 @@ class ConformerEncoderQuantized(nn.Module):
             keep_probs = torch.rand(len(self.layers))
 
         attention_lst = []
-        commitment_loss = None
-        codebook_loss = None
+
         if self.output_hidden_states:
             hidden_state_lst = [output]
 
