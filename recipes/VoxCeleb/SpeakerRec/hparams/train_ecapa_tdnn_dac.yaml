@@ -37,7 +37,7 @@ ckpt_interval_minutes: 15 # save checkpoint every N min
 
 # Training parameters
 number_of_epochs: 10
-batch_size: 32
+batch_size: 4
 lr: 0.001
 base_lr: 0.00000001
 max_lr: !ref <lr>
@@ -63,11 +63,15 @@ dataloader_options:
     num_workers: !ref <num_workers>
 
 # Functions
-compute_features: !new:speechbrain.lobes.features.Fbank
-    n_mels: !ref <n_mels>
-    left_frames: !ref <left_frames>
-    right_frames: !ref <right_frames>
-    deltas: !ref <deltas>
+#compute_features: !new:speechbrain.lobes.features.Fbank
+#    n_mels: !ref <n_mels>
+#    left_frames: !ref <left_frames>
+#    right_frames: !ref <right_frames>
+#    deltas: !ref <deltas>
+
+compute_features: !new:speechbrain.lobes.features.RawAudio
+    #sample_rate: !ref <sample_rate>
+    #max_len: 10 # seconds
 
 embedding_model: !new:speechbrain.lobes.models.discrete.DAC
     load_pretrained: True
@@ -75,7 +79,7 @@ embedding_model: !new:speechbrain.lobes.models.discrete.DAC
     sample_rate: !ref <sample_rate>
 
 classifier: !new:speechbrain.lobes.models.ECAPA_TDNN.Classifier
-    input_size: 192
+    input_size: 1024
     out_neurons: !ref <out_n_neurons>
 
 epoch_counter: !new:speechbrain.utils.epoch_loop.EpochCounter

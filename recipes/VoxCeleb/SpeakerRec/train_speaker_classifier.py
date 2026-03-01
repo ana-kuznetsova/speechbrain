@@ -26,6 +26,8 @@ import speechbrain as sb
 from speechbrain.dataio import audio_io
 from speechbrain.utils.data_utils import download_file
 from speechbrain.utils.distributed import run_on_main
+from speechbrain.lobes.models.discrete import DAC
+import logging
 
 
 class SpeakerBrain(sb.core.Brain):
@@ -52,10 +54,12 @@ class SpeakerBrain(sb.core.Brain):
             feats = torch.transpose(feats, 1, 2)
         else:
             feats = self.modules.compute_features(wavs)
-        feats = self.modules.mean_var_norm(feats, lens)
+        #feats = self.modules.mean_var_norm(feats, lens)
 
         # Embeddings + speaker classifier
-        embeddings = self.modules.embedding_model(feats)
+        _, embeddings = self.modules.embedding_model(feats)
+        #Embeddings shape: torch.Size([20, 1024, 150])
+        embeddings = embeddings.mean(dim=2) # pull over time dimension
         outputs = self.modules.classifier(embeddings)
 
         return outputs, lens
@@ -81,6 +85,14 @@ class SpeakerBrain(sb.core.Brain):
             self.error_metrics.append(uttid, predictions, spkid, lens)
 
         return loss
+
+    def on_init(self):
+        """Called after the brain is initialized."""
+        # Freeze embedding model if it's DAC, only train classifier
+        if isinstance(self.modules.embedding_model, DAC):
+            self.modules.embedding_model.eval()
+            for param in self.modules.embedding_model.parameters():
+                param.requires_grad = False
 
     def on_stage_start(self, stage, epoch=None):
         """Gets called at the beginning of an epoch."""
