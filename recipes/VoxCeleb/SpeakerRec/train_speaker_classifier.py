@@ -52,14 +52,19 @@ class SpeakerBrain(sb.core.Brain):
         ):
             feats = self.hparams.compute_features(audio=wavs)
             feats = torch.transpose(feats, 1, 2)
+            feats = self.modules.compute_features(wavs)
         else:
             feats = self.modules.compute_features(wavs)
-        #feats = self.modules.mean_var_norm(feats, lens)
+        # feats = self.modules.mean_var_norm(feats, lens)
 
         # Embeddings + speaker classifier
-        _, embeddings = self.modules.embedding_model(feats)
-        #Embeddings shape: torch.Size([20, 1024, 150])
-        embeddings = embeddings.mean(dim=2) # pull over time dimension
+        if hasattr(self.hparams, "n_quantizers"):
+            _, embeddings = self.modules.embedding_model(
+                feats, n_quantizers=self.hparams.n_quantizers
+            )
+        else:
+            _, embeddings = self.modules.embedding_model(feats)
+        embeddings = embeddings.mean(dim=2)  # pull over time dimension
         outputs = self.modules.classifier(embeddings)
 
         return outputs, lens

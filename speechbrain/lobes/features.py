@@ -40,12 +40,18 @@ from speechbrain.utils.filter_analysis import FilterProperties
 class RawAudio(torch.nn.Module):
     """Dummy class to pass raw audio through the pipeline.
     """
-    def __init__(self):
+    def __init__(self, sample_rate=16000, max_len=10):
         super().__init__()
+        self.sample_rate = sample_rate
+        self.max_len = max_len
 
     @fwd_default_precision(cast_inputs=torch.float32)
     def forward(self, x):
         """Returns the input tensor unchanged."""
+        if self.max_len is not None:
+            max_samples = self.sample_rate * self.max_len
+            if x.size(1) > max_samples:
+                x = x[:, :max_samples]
         return x
 
 class Fbank(torch.nn.Module):

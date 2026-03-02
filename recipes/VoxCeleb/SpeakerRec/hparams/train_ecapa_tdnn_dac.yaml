@@ -38,7 +38,7 @@ ckpt_interval_minutes: 15 # save checkpoint every N min
 # Training parameters
 number_of_epochs: 10
 batch_size: 4
-lr: 0.001
+lr: 0.00001
 base_lr: 0.00000001
 max_lr: !ref <lr>
 step_size: 65000
@@ -48,10 +48,7 @@ shuffle: True
 random_chunk: True
 
 # Feature parameters
-n_mels: 80
-left_frames: 0
-right_frames: 0
-deltas: False
+n_quantizers: 12
 
 # Number of speakers
 out_n_neurons: 7205 #1211 for vox1  # 5994 for vox2, 7205 for vox1+vox2
@@ -63,11 +60,6 @@ dataloader_options:
     num_workers: !ref <num_workers>
 
 # Functions
-#compute_features: !new:speechbrain.lobes.features.Fbank
-#    n_mels: !ref <n_mels>
-#    left_frames: !ref <left_frames>
-#    right_frames: !ref <right_frames>
-#    deltas: !ref <deltas>
 
 compute_features: !new:speechbrain.lobes.features.RawAudio
     #sample_rate: !ref <sample_rate>
@@ -146,15 +138,15 @@ wav_augment: !new:speechbrain.augment.augmenter.Augmenter
         !ref <drop_freq>,
         !ref <drop_chunk>]
 
-mean_var_norm: !new:speechbrain.processing.features.InputNormalization
-    norm_type: sentence
-    std_norm: False
+#mean_var_norm: !new:speechbrain.processing.features.InputNormalization
+#    norm_type: sentence
+#    std_norm: False
 
 modules:
     compute_features: !ref <compute_features>
     embedding_model: !ref <embedding_model>
     classifier: !ref <classifier>
-    mean_var_norm: !ref <mean_var_norm>
+    #mean_var_norm: !ref <mean_var_norm>
 
 compute_cost: !new:speechbrain.nnet.losses.LogSoftmaxWrapper
     loss_fn: !new:speechbrain.nnet.losses.AdditiveAngularMargin
@@ -185,6 +177,6 @@ checkpointer: !new:speechbrain.utils.checkpoints.Checkpointer
     recoverables:
         embedding_model: !ref <embedding_model>
         classifier: !ref <classifier>
-        normalizer: !ref <mean_var_norm>
+        #normalizer: !ref <mean_var_norm>
         counter: !ref <epoch_counter>
         lr_annealing: !ref <lr_annealing>
