@@ -1,103 +1,288 @@
 #!/usr/bin/python3
-"""Recipe for training speaker embeddings (e.g, xvectors) using the VoxCeleb Dataset.
-We employ an encoder followed by a speaker classifier.
+"""Recipe for training then testing speaker embeddings using the VoxCeleb Dataset.
+The embeddings are learned using the ECAPA-TDNN architecture
 
-To run this recipe, use the following command:
-> python train_speaker_embeddings.py {hyperparameter_file}
-
-Using your own hyperparameter file or one of the following:
-    hyperparams/train_x_vectors.yaml (for standard xvectors)
-    hyperparams/train_ecapa_tdnn.yaml (for the ecapa+tdnn system)
-
-Author
-    * Mirco Ravanelli 2020
-    * Hwidong Na 2020
-    * Nauman Dawalatabad 2020
+Authors
+ * Pooneh Mousavi 2024
 """
 
 import os
-import random
+from tqdm import tqdm
 import sys
-
-import torch
-from hyperpyyaml import load_hyperpyyaml
-
-import speechbrain as sb
-from speechbrain.dataio import audio_io
-from speechbrain.utils.data_utils import download_file
-from speechbrain.utils.distributed import run_on_main
-from speechbrain.lobes.models.discrete import DAC
 import logging
+import random
+import torch
+import torchaudio
+import speechbrain as sb
+import soundfile as sf
+from speechbrain.utils.data_utils import download_file
+from hyperpyyaml import load_hyperpyyaml
+from speechbrain.utils.metric_stats import EER, minDCF
+from speechbrain.utils.distributed import run_on_main
+
+
+def compute_embedding(wavs, wav_lens, tokens_bos=None):
+    """Compute speaker embeddings.
+
+    Arguments
+    ---------
+    wavs : Torch.Tensor
+        Tensor containing the speech waveform (batch, time).
+        Make sure the sample rate is fs=16000 Hz.
+    wav_lens: Torch.Tensor
+        Tensor containing the relative length for each sentence
+        in the length (e.g., [0.8 0.6 1.0])
+    """
+    with torch.no_grad():
+        wavs, wav_lens = (
+            wavs.to(speaker_brain.device),
+            wav_lens.to(speaker_brain.device),
+        )
+        # Compute features and augmentations (if specified)
+        feats = speaker_brain.hparams.compute_features(wavs)
+        current_epoch = speaker_brain.hparams.epoch_counter.current
+        feats = speaker_brain.modules.normalize(feats, wav_lens, epoch=current_epoch)
+
+        speaker_brain.modules.CNN.to(speaker_brain.device).eval()
+        speaker_brain.modules.Transformer.to(speaker_brain.device).eval()
+        src = speaker_brain.modules.CNN(feats)
+        tokens, codes = speaker_brain.modules.Transformer(
+                src, tokens_bos, wav_lens, pad_idx=speaker_brain.hparams.pad_index
+            )
+
+        embeddings = speaker_brain.modules.discrete_embedding_layer(
+            codes.movedim(-2, -1)
+        )
+        att_w = speaker_brain.modules.attention_mlp(embeddings)
+        feats = torch.matmul(att_w.transpose(2, -1), embeddings).squeeze(-2)
+        embeddings = speaker_brain.modules.embedding_model(feats, wav_lens)
+    return embeddings.squeeze(1)
+
+
+def compute_embedding_loop(data_loader):
+    """Computes the embeddings of all the waveforms specified in the
+    dataloader.
+    """
+    embedding_dict = {}
+
+    with torch.no_grad():
+        for batch in tqdm(data_loader, dynamic_ncols=True):
+            batch = batch.to(hparams["device"])
+            seg_ids = batch.id
+            wavs, lens = batch.sig
+
+            found = False
+            for seg_id in seg_ids:
+                if seg_id not in embedding_dict:
+                    found = True
+            if not found:
+                continue
+            wavs, lens = wavs.to(hparams["device"]), lens.to(hparams["device"])
+            emb = compute_embedding(wavs, lens).unsqueeze(1)
+            for i, seg_id in enumerate(seg_ids):
+                embedding_dict[seg_id] = emb[i].detach().clone()
+    return embedding_dict
+
+
+def get_verification_scores(veri_test):
+    """ Computes positive and negative scores given the verification split.
+    """
+    scores = []
+    positive_scores = []
+    negative_scores = []
+
+    save_file = os.path.join(hparams["output_folder"], "scores.txt")
+    s_file = open(save_file, "w")
+
+    # Cosine similarity initialization
+    similarity = torch.nn.CosineSimilarity(dim=-1, eps=1e-6)
+
+    # creating cohort for score normalization
+    if "score_norm" in hparams:
+        train_cohort = torch.stack(list(train_dict.values()))
+
+    for i, line in enumerate(veri_test):
+
+        # Reading verification file (enrol_file test_file label)
+        lab_pair = int(line.split(" ")[0].rstrip().split(".")[0].strip())
+        enrol_id = line.split(" ")[1].rstrip().split(".")[0].strip()
+        test_id = line.split(" ")[2].rstrip().split(".")[0].strip()
+        enrol = enrol_dict[enrol_id]
+        test = test_dict[test_id]
+
+        if "score_norm" in hparams:
+            # Getting norm stats for enrol impostors
+            enrol_rep = enrol.repeat(train_cohort.shape[0], 1, 1)
+            score_e_c = similarity(enrol_rep, train_cohort)
+
+            if "cohort_size" in hparams:
+                score_e_c = torch.topk(
+                    score_e_c, k=hparams["cohort_size"], dim=0
+                )[0]
+
+            mean_e_c = torch.mean(score_e_c, dim=0)
+            std_e_c = torch.std(score_e_c, dim=0)
+
+            # Getting norm stats for test impostors
+            test_rep = test.repeat(train_cohort.shape[0], 1, 1)
+            score_t_c = similarity(test_rep, train_cohort)
+
+            if "cohort_size" in hparams:
+                score_t_c = torch.topk(
+                    score_t_c, k=hparams["cohort_size"], dim=0
+                )[0]
+
+            mean_t_c = torch.mean(score_t_c, dim=0)
+            std_t_c = torch.std(score_t_c, dim=0)
+
+        # Compute the score for the given sentence
+        score = similarity(enrol, test)[0]
+
+        # Perform score normalization
+        if "score_norm" in hparams:
+            if hparams["score_norm"] == "z-norm":
+                score = (score - mean_e_c) / std_e_c
+            elif hparams["score_norm"] == "t-norm":
+                score = (score - mean_t_c) / std_t_c
+            elif hparams["score_norm"] == "s-norm":
+                score_e = (score - mean_e_c) / std_e_c
+                score_t = (score - mean_t_c) / std_t_c
+                score = 0.5 * (score_e + score_t)
+
+        # write score file
+        s_file.write("%s %s %i %f\n" % (enrol_id, test_id, lab_pair, score))
+        scores.append(score)
+
+        if lab_pair == 1:
+            positive_scores.append(score)
+        else:
+            negative_scores.append(score)
+
+    s_file.close()
+    return positive_scores, negative_scores
+
+
+def dataio_prep_verif(params):
+    "Creates the dataloaders and their data processing pipelines."
+
+    data_folder = params["data_folder"]
+
+    # 1. Declarations:
+
+    # Train data (used for normalization)
+    train_data = sb.dataio.dataset.DynamicItemDataset.from_csv(
+        csv_path=params["train_data"], replacements={"data_root": data_folder},
+    )
+    train_data = train_data.filtered_sorted(
+        sort_key="duration", select_n=params["n_train_snts"]
+    )
+
+    # Enrol data
+    enrol_data = sb.dataio.dataset.DynamicItemDataset.from_csv(
+        csv_path=params["enrol_data"], replacements={"data_root": data_folder},
+    )
+    enrol_data = enrol_data.filtered_sorted(sort_key="duration")
+
+    # Test data
+    test_data = sb.dataio.dataset.DynamicItemDataset.from_csv(
+        csv_path=params["test_data"], replacements={"data_root": data_folder},
+    )
+    test_data = test_data.filtered_sorted(sort_key="duration")
+
+    datasets = [train_data, enrol_data, test_data]
+
+    # 2. Define audio pipeline:
+    @sb.utils.data_pipeline.takes("wav", "start", "stop")
+    @sb.utils.data_pipeline.provides("sig")
+    def audio_pipeline(wav, start, stop):
+        start = int(start)
+        stop = int(stop)
+        num_frames = stop - start
+        sig, fs = torchaudio.load(
+            wav, num_frames=num_frames, frame_offset=start
+        )
+
+        resampled = torchaudio.transforms.Resample(
+            fs, hparams["sample_rate"],
+        )(sig)
+        resampled = resampled.transpose(0, 1).squeeze(1)
+        return resampled
+
+    sb.dataio.dataset.add_dynamic_item(datasets, audio_pipeline)
+
+    # 3. Set output:
+    sb.dataio.dataset.set_output_keys(datasets, ["id", "sig"])
+
+    # 4 Create dataloaders
+    train_dataloader = sb.dataio.dataloader.make_dataloader(
+        train_data, **params["train_dataloader_opts"]
+    )
+    enrol_dataloader = sb.dataio.dataloader.make_dataloader(
+        enrol_data, **params["enrol_dataloader_opts"]
+    )
+    test_dataloader = sb.dataio.dataloader.make_dataloader(
+        test_data, **params["test_dataloader_opts"]
+    )
+
+    return train_dataloader, enrol_dataloader, test_dataloader
 
 
 class SpeakerBrain(sb.core.Brain):
-    """Class for speaker embedding training"""
+    """Class for speaker embedding training"
+    """
 
     def compute_forward(self, batch, stage):
         """Computation pipeline based on a encoder + speaker classifier.
-        Data augmentation and environmental corruption are applied to the
-        input speech.
         """
         batch = batch.to(self.device)
-        wavs, lens = batch.sig
+        wavs, wav_lens = batch.sig
+        tokens_bos = None
 
-        # Add waveform augmentation if specified.
-        if stage == sb.Stage.TRAIN and hasattr(self.hparams, "wav_augment"):
-            wavs, lens = self.hparams.wav_augment(wavs, lens)
+        # compute features
+        feats = self.hparams.compute_features(wavs)
+        current_epoch = self.hparams.epoch_counter.current
+        feats = self.modules.normalize(feats, wav_lens, epoch=current_epoch)
 
-        # Feature extraction and normalization
-        if (
-            hasattr(self.hparams, "use_tacotron2_mel_spec")
-            and self.hparams.use_tacotron2_mel_spec
-        ):
-            feats = self.hparams.compute_features(audio=wavs)
-            feats = torch.transpose(feats, 1, 2)
-            feats = self.modules.compute_features(wavs)
-        else:
-            feats = self.modules.compute_features(wavs)
-        # feats = self.modules.mean_var_norm(feats, lens)
+        # Add feature augmentation if specified.
+        # if stage == sb.Stage.TRAIN and hasattr(self.hparams, "fea_augment"):
+        #     feats, fea_lens = self.hparams.fea_augment(feats, wav_lens)
+        #     tokens_bos = self.hparams.fea_augment.replicate_labels(tokens_bos)
 
-        # Embeddings + speaker classifier
-        if hasattr(self.hparams, "n_quantizers"):
-            _, embeddings = self.modules.embedding_model(
-                feats, n_quantizers=self.hparams.n_quantizers
+        with torch.no_grad():
+            self.modules.CNN.to(self.device).eval()
+            self.modules.Transformer.to(self.device).eval()
+
+            src = self.modules.CNN(feats)
+            tokens, _ = self.modules.Transformer(
+                src, tokens_bos, wav_lens, pad_idx=self.hparams.pad_index
             )
-        else:
-            _, embeddings = self.modules.embedding_model(feats)
-        embeddings = embeddings.mean(dim=2)  # pull over time dimension
-        outputs = self.modules.classifier(embeddings)
 
-        return outputs, lens
+        # Average poolong across time dimension
+        #tokens = torch.nn.functional.avg_pool1d(
+        #    tokens.transpose(1, 2), kernel_size=tokens.shape[1]
+        # ).squeeze(-1)
+        att_w = self.modules.attention_mlp(tokens)
+        feats = torch.matmul(att_w.transpose(1, 2), tokens)
+        outputs = self.modules.classifier(feats)
+        return outputs, wav_lens
 
     def compute_objectives(self, predictions, batch, stage):
-        """Computes the loss using speaker-id as label."""
+        """Computes the loss using speaker-id as label.
+        """
         predictions, lens = predictions
         uttid = batch.id
         spkid, _ = batch.spk_id_encoded
-
-        # Concatenate labels (due to data augmentation)
-        if stage == sb.Stage.TRAIN and hasattr(self.hparams, "wav_augment"):
-            spkid = self.hparams.wav_augment.replicate_labels(spkid)
-
         loss = self.hparams.compute_cost(predictions, spkid, lens)
 
         if stage == sb.Stage.TRAIN and hasattr(
             self.hparams.lr_annealing, "on_batch_end"
         ):
-            self.hparams.lr_annealing.on_batch_end(self.optimizer)
+            self.hparams.lr_annealing.on_batch_end(self.model_optimizer)
 
         if stage != sb.Stage.TRAIN:
             self.error_metrics.append(uttid, predictions, spkid, lens)
 
         return loss
-
-    def on_init(self):
-        """Called after the brain is initialized."""
-        # Freeze embedding model if it's DAC, only train classifier
-        if isinstance(self.modules.embedding_model, DAC):
-            self.modules.embedding_model.eval()
-            for param in self.modules.embedding_model.parameters():
-                param.requires_grad = False
 
     def on_stage_start(self, stage, epoch=None):
         """Gets called at the beginning of an epoch."""
@@ -116,7 +301,9 @@ class SpeakerBrain(sb.core.Brain):
         # Perform end-of-iteration things, like annealing, logging, etc.
         if stage == sb.Stage.VALID:
             old_lr, new_lr = self.hparams.lr_annealing(epoch)
-            sb.nnet.schedulers.update_learning_rate(self.optimizer, new_lr)
+            sb.nnet.schedulers.update_learning_rate(
+                self.model_optimizer, new_lr
+            )
 
             self.hparams.train_logger.log_stats(
                 stats_meta={"epoch": epoch, "lr": old_lr},
@@ -127,6 +314,25 @@ class SpeakerBrain(sb.core.Brain):
                 meta={"ErrorRate": stage_stats["ErrorRate"]},
                 min_keys=["ErrorRate"],
             )
+
+    def init_optimizers(self):
+        "Initializes the weights optimizer and model optimizer"
+        # self.weights_optimizer = self.hparams.weights_opt_class(
+        #     self.hparams.attention_mlp.parameters()
+        # )
+        self.model_optimizer = self.hparams.model_opt_class(
+            self.hparams.model.parameters()
+        )
+        self.optimizers_dict = {
+            # "weights_optimizer": self.weights_optimizer,
+            "model_optimizer": self.model_optimizer,
+        }
+        # Initializing the weights
+        if self.checkpointer is not None:
+            self.checkpointer.add_recoverable("modelopt", self.model_optimizer)
+            # self.checkpointer.add_recoverable(
+            #     "weights_opt", self.weights_optimizer
+            # )
 
 
 def dataio_prep(hparams):
@@ -148,23 +354,30 @@ def dataio_prep(hparams):
     datasets = [train_data, valid_data]
     label_encoder = sb.dataio.encoder.CategoricalEncoder()
 
-    snt_len_sample = int(hparams["sample_rate"] * hparams["sentence_len"])
+    snt_len_sample = int(
+        hparams["original_sample_rate"] * hparams["sentence_len"]
+    )
 
     # 2. Define audio pipeline:
     @sb.utils.data_pipeline.takes("wav", "start", "stop", "duration")
     @sb.utils.data_pipeline.provides("sig")
     def audio_pipeline(wav, start, stop, duration):
         if hparams["random_chunk"]:
-            duration_sample = int(duration * hparams["sample_rate"])
+            duration_sample = int(duration * hparams["original_sample_rate"])
             start = random.randint(0, duration_sample - snt_len_sample)
             stop = start + snt_len_sample
         else:
             start = int(start)
             stop = int(stop)
         num_frames = stop - start
-        sig, fs = audio_io.load(wav, num_frames=num_frames, frame_offset=start)
-        sig = sig.transpose(0, 1).squeeze(1)
-        return sig
+        sig, fs = torchaudio.load(
+            wav, num_frames=num_frames, frame_offset=start
+        )
+        resampled = torchaudio.transforms.Resample(
+            fs, hparams["sample_rate"],
+        )(sig)
+        resampled = resampled.transpose(0, 1).squeeze(1)
+        return resampled
 
     sb.dataio.dataset.add_dynamic_item(datasets, audio_pipeline)
 
@@ -182,9 +395,7 @@ def dataio_prep(hparams):
     # Load or compute the label encoder (with multi-GPU DDP support)
     lab_enc_file = os.path.join(hparams["save_folder"], "label_encoder.txt")
     label_encoder.load_or_create(
-        path=lab_enc_file,
-        from_didatasets=[train_data],
-        output_key="spk_id",
+        path=lab_enc_file, from_didatasets=[train_data], output_key="spk_id",
     )
 
     # 4. Set output:
@@ -194,6 +405,8 @@ def dataio_prep(hparams):
 
 
 if __name__ == "__main__":
+
+    logger = logging.getLogger(__name__)
     # This flag enables the inbuilt cudnn auto-tuner
     torch.backends.cudnn.benchmark = True
 
@@ -204,10 +417,10 @@ if __name__ == "__main__":
     sb.utils.distributed.ddp_init_group(run_opts)
 
     # Load hyperparameters file with command-line overrides
-    with open(hparams_file, encoding="utf-8") as fin:
+    with open(hparams_file) as fin:
         hparams = load_hyperpyyaml(fin, overrides)
 
-    # Download verification list (to exclude verification sentences from train)
+    # Download verification list (to exlude verification sentences from train)
     veri_file_path = os.path.join(
         hparams["save_folder"], os.path.basename(hparams["verification_file"])
     )
@@ -216,20 +429,24 @@ if __name__ == "__main__":
     # Dataset prep (parsing VoxCeleb and annotation into csv files)
     from voxceleb_prepare import prepare_voxceleb  # noqa
 
-    run_on_main(
-        prepare_voxceleb,
-        kwargs={
-            "data_folder": hparams["data_folder"],
-            "save_folder": hparams["save_folder"],
-            "verification_pairs_file": veri_file_path,
-            "splits": ["train", "dev"],
-            "split_ratio": hparams["split_ratio"],
-            "seg_dur": hparams["sentence_len"],
-            "skip_prep": hparams["skip_prep"],
-        },
-    )
-    sb.utils.distributed.run_on_main(hparams["prepare_noise_data"])
-    sb.utils.distributed.run_on_main(hparams["prepare_rir_data"])
+    if not hparams["skip_prep"]:
+        prepare_voxceleb(
+            data_folder=hparams["data_folder"],
+            save_folder=hparams["save_folder"],
+            verification_pairs_file=veri_file_path,
+            splits=["train", "dev", "test"],
+            split_ratio=[90, 10],
+            seg_dur=hparams["sentence_len"],
+            skip_prep=hparams["skip_prep"],
+            source=hparams["voxceleb_source"]
+            if "voxceleb_source" in hparams
+            else None,
+        )
+
+    # Load pretrained asr model
+
+    run_on_main(hparams["pretrainer"].collect_files)
+    hparams["pretrainer"].load_collected()
 
     # Dataset IO prep: creating Dataset objects and proper encodings for phones
     train_data, valid_data, label_encoder = dataio_prep(hparams)
@@ -244,7 +461,6 @@ if __name__ == "__main__":
     # Brain class initialization
     speaker_brain = SpeakerBrain(
         modules=hparams["modules"],
-        opt_class=hparams["opt_class"],
         hparams=hparams,
         run_opts=run_opts,
         checkpointer=hparams["checkpointer"],
@@ -255,6 +471,44 @@ if __name__ == "__main__":
         speaker_brain.hparams.epoch_counter,
         train_data,
         valid_data,
-        train_loader_kwargs=hparams["dataloader_options"],
-        valid_loader_kwargs=hparams["dataloader_options"],
+        train_loader_kwargs=hparams["train_dataloader_opts"],
+        valid_loader_kwargs=hparams["enrol_dataloader_opts"],
     )
+
+    if hparams["do_verification"]:
+        # Now preparing for test :
+        hparams["device"] = speaker_brain.device
+
+        speaker_brain.modules.eval()
+        train_dataloader, enrol_dataloader, test_dataloader = dataio_prep_verif(
+            hparams
+        )
+        # Computing  enrollment and test embeddings
+        logger.info("Computing enroll/test embeddings...")
+
+        # First run
+        enrol_dict = compute_embedding_loop(enrol_dataloader)
+        test_dict = compute_embedding_loop(test_dataloader)
+
+        if "score_norm" in hparams:
+            train_dict = compute_embedding_loop(train_dataloader)
+
+        # Compute the EER
+        logger.info("Computing EER..")
+        # Reading standard verification split
+        with open(veri_file_path) as f:
+            veri_test = [line.rstrip() for line in f]
+
+        positive_scores, negative_scores = get_verification_scores(veri_test)
+        del enrol_dict, test_dict
+
+        eer, th = EER(
+            torch.tensor(positive_scores), torch.tensor(negative_scores)
+        )
+        logger.info("EER(%%)=%f", eer * 100)
+
+        min_dcf, th = minDCF(
+            torch.tensor(positive_scores), torch.tensor(negative_scores)
+        )
+        # Testing
+        logger.info("minDCF=%f", min_dcf * 100)

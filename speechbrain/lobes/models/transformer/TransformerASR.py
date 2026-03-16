@@ -401,18 +401,20 @@ class TransformerASR(TransformerInterface):
         )
 
         # if encoder only, we return the output of the encoder
-        if tgt is None:
-            return outputs
-        if self.encoder_module == "conformerq":
+        if self.encoder_module == "conformerq" and self.encoder.mode != "quantize":
             if self.output_hidden_states:
                 encoder_out, _, hidden_states, commitment_loss, codebook_loss = outputs
             else:
                 encoder_out, _, commitment_loss, codebook_loss = outputs
+        elif self.encoder_module == "conformerq" and self.encoder.mode == "quantize":
+            return outputs
         else:
             if self.output_hidden_states:
                 encoder_out, _, hidden_states = outputs
             else:
                 encoder_out, _ = outputs
+        if tgt is None:
+            return outputs
 
         tgt = self.custom_tgt_module(tgt)
 
