@@ -1377,6 +1377,8 @@ class DAC(nn.Module):
         codebook_size: int = 1024,
         codebook_dim: Union[int, list] = 8,
         quantizer_dropout: bool = False,
+        quantizer_type: str = "sparse",
+        freeze_sparse_mat: bool = False,
         sample_rate: int = 44100,
         model_type: str = "44khz",
         model_bitrate: str = "8kbps",
@@ -1399,7 +1401,9 @@ class DAC(nn.Module):
         self.codebook_dim = codebook_dim
         self.latent_dim = latent_dim
         self.quantizer_dropout = quantizer_dropout
+        self.quantizer_type = quantizer_type
         self.max_duration = max_duration
+        self.freeze_sparse_mat = freeze_sparse_mat
 
         if load_pretrained:
             if not load_path:
@@ -1416,13 +1420,22 @@ class DAC(nn.Module):
         if self.latent_dim is None:
             self.latent_dim = self.encoder_dim * (2 ** len(self.encoder_rates))
         self.encoder = Encoder(self.encoder_dim, self.encoder_rates, self.latent_dim)
-        self.quantizer = ResidualVectorQuantize(
-            input_dim=self.latent_dim,
-            n_codebooks=self.n_codebooks,
-            codebook_size=self.codebook_size,
-            codebook_dim=self.codebook_dim,
-            quantizer_dropout=self.quantizer_dropout,
-        )
+        if not self.quantizer_type == "sparse":
+            self.quantizer = ResidualVectorQuantize(
+                input_dim=self.latent_dim,
+                n_codebooks=self.n_codebooks,
+                codebook_size=self.codebook_size,
+                codebook_dim=self.codebook_dim,
+                quantizer_dropout=self.quantizer_dropout,
+            )
+        else:
+            self.quantizer = SparseResidualVectorQuantize(
+                input_dim=self.latent_dim,
+                n_codebooks=self.n_codebooks,
+                codebook_size=self.codebook_size,
+                codebook_dim=self.codebook_dim,
+                quantizer_dropout=self.quantizer_dropout,
+            )
         self.decoder = Decoder(
             self.latent_dim,
             self.decoder_dim,
@@ -1435,8 +1448,16 @@ class DAC(nn.Module):
             self.metadata = metadata
             if freeze_codec:
                 for param in self.parameters():
+                    if not self.freeze_sparse_mat:
+                        if "codebook_sparse_mat" in param.name:
+                            continue
+                        if "codebook_dict" in param.name:
+                            continue
                     param.requires_grad = False
-                logger.info("Freezing the codec parameters")
+                if not self.freeze_sparse_mat:
+                    logger.info("Freezing codec parameters except sparse components")
+                else:
+                    logger.info("Freezing the codec parameters")
                 self.eval()
 
     def encode(
