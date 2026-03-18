@@ -368,7 +368,6 @@ class VectorQuantize(nn.Module):
         z_q = self.decode_code(indices)
         return z_q, indices
 
-
 class SparseVectorQuantize(nn.Module):
     """
     An implementation for Vector Quantization
@@ -787,7 +786,7 @@ class SparseResidualVectorQuantize(nn.Module):
 
         self.quantizers = nn.ModuleList(
             [
-                VectorQuantize(input_dim, codebook_size, codebook_dim[i])
+                SparseVectorQuantize(input_dim, codebook_size, codebook_dim[i])
                 for i in range(n_codebooks)
             ]
         )
@@ -825,6 +824,9 @@ class SparseResidualVectorQuantize(nn.Module):
         residual = z
         commitment_loss = 0
         codebook_loss = 0
+        sparse_loss = 0
+        l1_reg_speaker = 0
+        l1_reg_content = 0
 
         codebook_indices = []
         latents = []
@@ -842,8 +844,7 @@ class SparseResidualVectorQuantize(nn.Module):
             if self.training is False and i >= n_quantizers:
                 break
 
-            (
-                z_q_i,
+            (   z_q_i,
                 commitment_loss_i,
                 codebook_loss_i,
                 indices_i,
@@ -1447,11 +1448,9 @@ class DAC(nn.Module):
             self.load_state_dict(model_dict["state_dict"], strict=strict)
             self.metadata = metadata
             if freeze_codec:
-                for param in self.parameters():
+                for name, param in self.named_parameters():
                     if not self.freeze_sparse_mat:
-                        if "codebook_sparse_mat" in param.name:
-                            continue
-                        if "codebook_dict" in param.name:
+                        if "codebook_sparse_mat" in name or "codebook_dict" in name:
                             continue
                     param.requires_grad = False
                 if not self.freeze_sparse_mat:
@@ -1493,6 +1492,21 @@ class DAC(nn.Module):
             Number of samples in input audio
         """
         z = self.encoder(audio_data)
+        if self.quantizer_type == "sparse":
+            z, codes, latents, commitment_loss, codebook_loss, sparse_loss, l1_reg_speaker, l1_reg_content = self.quantizer(
+                z, n_quantizers
+            )
+            return (
+                z,
+                codes,
+                latents,
+                commitment_loss,
+                codebook_loss,
+                sparse_loss,
+                l1_reg_speaker,
+                l1_reg_content,
+            )
+
         z, codes, latents, commitment_loss, codebook_loss = self.quantizer(
             z, n_quantizers
         )
@@ -1548,5 +1562,19 @@ class DAC(nn.Module):
 
         audio_data = audio_data.unsqueeze(1)
         audio_data = audio_data[:, :, : self.max_duration * self.sample_rate]
+        if self.quantizer_type == "sparse":
+            z, codes, latents, commitment_loss, codebook_loss, sparse_loss, l1_reg_speaker, l1_reg_content = self.encode(
+                audio_data, n_quantizers
+            )
+            return (
+                z,
+                codes,
+                latents,
+                commitment_loss,
+                codebook_loss,
+                sparse_loss,
+                l1_reg_speaker,
+                l1_reg_content,
+            )
         z, codes, _, _, _ = self.encode(audio_data, n_quantizers)
         return codes, z

@@ -31,56 +31,57 @@ class SparseBrain(sb.core.Brain):
         """Forward computations from the waveform batches to the output probabilities."""
         batch = batch.to(self.device)
         wavs, wav_lens = batch.sig
-        tokens_bos, _ = batch.tokens_bos
 
-        # compute features
-        feats = self.hparams.compute_features(wavs)
-        current_epoch = self.hparams.epoch_counter.current
-        feats = self.modules.normalize(feats, wav_lens, epoch=current_epoch)
-        
-        # Feature extraction aned attention pooling
-        with torch.no_grad():
-            self.hparams.codec.to(self.device).eval()
-            tokens, _ = self.hparams.codec(
-                wavs.unsqueeze(1), n_quantizers=self.hparams.num_codebooks
-            )
+        logger.info(wavs.shape)
 
-        enc_out, pred, commitment_loss, codebook_loss = (
-            self.modules.Transformer(
-                src, tokens_bos, wav_lens, pad_idx=self.hparams.pad_index
-            )
-        )        # output layer for ctc log-probabilities
-        logits = self.modules.ctc_lin(enc_out)
+         # Add waveform augmentation if specified.
+        if stage == sb.Stage.TRAIN and hasattr(self.hparams, "wav_augment"):
+            wavs, wav_lens = self.hparams.wav_augment(wavs, wav_lens)  # [B, T]
+
+        # Codec forward pass
+        (
+            in_toks,
+            commitment_loss,
+            codebook_loss,
+            _,
+            _,
+            sparse_loss,
+            l1_reg_spk,
+            l1_reg_cont,
+        ) = self.hparams.codec(
+            wavs, n_quantizers=self.hparams.num_codebooks
+        )
+        logger.info(in_toks.shape)
+
+        ## Extract embeddings
+        in_embs = self.modules.discrete_embedding_layer(
+            in_toks
+        )  # [B, T, N-Q, D]
+        logger.info(in_embs.shape)
+        # Attention-Pooling
+        att_w = self.modules.attention_mlp(in_embs)  # [B, T, N-Q, 1]
+        in_embs = torch.matmul(att_w.transpose(2, -1), in_embs).squeeze(
+            -2
+        )  # [B, T, D]
+
+        logits = self.modules.ctc_lin(pred)
         p_ctc = self.hparams.log_softmax(logits)
 
         # output layer for seq2seq log-probabilities
         pred = self.modules.seq_lin(pred)
         p_seq = self.hparams.log_softmax(pred)
 
-        # Compute outputs
-        hyps = None
-        current_epoch = self.hparams.epoch_counter.current
-        is_valid_search = (
-            stage == sb.Stage.VALID
-            and current_epoch % self.hparams.valid_search_interval == 0
+        return (
+            p_ctc,
+            p_seq,
+            wav_lens,
+            hyps,
+            commitment_loss,
+            codebook_loss,
+            sparse_loss,
+            l1_reg_spk,
+            l1_reg_cont,
         )
-        is_test_search = stage == sb.Stage.TEST
-
-        if any([is_valid_search, is_test_search]):
-            # Note: For valid_search, for the sake of efficiency, we only perform beamsearch with
-            # limited capacity and no LM to give user some idea of how the AM is doing
-
-            # Decide searcher for inference: valid or test search
-            if stage == sb.Stage.VALID:
-                hyps, _, _, _ = self.hparams.valid_search(
-                    enc_out.detach(), wav_lens
-                )
-            else:
-                hyps, _, _, _ = self.hparams.test_search(
-                    enc_out.detach(), wav_lens
-                )
-        #logging.info("Commitment loss: {}".format(commitment_loss))
-        return p_ctc, p_seq, wav_lens, hyps, commitment_loss, codebook_loss
 
     def compute_objectives(self, predictions, batch, stage):
         """Computes the loss (CTC+NLL) given predictions and targets."""
