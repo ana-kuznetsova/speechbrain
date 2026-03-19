@@ -17,6 +17,7 @@ from pathlib import Path
 
 import torch
 import torchaudio
+import librosa
 from hyperpyyaml import load_hyperpyyaml
 
 import speechbrain as sb
@@ -310,9 +311,9 @@ def dataio_prepare(hparams, tokenizer):
     @sb.utils.data_pipeline.provides("sig")
     def audio_pipeline(wav):
         sig = sb.dataio.dataio.read_audio(wav)
-        info = torchaudio.info(wav)
+        sample_rate = librosa.get_samplerate(wav)
         resampled = torchaudio.transforms.Resample(
-            info.sample_rate, hparams["sample_rate"],
+            sample_rate, hparams["sample_rate"],
         )(sig)
         # resampled = resampled.unsqueeze(0)
         return resampled
@@ -408,7 +409,7 @@ if __name__ == "__main__":
     # here we create the datasets objects as well as tokenization and encoding
     # Defining tokenizer and loading it
     tokenizer = SentencePiece(
-        model_dir=hparams["save_folder"],        rm .git/index.lock
+        model_dir=hparams["save_folder"],
         vocab_size=hparams["output_neurons"],
         annotation_train=hparams["train_csv"],
         annotation_read="wrd",
