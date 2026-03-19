@@ -41,7 +41,7 @@ test_batch_size: 1
 grad_accumulation_factor: 2
 max_grad_norm: 5.0
 sorting: descending #random
-num_workers: 8
+num_workers: 4
 loss_reduction: batchmean
 precision: fp32 # bf16, fp16 or fp32loss_reduction: batchmean
 valid_search_interval: 1
@@ -195,7 +195,7 @@ scheduler: !new:speechbrain.nnet.schedulers.NewBobScheduler
    patient: 0
 
 
-model_opt_class: !name:torch.optim.AdamW
+Adam: !name:torch.optim.AdamW
    lr: !ref <lr_model>
    betas: (0.9, 0.98)
    eps: 0.000000001
