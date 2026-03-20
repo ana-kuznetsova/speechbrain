@@ -96,7 +96,7 @@ test_dataloader_opts:
 # DAC Parameters
 model_type: 16khz
 vocab_size: 1024
-encoder_dim: 512
+encoder_dim: 1024
 model_bitrate: 8kbps
 freeze_embedding: False
 pretrain_embeddings: False
@@ -136,19 +136,7 @@ prune_history: False
 ############################## models ################################
 # EnCodec model (see https://huggingface.co/docs/transformers/v4.31.0/en/model_doc/encodec)
 
-discrete_embedding_layer: !new:custom_model.Discrete_EmbeddingLayer
-   num_codebooks: !ref <num_codebooks>
-   vocab_size: !ref <vocab_size>
-   emb_dim: !ref <encoder_dim>
-   # hidden_dim: !ref <encoder_dim>
-   freeze: !ref <freeze_embedding>
-   init: !ref <pretrain_embeddings>
-
-attention_mlp: !new:custom_model.AttentionMLP
-   input_dim: !ref <encoder_dim>
-   hidden_dim: !ref <encoder_dim>
-
-encoder: !new:speechbrain.nnet.RNN.LSTM
+asr_encoder: !new:speechbrain.nnet.RNN.LSTM
    input_shape: [Null, Null, !ref <encoder_dim>]
    num_layers: !ref <dnn_layers>
    bidirectional: True

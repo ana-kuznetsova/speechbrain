@@ -12,6 +12,7 @@ Authors
 """
 
 import os
+from pyexpat.errors import codes
 import sys
 from pathlib import Path
 
@@ -35,8 +36,6 @@ class SparseBrain(sb.core.Brain):
         batch = batch.to(self.device)
         wavs, wav_lens = batch.sig
 
-        logger.info(wavs.shape)
-
          # Add waveform augmentation if specified.
         if stage == sb.Stage.TRAIN and hasattr(self.hparams, "wav_augment"):
             wavs, wav_lens = self.hparams.wav_augment(wavs, wav_lens)  # [B, T]
@@ -44,41 +43,36 @@ class SparseBrain(sb.core.Brain):
         # Codec forward pass
         (
             in_toks,
+            _,
+            _,
             commitment_loss,
             codebook_loss,
-            _,
-            _,
             sparse_loss,
             l1_reg_spk,
             l1_reg_cont,
         ) = self.hparams.codec(
             wavs, n_quantizers=self.hparams.num_codebooks
         )
-        logger.info(in_toks.shape)
 
-        ## Extract embeddings
-        in_embs = self.modules.discrete_embedding_layer(
-            in_toks
-        )  # [B, T, N-Q, D]
-        logger.info(in_embs.shape)
-        # Attention-Pooling
-        att_w = self.modules.attention_mlp(in_embs)  # [B, T, N-Q, 1]
-        in_embs = torch.matmul(att_w.transpose(2, -1), in_embs).squeeze(
-            -2
-        )  # [B, T, D]
+        # ASR head forward pass
+        logger.info(f"wav_lens: {wav_lens}, in_toks shape: {in_toks.shape}")
+        enc_out, _ = self.modules.asr_encoder(in_toks, lengths=wav_lens)
 
-        logits = self.modules.ctc_lin(pred)
+        logits = self.modules.ctc_lin(enc_out)
         p_ctc = self.hparams.log_softmax(logits)
 
-        # output layer for seq2seq log-probabilities
-        pred = self.modules.seq_lin(pred)
-        p_seq = self.hparams.log_softmax(pred)
+        p_tokens = None
+        if stage == sb.Stage.VALID:
+            p_tokens = sb.decoders.ctc_greedy_decode(
+                p_ctc, wav_lens, blank_id=self.hparams.blank_index
+            )
+        elif stage == sb.Stage.TEST:
+            p_tokens = test_searcher(p_ctc, wav_lens)
 
         return (
-            p_ctc,
-            p_seq,
+            p_ctc, # ctc probabilities
+            p_tokens, # predicted hypotheses (token ids)
             wav_lens,
-            hyps,
             commitment_loss,
             codebook_loss,
             sparse_loss,
@@ -433,6 +427,17 @@ if __name__ == "__main__":
         hparams=hparams,
         run_opts=run_opts,
         checkpointer=hparams["checkpointer"],
+    )
+    
+    sparse_brain.tokenizer = tokenizer
+    vocab_list = [
+        tokenizer.sp.id_to_piece(i) for i in range(tokenizer.sp.vocab_size())
+    ]
+
+    from speechbrain.decoders.ctc import CTCBeamSearcher
+
+    test_searcher = CTCBeamSearcher(
+        **hparams["test_beam_search"], vocab_list=vocab_list,
     )
 
     # adding objects to trainer:
