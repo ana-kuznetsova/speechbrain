@@ -1577,4 +1577,4 @@ class DAC(nn.Module):
                 l1_reg_content,
             )
         z, codes, _, _, _ = self.encode(audio_data, n_quantizers)
-        return codes, z
+        return z, codes
