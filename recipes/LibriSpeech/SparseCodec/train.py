@@ -13,6 +13,7 @@ Authors
 
 import os
 from pyexpat.errors import codes
+import time
 import sys
 from pathlib import Path
 
@@ -36,7 +37,7 @@ class SparseBrain(sb.core.Brain):
         batch = batch.to(self.device)
         wavs, wav_lens = batch.sig
 
-         # Add waveform augmentation if specified.
+        # Add waveform augmentation if specified.
         if stage == sb.Stage.TRAIN and hasattr(self.hparams, "wav_augment"):
             wavs, wav_lens = self.hparams.wav_augment(wavs, wav_lens)  # [B, T]
 
@@ -55,23 +56,22 @@ class SparseBrain(sb.core.Brain):
         )
 
         # ASR head forward pass
-        logger.info(f"wav_lens: {wav_lens}, in_toks shape: {in_toks.shape}")
+        in_toks = in_toks.transpose(1, 2)
         enc_out, _ = self.modules.asr_encoder(in_toks, lengths=wav_lens)
-
         logits = self.modules.ctc_lin(enc_out)
         p_ctc = self.hparams.log_softmax(logits)
 
-        p_tokens = None
+        pred_hyps = None
         if stage == sb.Stage.VALID:
-            p_tokens = sb.decoders.ctc_greedy_decode(
+            pred_hyps = sb.decoders.ctc_greedy_decode(
                 p_ctc, wav_lens, blank_id=self.hparams.blank_index
             )
         elif stage == sb.Stage.TEST:
-            p_tokens = test_searcher(p_ctc, wav_lens)
+            pred_hyps = test_searcher(p_ctc, wav_lens)
 
         return (
             p_ctc, # ctc probabilities
-            p_tokens, # predicted hypotheses (token ids)
+            pred_hyps, # predicted hypotheses (token ids)
             wav_lens,
             commitment_loss,
             codebook_loss,
@@ -81,87 +81,51 @@ class SparseBrain(sb.core.Brain):
         )
 
     def compute_objectives(self, predictions, batch, stage):
-        """Computes the loss (CTC+NLL) given predictions and targets."""
+        """Computes combined ASR + L1 per attrribute regularizaer."""
 
-        (p_ctc, p_seq, wav_lens, hyps, commitment_loss, codebook_loss) = (
-            predictions
-        )
+        (
+            p_seq,
+            pred_hyps,
+            wav_lens,
+            _,
+            _,
+            sparse_loss,
+            l1_reg_spk,
+            l1_reg_cont,
+        ) = predictions
         ids = batch.id
-        tokens_eos, tokens_eos_lens = batch.tokens_eos
         tokens, tokens_lens = batch.tokens
 
-        if stage == sb.Stage.TRAIN:
-            # Labels must be extended if parallel augmentation or concatenated
-            # augmentation was performed on the input (increasing the time dimension)
-            augment_warmup = 0
-            if hasattr(self.hparams, "augment_warmup"):
-                augment_warmup = self.hparams.augment_warmup
-            if (
-                hasattr(self.hparams, "fea_augment")
-                and self.optimizer_step > augment_warmup
-            ):
-                (
-                    tokens,
-                    tokens_lens,
-                    tokens_eos,
-                    tokens_eos_lens,
-                ) = self.hparams.fea_augment.replicate_multiple_labels(
-                    tokens, tokens_lens, tokens_eos, tokens_eos_lens
-                )
+        # Label Augmentation
+        if stage == sb.Stage.TRAIN and hasattr(self.hparams, "wav_augment"):
+            tokens = self.hparams.wav_augment.replicate_labels(tokens)
+            tokens_lens = self.hparams.wav_augment.replicate_labels(tokens_lens)
 
-        loss_seq = self.hparams.seq_cost(
-            p_seq, tokens_eos, length=tokens_eos_lens
-        ).sum()
-
-        loss_ctc = self.hparams.ctc_cost(
-            p_ctc, tokens, wav_lens, tokens_lens
-        ).sum()
-
-        loss = (
-            self.hparams.ctc_weight * loss_ctc
-            + self.hparams.seq_weight * loss_seq
+        ctc_batch_loss = self.hparams.ctc_cost(
+            p_seq, tokens, wav_lens, tokens_lens, reduction=self.hparams.loss_reduction
         )
+        ctc_batch_loss = ctc_batch_loss * self.hparams.ctc_weight
+        sparse_batch_loss = sparse_loss * self.hparams.sparse_loss_weight
 
-        if commitment_loss is not None:
-            loss += self.hparams.codec_loss_weight * (
-                commitment_loss + codebook_loss
+        l1_reg_batch_loss = (
+            0.5 * (l1_reg_spk + l1_reg_cont)
+        ) * self.hparams.l1_reg_weight
+
+        loss = ctc_batch_loss + sparse_batch_loss + l1_reg_batch_loss
+
+        if stage == sb.Stage.VALID:
+            # Decode token terms to words
+            predicted_words = self.tokenizer(
+                pred_hyps, task="decode_from_list"
             )
+        elif stage == sb.Stage.TEST:
+            predicted_words = [
+                hyp[0].text.split(" ") for hyp in pred_hyps
+            ]
 
         if stage != sb.Stage.TRAIN:
-            if self.modules.Transformer.encoder_module != "conformerq":
-                self.hparams.train_logger.log_stats(
-                stats_meta={"epoch": self.hparams.epoch_counter.current},
-                train_stats={
-                    "loss_ctc": loss_ctc.item(),
-                    "loss_seq": loss_seq.item(),
-                },
-                verbose=True,
-                )
-            else:
-                self.hparams.train_logger.log_stats(
-                stats_meta={"epoch": self.hparams.epoch_counter.current},
-                train_stats={
-                    "loss_ctc": loss_ctc.item(),
-                    "loss_seq": loss_seq.item(),
-                    "codebook_loss": codebook_loss.item(),
-                    "commitment_loss": commitment_loss.item(),
-                },
-                verbose=True,
-                )
-            current_epoch = self.hparams.epoch_counter.current
-            valid_search_interval = self.hparams.valid_search_interval
-            if current_epoch % valid_search_interval == 0 or (
-                stage == sb.Stage.TEST
-            ):
-                # Decode token terms to words
-                predicted_words = [
-                    tokenizer.decode_ids(utt_seq).split(" ") for utt_seq in hyps
-                ]
-                target_words = [wrd.split(" ") for wrd in batch.wrd]
-                self.wer_metric.append(ids, predicted_words, target_words)
-
-            # compute the accuracy of the one-step-forward prediction
-            self.acc_metric.append(p_seq, tokens_eos, tokens_eos_lens)
+            target_words = [wrd.split(" ") for wrd in batch.wrd]
+            self.wer_metric.append(ids, predicted_words, target_words)
         return loss
 
     def on_evaluate_start(self, max_key=None, min_key=None):
@@ -184,7 +148,6 @@ class SparseBrain(sb.core.Brain):
     def on_stage_start(self, stage, epoch):
         """Gets called at the beginning of each epoch"""
         if stage != sb.Stage.TRAIN:
-            self.acc_metric = self.hparams.acc_computer()
             self.wer_metric = self.hparams.error_rate_computer()
 
     def on_stage_end(self, stage, stage_loss, epoch):
@@ -194,7 +157,7 @@ class SparseBrain(sb.core.Brain):
         if stage == sb.Stage.TRAIN:
             self.train_stats = stage_stats
         else:
-            stage_stats["ACC"] = self.acc_metric.summarize()
+            stage_stats["WER"] = self.wer_metric.summarize("error_rate")
             current_epoch = self.hparams.epoch_counter.current
             valid_search_interval = self.hparams.valid_search_interval
             if (
@@ -205,14 +168,18 @@ class SparseBrain(sb.core.Brain):
 
         # log stats and save checkpoint at end-of-epoch
         if stage == sb.Stage.VALID:
-            lr = self.hparams.noam_annealing.current_lr
-            steps = self.optimizer_step
-            optimizer = self.optimizer.__class__.__name__
+            if type(self.hparams.scheduler).__name__ == "NewBobScheduler":
+                lr, new_lr = self.hparams.scheduler(stage_stats["loss"])
+                sb.nnet.schedulers.update_learning_rate(self.optimizer, new_lr)
+            elif type(self.hparams.scheduler).__name__ == "LinearNoamScheduler":
+                lr = self.hparams.scheduler.current_lr
+            else:
+                raise NotImplementedError
 
+            optimizer = self.optimizer.__class__.__name__
             epoch_stats = {
                 "epoch": epoch,
                 "lr": lr,
-                "steps": steps,
                 "optimizer": optimizer,
             }
             self.hparams.train_logger.log_stats(
@@ -221,8 +188,8 @@ class SparseBrain(sb.core.Brain):
                 valid_stats=stage_stats,
             )
             self.checkpointer.save_and_keep_only(
-                meta={"ACC": stage_stats["ACC"], "epoch": epoch},
-                max_keys=["ACC"],
+                meta={"WER": stage_stats["WER"], "epoch": epoch},
+                min_keys=["WER"],
                 num_to_keep=self.hparams.avg_checkpoints,
             )
 
@@ -233,23 +200,16 @@ class SparseBrain(sb.core.Brain):
             )
             if if_main_process():
                 with open(
-                    self.hparams.test_wer_file, "w", encoding="utf-8"
+                    self.hparams.output_wer_folder, "w", encoding="utf-8"
                 ) as w:
                     self.wer_metric.write_stats(w)
 
-            # save the averaged checkpoint at the end of the evaluation stage
-            # delete the rest of the intermediate checkpoints
-            # ACC is set to 1.1 so checkpointer only keeps the averaged checkpoint
-            self.checkpointer.save_and_keep_only(
-                meta={"ACC": 1.1, "epoch": epoch},
-                max_keys=["ACC"],
-                num_to_keep=1,
-            )
-
     def on_fit_batch_end(self, batch, outputs, loss, should_step):
-        """At the end of the optimizer step, apply noam annealing."""
-        if should_step:
-            self.hparams.noam_annealing(self.optimizer)
+        if (
+            should_step
+            and type(self.hparams.scheduler).__name__ == "LinearNoamScheduler"
+        ):
+            self.hparams.scheduler(self.optimizer)
 
 
 def dataio_prepare(hparams, tokenizer):
@@ -365,7 +325,6 @@ def dataio_prepare(hparams, tokenizer):
     )
 
 
-
 if __name__ == "__main__":
     # CLI:
     hparams_file, run_opts, overrides = sb.parse_arguments(sys.argv[1:])
@@ -428,7 +387,7 @@ if __name__ == "__main__":
         run_opts=run_opts,
         checkpointer=hparams["checkpointer"],
     )
-    
+
     sparse_brain.tokenizer = tokenizer
     vocab_list = [
         tokenizer.sp.id_to_piece(i) for i in range(tokenizer.sp.vocab_size())
@@ -467,8 +426,10 @@ if __name__ == "__main__":
         if collate_fn is not None:
             valid_dataloader_opts["collate_fn"] = collate_fn
 
-    #if not hparams["eval_only"]:
     # Training
+    # Measure time
+    start_time = time.time()
+
     sparse_brain.fit(
         sparse_brain.hparams.epoch_counter,
         train_data,
@@ -477,17 +438,21 @@ if __name__ == "__main__":
         valid_loader_kwargs=valid_dataloader_opts,
     )
 
-    if hparams["testing"]:
-        # Testing
-        if not os.path.exists(hparams["output_wer_folder"]):
-            os.makedirs(hparams["output_wer_folder"])
+    end_time = time.time()  # End the timer
+    # Calculate elapsed time
+    elapsed_time = (end_time - start_time) / 3600  # Convert to hours
+    logger.info("Elapsed time %s hours", elapsed_time)
 
-        for k in test_datasets.keys():  # keys are test_clean, test_other etc
-            sparse_brain.hparams.test_wer_file = os.path.join(
-                hparams["output_wer_folder"], f"wer_{k}.txt"
-            )
-            sparse_brain.evaluate(
-                test_datasets[k],
-                max_key="ACC",
-                test_loader_kwargs=hparams["test_dataloader_opts"],
-            )
+    # Testing
+    if not os.path.exists(hparams["output_wer_folder"]):
+        os.makedirs(hparams["output_wer_folder"])
+
+    for k in test_datasets.keys():  # keys are test_clean, test_other etc
+        sparse_brain.hparams.output_wer_folder = os.path.join(
+            hparams["output_wer_folder"], f"wer_{k}.txt"
+        )
+        sparse_brain.evaluate(
+            test_datasets[k],
+            test_loader_kwargs=hparams["test_dataloader_opts"],
+            min_key="WER",
+        )
