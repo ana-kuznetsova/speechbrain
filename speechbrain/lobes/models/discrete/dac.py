@@ -1563,9 +1563,16 @@ class DAC(nn.Module):
         audio_data = audio_data.unsqueeze(1)
         audio_data = audio_data[:, :, : self.max_duration * self.sample_rate]
         if self.quantizer_type == "sparse":
-            z, codes, latents, commitment_loss, codebook_loss, sparse_loss, l1_reg_speaker, l1_reg_content = self.encode(
-                audio_data, n_quantizers
-            )
+            (
+                z,
+                codes,
+                latents,
+                commitment_loss,
+                codebook_loss,
+                sparse_loss,
+                l1_reg_speaker,
+                l1_reg_content,
+            ) = self.encode(audio_data, n_quantizers)
             return (
                 z,
                 codes,
