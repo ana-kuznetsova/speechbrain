@@ -137,6 +137,7 @@ label_smoothing: 0.1
 loss_reduction: "sum"
 sparse_loss_weight: 0.1
 l1_reg_weight: 0.5
+spk_loss_weight: 0.5
 ctc_weight: 0.3
 seq_weight: 0.7
 

@@ -70,14 +70,14 @@ class SparseBrain(sb.core.Brain):
             pred_hyps = test_searcher(p_ctc, wav_lens)
 
         # Spekaer classification head forward pass
-        spk_emb = self.modules.spk_encoder(in_tok)
-        spk_logits = self.modules.spk_classifier(spk_emb)
-        logger.info("DEBUG spk_logits shape: %s", spk_logits.shape)
+        spk_emb = self.modules.spk_encoder(in_toks)
+        spk_logits = self.modules.spk_classifier(spk_emb).squeeze(1)
 
         return (
             p_ctc, # ctc probabilities
             pred_hyps, # predicted hypotheses (token ids)
             wav_lens,
+            spk_logits,
             commitment_loss,
             codebook_loss,
             sparse_loss,
@@ -92,15 +92,22 @@ class SparseBrain(sb.core.Brain):
             p_seq,
             pred_hyps,
             wav_lens,
+            spk_logits,
             _,
             _,
             sparse_loss,
             l1_reg_spk,
             l1_reg_cont,
         ) = predictions
+
         ids = batch.id
         tokens, tokens_lens = batch.tokens
-
+        spk_targets = batch.spk_index
+        # Convert spk_targets to one-hot
+        spk_targets = torch.nn.functional.one_hot(
+            spk_targets, num_classes=self.hparams.out_n_neurons
+        ).float()
+        logger.info("Speaker targets shape: %s", spk_targets.shape)
         # Label Augmentation
         if stage == sb.Stage.TRAIN and hasattr(self.hparams, "wav_augment"):
             tokens = self.hparams.wav_augment.replicate_labels(tokens)
@@ -111,6 +118,12 @@ class SparseBrain(sb.core.Brain):
         )
         ctc_batch_loss = ctc_batch_loss * self.hparams.ctc_weight
         sparse_batch_loss = sparse_loss * self.hparams.sparse_loss_weight
+        #logger.info(spk_logits.shape)
+        #logger.info(spk_targets)
+        #aam_batch_loss = self.hparams.spk_amm_loss(
+        #    spk_logits, spk_targets
+        # ) * self.hparams.spk_loss_weight
+        #logger.info("AAM batch loss: %s", aam_batch_loss.item())
 
         l1_reg_batch_loss = (
             0.5 * (l1_reg_spk + l1_reg_cont)
@@ -280,29 +293,38 @@ def dataio_prepare(hparams, tokenizer):
                 max_depth -= 1
             if not hasattr(parent, "data"):
                 raise RuntimeError("Could not find .data in dataset or its parents.")
-            # Get fieldnames from the first entry
-            first_entry = next(iter(parent.data.values()))
-            if isinstance(first_entry, dict):
-                fieldnames = list(first_entry.keys())
-                if "spk_id" not in fieldnames:
-                    raise RuntimeError("spk_id not found in dataset fields.")
-                for entry in parent.data.values():
-                    if not entry:
+            for entry in parent.data.values():
+                if not entry:
+                    continue
+                # Accept both dict and list/tuple entries
+                if isinstance(entry, dict):
+                    spk_id = entry.get("spk_id")
+                elif isinstance(entry, (list, tuple)):
+                    # Try to find the index of spk_id from the header
+                    first_entry = next(iter(parent.data.values()))
+                    if isinstance(first_entry, dict):
+                        fieldnames = list(first_entry.keys())
+                        spk_idx = fieldnames.index("spk_id")
+                        spk_id = entry[spk_idx]
+                    else:
                         continue
-                    speakers.add(entry.get("spk_id"))
-            else:
-                raise RuntimeError("Dataset entries are not dicts; cannot extract spk_id.")
-        speakers.discard(None)
-        return {spk: idx for idx, spk in enumerate(sorted(speakers))}
+                else:
+                    continue
+                if spk_id is not None:
+                    spk_id = spk_id.split("-")[0]
+                    speakers.add(spk_id)
+        speakers = sorted(speakers)
+        return {spk: idx for idx, spk in enumerate(speakers)}
 
-    spk_dict = get_speaker_dict(datasets)
+    spk_dict = get_speaker_dict([train_data])
 
     # 2. Add a dynamic item for speaker labels
     @sb.utils.data_pipeline.takes("spk_id")
     @sb.utils.data_pipeline.provides("spk_id", "spk_index")
     def speaker_pipeline(spk_id):
+        spk_id_short = spk_id.split("-")[0]
         yield spk_id
-        yield spk_dict[spk_id]
+        yield spk_dict[spk_id_short]
 
     sb.dataio.dataset.add_dynamic_item(datasets, speaker_pipeline)
 
