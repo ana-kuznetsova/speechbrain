@@ -242,6 +242,7 @@ def dataio_prepare(hparams, tokenizer):
             "sorting must be random, ascending or descending"
         )
 
+
     valid_data = sb.dataio.dataset.DynamicItemDataset.from_csv(
         csv_path=hparams["valid_csv"], replacements={"data_root": data_folder},
     )
@@ -258,7 +259,28 @@ def dataio_prepare(hparams, tokenizer):
             sort_key="duration"
         )
 
+
     datasets = [train_data, valid_data] + [i for k, i in test_datasets.items()]
+
+    # --- Speaker label preprocessing ---
+    # 1. Build a mapping from speaker IDs to integer indices
+    def get_speaker_dict(datasets):
+        speakers = set()
+        for dataset in datasets:
+            for entry in dataset:
+                speakers.add(entry['spk_id'])
+        return {spk: idx for idx, spk in enumerate(sorted(speakers))}
+
+    spk_dict = get_speaker_dict(datasets)
+
+    # 2. Add a dynamic item for speaker labels
+    @sb.utils.data_pipeline.takes("spk_id")
+    @sb.utils.data_pipeline.provides("spk_id", "spk_index")
+    def speaker_pipeline(spk_id):
+        yield spk_id
+        yield spk_dict[spk_id]
+
+    sb.dataio.dataset.add_dynamic_item(datasets, speaker_pipeline)
 
     # 2. Define audio pipeline:
     @sb.utils.data_pipeline.takes("wav")
@@ -292,7 +314,7 @@ def dataio_prepare(hparams, tokenizer):
 
     # 4. Set output:
     sb.dataio.dataset.set_output_keys(
-        datasets, ["id", "sig", "wrd", "char_list", "tokens"],
+        datasets, ["id", "sig", "wrd", "char_list", "tokens", "spk_id", "spk_index"],
     )
 
     # 5. If Dynamic Batching is used, we instantiate the needed samplers.
