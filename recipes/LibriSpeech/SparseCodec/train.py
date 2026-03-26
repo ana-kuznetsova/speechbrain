@@ -69,6 +69,11 @@ class SparseBrain(sb.core.Brain):
         elif stage == sb.Stage.TEST:
             pred_hyps = test_searcher(p_ctc, wav_lens)
 
+        # Spekaer classification head forward pass
+        spk_emb = self.modules.spk_encoder(in_tok)
+        spk_logits = self.modules.spk_classifier(spk_emb)
+        logger.info("DEBUG spk_logits shape: %s", spk_logits.shape)
+
         return (
             p_ctc, # ctc probabilities
             pred_hyps, # predicted hypotheses (token ids)
@@ -267,8 +272,27 @@ def dataio_prepare(hparams, tokenizer):
     def get_speaker_dict(datasets):
         speakers = set()
         for dataset in datasets:
-            for entry in dataset:
-                speakers.add(entry['spk_id'])
+            # Recursively find the base dataset with .data
+            parent = dataset
+            max_depth = 10
+            while not hasattr(parent, "data") and hasattr(parent, "_parent") and max_depth > 0:
+                parent = parent._parent
+                max_depth -= 1
+            if not hasattr(parent, "data"):
+                raise RuntimeError("Could not find .data in dataset or its parents.")
+            # Get fieldnames from the first entry
+            first_entry = next(iter(parent.data.values()))
+            if isinstance(first_entry, dict):
+                fieldnames = list(first_entry.keys())
+                if "spk_id" not in fieldnames:
+                    raise RuntimeError("spk_id not found in dataset fields.")
+                for entry in parent.data.values():
+                    if not entry:
+                        continue
+                    speakers.add(entry.get("spk_id"))
+            else:
+                raise RuntimeError("Dataset entries are not dicts; cannot extract spk_id.")
+        speakers.discard(None)
         return {spk: idx for idx, spk in enumerate(sorted(speakers))}
 
     spk_dict = get_speaker_dict(datasets)

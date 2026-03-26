@@ -154,14 +154,31 @@ ctc_lin: !new:speechbrain.nnet.linear.Linear
    input_size: 2048
    n_neurons: !ref <output_neurons>
 
+## Speaker Embedding branch
+out_n_neurons: 251 # Number of speakers in the training set
+
+spk_encoder: !new:speechbrain.lobes.models.ECAPA_TDNN.ECAPA_TDNN
+    input_size: !ref <encoder_dim>
+    channels: [1024, 1024, 1024, 1024, 3072]
+    kernel_sizes: [5, 3, 3, 3, 1]
+    dilations: [1, 2, 3, 4, 1]
+    groups: [1, 1, 1, 1, 1]
+    attention_channels: 128
+    lin_neurons: 192
+
+spk_classifier: !new:speechbrain.lobes.models.ECAPA_TDNN.Classifier
+    input_size: 192
+    out_neurons: !ref <out_n_neurons>
+
 modules:
    asr_encoder: !ref <asr_encoder>
    ctc_lin: !ref <ctc_lin>
    tokenizer: !ref <codec>
-
+   spk_encoder: !ref <spk_encoder>
+   spk_classifier: !ref <spk_classifier>
 
 model: !new:torch.nn.ModuleList
-   - [!ref <codec>, !ref <asr_encoder>, !ref <ctc_lin>]
+   - [!ref <codec>, !ref <asr_encoder>, !ref <ctc_lin>, !ref <spk_encoder>, !ref <spk_classifier>]
 ####################### Decoding & optimiser ###########################
 # Decoding parameters
 test_beam_search:
@@ -179,6 +196,10 @@ ctc_cost: !name:speechbrain.nnet.losses.ctc_loss
 
 log_softmax: !new:speechbrain.nnet.activations.Softmax
    apply_log: True
+
+spk_amm_loss: !name:speechbrain.nnet.losses.AdditiveAngularMargin
+   margin: 0.2
+   scale: 30.0
 
 scheduler: !new:speechbrain.nnet.schedulers.NewBobScheduler
    initial_value: !ref <lr_model>
