@@ -27,6 +27,7 @@ train_splits: ["train-clean-100"]
 dev_splits: ["dev-clean"]
 test_splits: ["dev-clean", "test-clean", "test-other"]
 skip_prep: False
+verification_trials: True
 train_csv: !ref <output_folder>/train.csv
 valid_csv: !ref <output_folder>/dev-clean.csv
 test_csv:
@@ -233,7 +234,7 @@ checkpointer: !new:speechbrain.utils.checkpoints.Checkpointer
 epoch_counter: !new:speechbrain.utils.epoch_loop.EpochCounter
    limit: !ref <number_of_epochs>
 
-train_logger: !new:speechbrain.utils.train_logger.TensorboardTrainLogger
+train_logger: !new:speechbrain.utils.train_logger.TensorboardLogger
    save_dir: !ref <output_folder>/tensorboard_logs
 
 error_rate_computer: !name:speechbrain.utils.metric_stats.ErrorRateStats

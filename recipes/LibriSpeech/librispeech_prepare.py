@@ -52,6 +52,7 @@ def prepare_librispeech(
     merge_name=None,
     create_lexicon=False,
     skip_prep=False,
+    verfification_trials=False,
 ):
     """
     This class prepares the csv files for the LibriSpeech dataset.
@@ -161,6 +162,11 @@ def prepare_librispeech(
     # Create lexicon.csv and oov.csv
     if create_lexicon:
         create_lexicon_and_oov_csv(all_texts, save_folder)
+
+    if verfification_trials:
+        dev_csvs = [split + ".csv" for split in dev_splits]
+        test_csvs = [split + ".csv" for split in te_splits]
+        create_verification_trials(save_folder, dev_csvs, test_csvs)
 
     # saving options
     save_pkl(conf, save_opt)
@@ -530,3 +536,67 @@ def download_sb_librispeech_lm(destination, rescoring_lm=True):
             "https://www.dropbox.com/scl/fi/roz46ee0ah2lvy5csno4z/4gram_lm.arpa?rlkey=2wt8ozb1mqgde9h9n9rp2yppz&dl=1",
             os.path.join(destination, "4-gram_sb.arpa"),
         )
+
+
+# --- Verification file creation ---
+import itertools
+
+def create_verification_trials(save_folder, dev_csvs, test_csvs, n_trials=10000, seed=1234):
+    """
+    Create veri_dev.txt and veri_test.txt for speaker verification from dev and test CSVs.
+    Each line: <label> <utt_path1> <utt_path2>
+    label: 1 if same speaker, 0 if different speakers
+    """
+    random.seed(seed)
+
+    def load_utt_dict(csv_paths):
+        utts = []
+        for csv_path in csv_paths:
+            with open(os.path.join(save_folder, csv_path), newline='', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    utts.append({
+                        'spk_id': row['spk_id'],
+                        'wav': row['wav'],
+                    })
+        return utts
+
+    def make_trials(utts, n_trials):
+        # Group by speaker
+        spk2utts = {}
+        for u in utts:
+            spk2utts.setdefault(u['spk_id'], []).append(u['wav'])
+        spk_list = list(spk2utts.keys())
+        # Positive pairs
+        pos_pairs = []
+        for spk, wavs in spk2utts.items():
+            if len(wavs) < 2:
+                continue
+            # All unique pairs for this speaker
+            pairs = list(itertools.combinations(wavs, 2))
+            pos_pairs.extend([(1, a, b) for a, b in pairs])
+        # Negative pairs
+        neg_pairs = []
+        for _ in range(len(pos_pairs)):
+            spk_a, spk_b = random.sample(spk_list, 2)
+            wav_a = random.choice(spk2utts[spk_a])
+            wav_b = random.choice(spk2utts[spk_b])
+            neg_pairs.append((0, wav_a, wav_b))
+        # Shuffle and limit
+        all_pairs = pos_pairs + neg_pairs
+        random.shuffle(all_pairs)
+        return all_pairs[:n_trials]
+
+    # DEV
+    dev_utts = load_utt_dict(dev_csvs)
+    dev_trials = make_trials(dev_utts, n_trials)
+    with open(os.path.join(save_folder, 'veri_dev.txt'), 'w', encoding='utf-8') as f:
+        for label, a, b in dev_trials:
+            f.write(f"{label} {a} {b}\n")
+
+    # TEST
+    test_utts = load_utt_dict(test_csvs)
+    test_trials = make_trials(test_utts, n_trials)
+    with open(os.path.join(save_folder, 'veri_test.txt'), 'w', encoding='utf-8') as f:
+        for label, a, b in test_trials:
+            f.write(f"{label} {a} {b}\n")
