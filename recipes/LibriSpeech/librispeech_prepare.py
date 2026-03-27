@@ -84,7 +84,10 @@ def prepare_librispeech(
         to phonemes. Use it for training a G2P system.
     skip_prep: bool
         If True, data preparation is skipped.
-
+    verfification_trials: bool
+        If True, creates veri_dev.txt and veri_test.txt for speaker verification
+        from dev and test CSVs. Each line: <label> <utt_path1> <utt_path2>
+        label: 1 if same speaker, 0 if different speakers
     Returns
     -------
     None
