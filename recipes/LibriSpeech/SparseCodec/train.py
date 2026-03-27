@@ -102,11 +102,12 @@ class SparseBrain(sb.core.Brain):
 
         ids = batch.id
         tokens, tokens_lens = batch.tokens
-        spk_targets = batch.spk_index
+        spk_targets, _ = batch.spk_id_encoded
+
         # Convert spk_targets to one-hot
         spk_targets = torch.nn.functional.one_hot(
             spk_targets, num_classes=self.hparams.out_n_neurons
-        )
+        ).squeeze(1)
 
         # Label Augmentation
         if stage == sb.Stage.TRAIN and hasattr(self.hparams, "wav_augment"):
@@ -119,15 +120,13 @@ class SparseBrain(sb.core.Brain):
         ctc_batch_loss = ctc_batch_loss * self.hparams.ctc_weight
         sparse_batch_loss = sparse_loss * self.hparams.sparse_loss_weight
 
-        logger.info("%s %s", spk_logits.shape, spk_targets.shape)
+        batch_aam_loss = self.hparams.spk_aam_loss(spk_logits, spk_targets.transpose(0, 1))
+        batch_aam_loss = batch_aam_loss * self.hparams.spk_aam_loss_weight
 
-        batch_aam_loss = self.hparams.spk_aam_loss(spk_logits, spk_targets)
+        spk_reg_loss = l1_reg_spk * self.hparams.spk_reg_weight
+        content_reg_loss = l1_reg_cont * self.hparams.content_reg_weight
 
-        l1_reg_batch_loss = (
-            0.5 * (l1_reg_spk + l1_reg_cont)
-        ) * self.hparams.l1_reg_weight
-
-        loss = ctc_batch_loss + sparse_batch_loss + l1_reg_batch_loss
+        loss = ctc_batch_loss + sparse_batch_loss + batch_aam_loss + spk_reg_loss + content_reg_loss
 
         if stage == sb.Stage.VALID:
             # Decode token terms to words
