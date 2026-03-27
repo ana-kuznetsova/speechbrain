@@ -36,7 +36,7 @@ test_csv:
 
 ####################### Training Parameters ####################################
 number_of_epochs: 20
-batch_size: 32 # This works for 2x GPUs with 32GB
+batch_size: 64 # This works for 2x GPUs with 32GB
 test_batch_size: 1
 grad_accumulation_factor: 2
 max_grad_norm: 5.0
@@ -57,7 +57,7 @@ weight_decay: 0.0005
 # Empirically, we used 850 * 8 A40 45G GPUs * 2 or 1700 * 4 A100 80G * 2.
 # Please, set your parameters accordingly.
 dynamic_batching: True
-max_batch_length_train: 256
+max_batch_length_train: 128
 max_batch_len_val: 100
 num_bucket: 200
 shuffle: False # if true re-creates batches at each epoch shuffling examples.
@@ -70,6 +70,7 @@ dynamic_batch_sampler_train:
    shuffle: !ref <shuffle>
    batch_ordering: !ref <batch_ordering>
    max_batch_ex: !ref <max_batch_ex>
+   drop_last: True
 
 dynamic_batch_sampler_val:
    max_batch_length: !ref <max_batch_len_val>
@@ -83,6 +84,7 @@ train_dataloader_opts:
    batch_size: !ref <batch_size>
    shuffle: True
    num_workers: !ref <num_workers>
+   drop_last: True
 
 valid_dataloader_opts:
    batch_size: !ref <test_batch_size>
@@ -231,9 +233,13 @@ checkpointer: !new:speechbrain.utils.checkpoints.Checkpointer
 epoch_counter: !new:speechbrain.utils.epoch_loop.EpochCounter
    limit: !ref <number_of_epochs>
 
-train_logger: !new:speechbrain.utils.train_logger.FileTrainLogger
-   save_file: !ref <train_log>
+train_logger: !new:speechbrain.utils.train_logger.TensorboardTrainLogger
+   save_dir: !ref <output_folder>/tensorboard_logs
 
 error_rate_computer: !name:speechbrain.utils.metric_stats.ErrorRateStats
 
 wer_computer: !name:speechbrain.utils.metric_stats.ErrorRateStats
+
+spk_error_stats: !name:speechbrain.utils.metric_stats.MetricStats
+    metric: !name:speechbrain.nnet.losses.classification_error
+        reduction: batch

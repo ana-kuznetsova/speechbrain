@@ -100,7 +100,7 @@ class SparseBrain(sb.core.Brain):
             l1_reg_cont,
         ) = predictions
 
-        ids = batch.id
+        uttid = batch.id
         tokens, tokens_lens = batch.tokens
         spk_targets, _ = batch.spk_id_encoded
 
@@ -140,8 +140,18 @@ class SparseBrain(sb.core.Brain):
 
         if stage != sb.Stage.TRAIN:
             target_words = [wrd.split(" ") for wrd in batch.wrd]
-            self.wer_metric.append(ids, predicted_words, target_words)
-        return loss
+            self.wer_metric.append(uttid, predicted_words, target_words)
+            self.spk_error_metrics.append(uttid, predictions, batch.spk_id_encoded.data)
+
+        # Return all losses as a dict
+        return {
+            "loss": loss,
+            "ctc_loss": ctc_batch_loss,
+            "sparse_loss": sparse_batch_loss,
+            "aam_loss": batch_aam_loss,
+            "spk_reg_loss": spk_reg_loss,
+            "content_reg_loss": content_reg_loss,
+        }
 
     def on_evaluate_start(self, max_key=None, min_key=None):
         """perform checkpoint average if needed"""
@@ -164,15 +174,22 @@ class SparseBrain(sb.core.Brain):
         """Gets called at the beginning of each epoch"""
         if stage != sb.Stage.TRAIN:
             self.wer_metric = self.hparams.error_rate_computer()
+            self.spk_error_metrics = self.hparams.spk_error_stats()
 
     def on_stage_end(self, stage, stage_loss, epoch):
         """Gets called at the end of a epoch."""
         # Compute/store important stats
-        stage_stats = {"loss": stage_loss}
+        # If stage_loss is a dict, unpack all losses into stage_stats
+        if isinstance(stage_loss, dict):
+            stage_stats = dict(stage_loss)
+        else:
+            stage_stats = {"loss": stage_loss}
+
         if stage == sb.Stage.TRAIN:
             self.train_stats = stage_stats
         else:
             stage_stats["WER"] = self.wer_metric.summarize("error_rate")
+            stage_stats["ErrorRate"] = self.spk_error_metrics.summarize("average")
             current_epoch = self.hparams.epoch_counter.current
             valid_search_interval = self.hparams.valid_search_interval
             if (
@@ -180,6 +197,7 @@ class SparseBrain(sb.core.Brain):
                 or stage == sb.Stage.TEST
             ):
                 stage_stats["WER"] = self.wer_metric.summarize("error_rate")
+                stage_stats["ErrorRate"] = self.spk_error_metrics.summarize("average")
 
         # log stats and save checkpoint at end-of-epoch
         if stage == sb.Stage.VALID:
