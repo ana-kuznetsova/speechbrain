@@ -11,21 +11,21 @@ Authors
  * Anastasia Kuznetsova 2026
 """
 
+import logging
 import os
-from pyexpat.errors import codes
-import time
 import sys
+import time
 from pathlib import Path
 
+import librosa
+import pandas as pd
 import torch
 import torchaudio
-import librosa
 from hyperpyyaml import load_hyperpyyaml
 
 import speechbrain as sb
 from speechbrain.tokenizers.SentencePiece import SentencePiece
 from speechbrain.utils.distributed import if_main_process, run_on_main
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -106,8 +106,8 @@ class SparseBrain(sb.core.Brain):
         # Convert spk_targets to one-hot
         spk_targets = torch.nn.functional.one_hot(
             spk_targets, num_classes=self.hparams.out_n_neurons
-        ).float()
-        logger.info("Speaker targets shape: %s", spk_targets.shape)
+        )
+
         # Label Augmentation
         if stage == sb.Stage.TRAIN and hasattr(self.hparams, "wav_augment"):
             tokens = self.hparams.wav_augment.replicate_labels(tokens)
@@ -118,12 +118,10 @@ class SparseBrain(sb.core.Brain):
         )
         ctc_batch_loss = ctc_batch_loss * self.hparams.ctc_weight
         sparse_batch_loss = sparse_loss * self.hparams.sparse_loss_weight
-        #logger.info(spk_logits.shape)
-        #logger.info(spk_targets)
-        #aam_batch_loss = self.hparams.spk_amm_loss(
-        #    spk_logits, spk_targets
-        # ) * self.hparams.spk_loss_weight
-        #logger.info("AAM batch loss: %s", aam_batch_loss.item())
+
+        logger.info("%s %s", spk_logits.shape, spk_targets.shape)
+
+        batch_aam_loss = self.hparams.spk_aam_loss(spk_logits, spk_targets)
 
         l1_reg_batch_loss = (
             0.5 * (l1_reg_spk + l1_reg_cont)
@@ -260,7 +258,6 @@ def dataio_prepare(hparams, tokenizer):
             "sorting must be random, ascending or descending"
         )
 
-
     valid_data = sb.dataio.dataset.DynamicItemDataset.from_csv(
         csv_path=hparams["valid_csv"], replacements={"data_root": data_folder},
     )
@@ -277,56 +274,33 @@ def dataio_prepare(hparams, tokenizer):
             sort_key="duration"
         )
 
-
     datasets = [train_data, valid_data] + [i for k, i in test_datasets.items()]
 
-    # --- Speaker label preprocessing ---
-    # 1. Build a mapping from speaker IDs to integer indices
-    def get_speaker_dict(datasets):
-        speakers = set()
-        for dataset in datasets:
-            # Recursively find the base dataset with .data
-            parent = dataset
-            max_depth = 10
-            while not hasattr(parent, "data") and hasattr(parent, "_parent") and max_depth > 0:
-                parent = parent._parent
-                max_depth -= 1
-            if not hasattr(parent, "data"):
-                raise RuntimeError("Could not find .data in dataset or its parents.")
-            for entry in parent.data.values():
-                if not entry:
-                    continue
-                # Accept both dict and list/tuple entries
-                if isinstance(entry, dict):
-                    spk_id = entry.get("spk_id")
-                elif isinstance(entry, (list, tuple)):
-                    # Try to find the index of spk_id from the header
-                    first_entry = next(iter(parent.data.values()))
-                    if isinstance(first_entry, dict):
-                        fieldnames = list(first_entry.keys())
-                        spk_idx = fieldnames.index("spk_id")
-                        spk_id = entry[spk_idx]
-                    else:
-                        continue
-                else:
-                    continue
-                if spk_id is not None:
-                    spk_id = spk_id.split("-")[0]
-                    speakers.add(spk_id)
-        speakers = sorted(speakers)
-        return {spk: idx for idx, spk in enumerate(speakers)}
+    spk_label_encoder = sb.dataio.encoder.CategoricalEncoder()
 
-    spk_dict = get_speaker_dict([train_data])
-
-    # 2. Add a dynamic item for speaker labels
+    # 1. Define Speaker ID label pipeline.
     @sb.utils.data_pipeline.takes("spk_id")
-    @sb.utils.data_pipeline.provides("spk_id", "spk_index")
-    def speaker_pipeline(spk_id):
-        spk_id_short = spk_id.split("-")[0]
-        yield spk_id
-        yield spk_dict[spk_id_short]
+    @sb.utils.data_pipeline.provides("spk_id", "spk_id_encoded")
+    def label_pipeline(spk_id):
+        spk_id_prefix = spk_id.split("-")[0]
+        yield spk_id_prefix
+        spk_id_encoded = spk_label_encoder.encode_sequence_torch([spk_id_prefix])
+        yield spk_id_encoded
 
-    sb.dataio.dataset.add_dynamic_item(datasets, speaker_pipeline)
+    sb.dataio.dataset.add_dynamic_item(datasets, label_pipeline)
+
+    # 3. Fit encoder:
+    # Extract unique speaker prefixes from training set
+    unique_spk_prefixes = set()
+    spk_ids = pd.read_csv(hparams["train_csv"])["spk_id"].tolist()
+    for spk_id in spk_ids:
+        spk_id_prefix = spk_id.split("-")[0]
+        unique_spk_prefixes.add(spk_id_prefix)
+
+    lab_enc_file = os.path.join(hparams["save_folder"], "label_encoder.txt")
+    spk_label_encoder.load_or_create(
+        path=lab_enc_file, from_iterables=[unique_spk_prefixes],
+    )
 
     # 2. Define audio pipeline:
     @sb.utils.data_pipeline.takes("wav")
@@ -360,12 +334,13 @@ def dataio_prepare(hparams, tokenizer):
 
     # 4. Set output:
     sb.dataio.dataset.set_output_keys(
-        datasets, ["id", "sig", "wrd", "char_list", "tokens", "spk_id", "spk_index"],
+        datasets, ["id", "sig", "wrd", "char_list", "tokens", "spk_id_encoded"],
     )
 
     # 5. If Dynamic Batching is used, we instantiate the needed samplers.
     train_batch_sampler = None
     valid_batch_sampler = None
+
     if hparams["dynamic_batching"]:
         from speechbrain.dataio.sampler import DynamicBatchSampler  # noqa
 

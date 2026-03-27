@@ -198,9 +198,10 @@ ctc_cost: !name:speechbrain.nnet.losses.ctc_loss
 log_softmax: !new:speechbrain.nnet.activations.Softmax
    apply_log: True
 
-spk_amm_loss: !name:speechbrain.nnet.losses.AdditiveAngularMargin
-   margin: 0.2
-   scale: 30.0
+spk_aam_loss: !new:speechbrain.nnet.losses.LogSoftmaxWrapper
+    loss_fn: !new:speechbrain.nnet.losses.AdditiveAngularMargin
+        margin: 0.2
+        scale: 30
 
 scheduler: !new:speechbrain.nnet.schedulers.NewBobScheduler
    initial_value: !ref <lr_model>
