@@ -23,7 +23,7 @@ data_folder: /storage/share_folder/LibriSpeech  # e.g., /path/to/LibriSpeech
 # then data_folder_rirs should be /localscratch/xxx_corpus
 # otherwise the dataset will automatically be downloaded
 # data_folder_rirs: !ref <data_folder>
-train_splits: ["train-clean-100"]
+train_splits: ["train-debug-set"]
 dev_splits: ["dev-clean"]
 test_splits: ["dev-clean", "test-clean", "test-other"]
 skip_prep: False
@@ -34,9 +34,12 @@ test_csv:
    - !ref <output_folder>/dev-clean.csv
    - !ref <output_folder>/test-clean.csv
 
+valid_veri_file: !ref <output_folder>/veri_dev.txt
+test_veri_file: !ref <output_folder>/veri_test.txt
+
 
 ####################### Training Parameters ####################################
-number_of_epochs: 20
+number_of_epochs: 50
 batch_size: 64 # This works for 2x GPUs with 32GB
 test_batch_size: 1
 grad_accumulation_factor: 2
@@ -161,7 +164,7 @@ ctc_lin: !new:speechbrain.nnet.linear.Linear
    n_neurons: !ref <output_neurons>
 
 ## Speaker Embedding branch
-out_n_neurons: 251 # Number of speakers in the training set
+out_n_neurons: 331 # Number of speakers in the full set
 
 spk_encoder: !new:speechbrain.lobes.models.ECAPA_TDNN.ECAPA_TDNN
     input_size: !ref <encoder_dim>

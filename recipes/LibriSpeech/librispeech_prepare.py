@@ -544,7 +544,7 @@ def download_sb_librispeech_lm(destination, rescoring_lm=True):
 # --- Verification file creation ---
 import itertools
 
-def create_verification_trials(save_folder, dev_csvs, test_csvs, n_trials=10000, seed=1234):
+def create_verification_trials(save_folder, dev_csvs, test_csvs, n_trials=5000, seed=1234):
     """
     Create veri_dev.txt and veri_test.txt for speaker verification from dev and test CSVs.
     Each line: <label> <utt_path1> <utt_path2>

@@ -74,6 +74,13 @@ class SparseBrain(sb.core.Brain):
         spk_emb = self.modules.spk_encoder(in_toks)
         spk_logits = self.modules.spk_classifier(spk_emb).squeeze(1)
 
+        # Collect utterance embeddings for Cosine similarity evaluation
+        if stage != sb.Stage.TRAIN:
+            if not hasattr(self, "eval_spk_embs"):
+                self.eval_spk_embs = {}
+            utt_ids = batch.id
+            for utt_id, spk_embedding in zip(utt_ids, spk_emb):
+                self.eval_spk_embs[utt_id] = spk_embedding.cpu().detach()
         return (
             p_ctc, # ctc probabilities
             pred_hyps, # predicted hypotheses (token ids)
@@ -121,8 +128,11 @@ class SparseBrain(sb.core.Brain):
         ctc_batch_loss = ctc_batch_loss * self.hparams.ctc_weight
         sparse_batch_loss = sparse_loss * self.hparams.sparse_loss_weight
 
-        batch_aam_loss = self.hparams.spk_aam_loss(spk_logits, spk_targets.transpose(0, 1))
-        batch_aam_loss = batch_aam_loss * self.hparams.spk_aam_loss_weight
+        if stage == sb.Stage.TRAIN:
+            batch_aam_loss = self.hparams.spk_aam_loss(spk_logits, spk_targets.transpose(0, 1))
+            batch_aam_loss = batch_aam_loss * self.hparams.spk_aam_loss_weight
+        else:
+            batch_aam_loss = torch.tensor(0.0, device=ctc_batch_loss.device)
 
         spk_reg_loss = l1_reg_spk * self.hparams.spk_reg_weight
         content_reg_loss = l1_reg_cont * self.hparams.content_reg_weight
@@ -142,7 +152,8 @@ class SparseBrain(sb.core.Brain):
         if stage != sb.Stage.TRAIN:
             target_words = [wrd.split(" ") for wrd in batch.wrd]
             self.wer_metric.append(uttid, predicted_words, target_words)
-            self.spk_error_metrics.append(uttid, predictions, batch.spk_id_encoded.data)
+            spk_predictions = torch.argmax(spk_logits, dim=1)
+            self.spk_error_metrics.append(uttid, spk_predictions, batch.spk_id_encoded.data)
 
         # Return all losses as a dict
         loss_dict = {
@@ -155,15 +166,15 @@ class SparseBrain(sb.core.Brain):
         }
         if not hasattr(self, "stage_loss_dict"):
             self.stage_loss_dict = {
-                    "loss": [],
-                    "ctc_loss": [],
-                    "sparse_loss": [],
-                    "aam_loss": [],
-                    "spk_reg_loss": [],
-                    "content_reg_loss": [],
-                }
-        for key in loss_dict:
-            self.stage_loss_dict[key].append(loss_dict[key].item())
+                "loss": [],
+                "ctc_loss": [],
+                "sparse_loss": [],
+                "aam_loss": [],
+                "spk_reg_loss": [],
+                "content_reg_loss": [],
+            }
+        for key, item in loss_dict.items():
+            self.stage_loss_dict[key].append(item.item())
         return loss
 
     def on_evaluate_start(self, max_key=None, min_key=None):
@@ -213,6 +224,28 @@ class SparseBrain(sb.core.Brain):
             ):
                 stage_stats["WER"] = self.wer_metric.summarize("error_rate")
                 stage_stats["ErrorRate"] = self.spk_error_metrics.summarize("average")
+            # Compute cosine similarity stats for speaker verification
+            # Load verification trial pairs
+            veri_file = (
+                self.hparams.valid_veri_file
+                if stage == sb.Stage.VALID
+                else self.hparams.test_veri_file
+            )
+            trial_pairs = load_verification_trials(veri_file)
+
+            for label, utt1, utt2 in trial_pairs:
+                spk_emb1 = self.eval_spk_embs.get(utt1)
+                spk_emb2 = self.eval_spk_embs.get(utt2)
+                if spk_emb1 is not None and spk_emb2 is not None:
+                    cos_sim = torch.nn.functional.cosine_similarity(
+                        spk_emb1.unsqueeze(0), spk_emb2.unsqueeze(0)
+                    ).item()
+                    self.spk_verification_metrics.append_verification_trial(
+                        label, cos_sim
+                    )
+                    logging.info(
+                        f"Verification trial: {utt1} vs {utt2}, label: {label}, cosine similarity: {cos_sim}"
+                    )
 
         # log stats and save checkpoint at end-of-epoch
         if stage == sb.Stage.VALID:
@@ -259,6 +292,26 @@ class SparseBrain(sb.core.Brain):
         ):
             self.hparams.scheduler(self.optimizer)
 
+def load_verification_trials(veri_file):
+    """Load verification trial pairs from a file."""
+    import os
+    trial_pairs = []
+    with open(veri_file, "r", encoding="utf-8") as f:
+        for line in f:
+            parts = line.strip().split()
+            if len(parts) == 3:
+                label, path1, path2 = parts
+                # Extract uttid from path (e.g., 422-122949-0032.wav -> 422-122949-0032)
+                uttid1 = os.path.splitext(os.path.basename(path1))[0]
+                uttid2 = os.path.splitext(os.path.basename(path2))[0]
+                trial_pairs.append((label, uttid1, uttid2))
+            else:
+                # Try to parse as a comma-separated list of utterance IDs (no label)
+                line_clean = line.strip().replace("[", "").replace("]", "").replace("'", "")
+                utt_ids = [utt.strip() for utt in line_clean.split(",") if utt.strip()]
+                for i in range(0, len(utt_ids)-1, 2):
+                    trial_pairs.append((None, utt_ids[i], utt_ids[i+1]))
+    return trial_pairs
 
 def dataio_prepare(hparams, tokenizer):
     """This function prepares the datasets to be used in the brain class.
@@ -324,7 +377,13 @@ def dataio_prepare(hparams, tokenizer):
     # 3. Fit encoder:
     # Extract unique speaker prefixes from training set
     unique_spk_prefixes = set()
-    spk_ids = pd.read_csv(hparams["train_csv"])["spk_id"].tolist()
+
+    # Combine speaker IDs from train, valid, and all test CSVs
+    spk_ids = []
+    for csv_path in [hparams["train_csv"], hparams["valid_csv"]] + hparams["test_csv"]:
+        df = pd.read_csv(csv_path)
+        if "spk_id" in df.columns:
+            spk_ids.extend(df["spk_id"].tolist())
     for spk_id in spk_ids:
         spk_id_prefix = spk_id.split("-")[0]
         unique_spk_prefixes.add(spk_id_prefix)
