@@ -24,6 +24,7 @@ import torchaudio
 from hyperpyyaml import load_hyperpyyaml
 
 import speechbrain as sb
+from speechbrain.nnet import loss
 from speechbrain.tokenizers.SentencePiece import SentencePiece
 from speechbrain.utils.distributed import if_main_process, run_on_main
 
@@ -144,7 +145,7 @@ class SparseBrain(sb.core.Brain):
             self.spk_error_metrics.append(uttid, predictions, batch.spk_id_encoded.data)
 
         # Return all losses as a dict
-        return {
+        loss_dict = {
             "loss": loss,
             "ctc_loss": ctc_batch_loss,
             "sparse_loss": sparse_batch_loss,
@@ -152,6 +153,18 @@ class SparseBrain(sb.core.Brain):
             "spk_reg_loss": spk_reg_loss,
             "content_reg_loss": content_reg_loss,
         }
+        if not hasattr(self, "stage_loss_dict"):
+            self.stage_loss_dict = {
+                    "loss": [],
+                    "ctc_loss": [],
+                    "sparse_loss": [],
+                    "aam_loss": [],
+                    "spk_reg_loss": [],
+                    "content_reg_loss": [],
+                }
+        for key in loss_dict:
+            self.stage_loss_dict[key].append(loss_dict[key].item())
+        return loss
 
     def on_evaluate_start(self, max_key=None, min_key=None):
         """perform checkpoint average if needed"""
@@ -178,15 +191,17 @@ class SparseBrain(sb.core.Brain):
 
     def on_stage_end(self, stage, stage_loss, epoch):
         """Gets called at the end of a epoch."""
-        # Compute/store important stats
-        # If stage_loss is a dict, unpack all losses into stage_stats
-        if isinstance(stage_loss, dict):
-            stage_stats = dict(stage_loss)
-        else:
-            stage_stats = {"loss": stage_loss}
 
-        if stage == sb.Stage.TRAIN:
+        stage_stats = {"loss": stage_loss}
+
+        if stage == sb.Stage.TRAIN and not hasattr(self, "stage_loss_dict"):
             self.train_stats = stage_stats
+        elif stage ==sb.Stage.TRAIN and hasattr(self, "stage_loss_dict"):
+            stage_stats = {
+                key: sum(self.stage_loss_dict[key]) / len(self.stage_loss_dict[key])
+                for key in self.stage_loss_dict
+            }
+            self.stage_loss_dict = None  # reset for next epoch
         else:
             stage_stats["WER"] = self.wer_metric.summarize("error_rate")
             stage_stats["ErrorRate"] = self.spk_error_metrics.summarize("average")
