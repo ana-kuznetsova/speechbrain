@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Recipe for training a sparse codec-based ASR system on LibriSpeech
 in a discriminative style. The system is using ASR downstream with CTC+NLL loss 
-and a Transformer-based architecture. And a soekaer recongitnion ECAPA head with AAM loss.
+and a Transformer-based architecture. And a speaker recognition ECAPA head with AAM loss.
 
 
 To run this recipe, do the following:
@@ -22,6 +22,7 @@ import pandas as pd
 import torch
 import torchaudio
 from hyperpyyaml import load_hyperpyyaml
+from tqdm import tqdm
 
 import speechbrain as sb
 from speechbrain.nnet import loss
@@ -29,6 +30,45 @@ from speechbrain.tokenizers.SentencePiece import SentencePiece
 from speechbrain.utils.distributed import if_main_process, run_on_main
 
 logger = logging.getLogger(__name__)
+
+
+def compute_speaker_embedding(wavs):
+    """Compute speaker embeddings.
+    """
+    with torch.no_grad():
+        wavs = wavs.to(sparse_brain.device)
+        
+        codec_outputs = sparse_brain.modules.tokenizer(
+            wavs.unsqueeze(0), n_quantizers=sparse_brain.hparams.num_codebooks
+        )
+        spk_emb = sparse_brain.modules.spk_encoder(codec_outputs[0].transpose(1, 2))
+    return spk_emb
+
+
+def compute_embedding_loop(data_loader):
+    """Computes the embeddings of all the waveforms specified in the
+    dataloader.
+    """
+    embedding_dict = {}
+
+    with torch.no_grad():
+        for batch in tqdm(data_loader, dynamic_ncols=True):
+            seg_ids = batch["id"]
+            wavs = batch["sig"]
+
+            found = False
+            for seg_id in seg_ids:
+                if seg_id not in embedding_dict:
+                    found = True
+            if not found:
+                continue
+            wavs = wavs.to(sparse_brain.device)
+            emb = compute_speaker_embedding(wavs)
+            for i, seg_id in enumerate(seg_ids):
+                embedding_dict[seg_id] = emb[i].detach().clone()
+    return embedding_dict
+
+
 
 
 # Define training procedure
@@ -254,8 +294,7 @@ class SparseBrain(sb.core.Brain):
             negative_scores = torch.tensor(negative_scores)
             eer, _ = self.hparams.spk_verification_metrics(positive_scores, negative_scores)
             stage_stats["EER"] = eer
-        # log stats and save checkpoint at end-of-epoch
-        logger.info("Statistics for epoch %d: EER %s, WER %s", epoch, stage_stats["EER"], stage_stats["WER"])
+            logger.info("Statistics for epoch %d: EER %s, WER %s", epoch, stage_stats["EER"], stage_stats["WER"])
         if stage == sb.Stage.VALID:
             if type(self.hparams.scheduler).__name__ == "NewBobScheduler":
                 lr, new_lr = self.hparams.scheduler(stage_stats["loss"])
@@ -439,12 +478,14 @@ def dataio_prepare(hparams, tokenizer):
     # 5. If Dynamic Batching is used, we instantiate the needed samplers.
     train_batch_sampler = None
     valid_batch_sampler = None
+    test_batch_sampler = None
 
     if hparams["dynamic_batching"]:
         from speechbrain.dataio.sampler import DynamicBatchSampler  # noqa
 
         dynamic_hparams_train = hparams["dynamic_batch_sampler_train"]
         dynamic_hparams_val = hparams["dynamic_batch_sampler_val"]
+        dynamic_hparams_test = hparams["dynamic_batch_sampler_test"]
 
         train_batch_sampler = DynamicBatchSampler(
             train_data,
@@ -590,12 +631,42 @@ if __name__ == "__main__":
     if not os.path.exists(hparams["output_wer_folder"]):
         os.makedirs(hparams["output_wer_folder"])
 
-    for k in test_datasets.keys():  # keys are test_clean, test_other etc
-        sparse_brain.hparams.output_wer_folder = os.path.join(
-            hparams["output_wer_folder"], f"wer_{k}.txt"
-        )
-        sparse_brain.evaluate(
-            test_datasets[k],
-            test_loader_kwargs=hparams["test_dataloader_opts"],
-            min_key="WER",
-        )
+    #for k in test_datasets.keys():  # keys are test_clean, test_other etc
+    #    sparse_brain.hparams.output_wer_folder = os.path.join(
+    #        hparams["output_wer_folder"], f"wer_{k}.txt"
+    #    )
+    #    sparse_brain.evaluate(
+    #        test_datasets[k],
+    #        test_loader_kwargs=hparams["test_dataloader_opts"],
+    #        min_key="WER",
+   #     )
+    # Compute final EER on all test sets combined
+    logger.info("Computing final EER on all test sets combined...")
+    sparse_brain.modules.eval()
+    train_data, valid_data, test_datasets, train_bsampler, valid_bsampler= dataio_prepare(hparams, tokenizer)
+
+    enroll_embedding_dict = compute_embedding_loop(valid_data)
+    test_embedding_dict = compute_embedding_loop(test_datasets["test-clean"])
+
+    verification_trials = load_verification_trials(hparams["test_veri_file"])
+    similarity = torch.nn.CosineSimilarity(dim=-1, eps=1e-6)
+    positive_scores = []
+    negative_scores = []
+
+    for label, utt1, utt2 in verification_trials:
+        spk_emb1 = enroll_embedding_dict.get(utt1) or test_embedding_dict.get(utt1)
+        spk_emb2 = enroll_embedding_dict.get(utt2) or test_embedding_dict.get(utt2)
+
+        if spk_emb1 is None or spk_emb2 is None:
+            logger.warning(f"Speaker embedding not found for {utt1} or {utt2}. Skipping this pair.")
+            continue
+
+        cos_sim = similarity(spk_emb1, spk_emb2)
+        if label == "1":
+            positive_scores.append(cos_sim.item())
+        else:
+            negative_scores.append(cos_sim.item())
+    positive_scores = torch.tensor(positive_scores)
+    negative_scores = torch.tensor(negative_scores)
+    eer, _ = hparams["spk_verification_metrics"](positive_scores, negative_scores)
+    logger.info(f"Final EER on all test sets combined: {eer:.4f}")

@@ -11,19 +11,19 @@
 
 seed: 1986
 __set_seed: !apply:torch.manual_seed [!ref <seed>]
-output_folder: /work/hdd/bfje/akuznetsova/exp/SparseCodecDebug
+output_folder: /projects/bfje/akuznetsova/exp/SparseCodecDebug
 output_wer_folder: !ref <output_folder>/wer.txt
 save_folder: !ref <output_folder>/save
 train_log: !ref <output_folder>/train_log.txt
 
 
 # Data files
-data_folder: /storage/share_folder/LibriSpeech  # e.g., /path/to/LibriSpeech
+data_folder: /projects/bfje/akuznetsova/datasets/LibriSpeech/ # e.g., /path/to/LibriSpeech
 # If RIRS_NOISES dir exists in /localscratch/xxx_corpus/RIRS_NOISES
 # then data_folder_rirs should be /localscratch/xxx_corpus
 # otherwise the dataset will automatically be downloaded
 # data_folder_rirs: !ref <data_folder>
-train_splits: ["train-debug-set"]
+train_splits: ["train-debug-set"] # ["train-clean-100", "train-clean-360", "train-other-500"]
 dev_splits: ["dev-clean"]
 test_splits: ["test-clean"]
 skip_prep: False
@@ -76,6 +76,13 @@ dynamic_batch_sampler_train:
    drop_last: True
 
 dynamic_batch_sampler_val:
+   max_batch_length: !ref <max_batch_len_val>
+   num_buckets: !ref <num_bucket>
+   shuffle: !ref <shuffle>
+   batch_ordering: !ref <batch_ordering>
+   max_batch_ex: !ref <max_batch_ex>
+
+dynamic_batch_sampler_test:
    max_batch_length: !ref <max_batch_len_val>
    num_buckets: !ref <num_bucket>
    shuffle: !ref <shuffle>
@@ -247,3 +254,5 @@ spk_error_stats: !name:speechbrain.utils.metric_stats.MetricStats
     metric: !name:speechbrain.nnet.losses.classification_error
         reduction: batch
 spk_verification_metrics: !name:speechbrain.utils.metric_stats.EER
+
+final_verification: True
