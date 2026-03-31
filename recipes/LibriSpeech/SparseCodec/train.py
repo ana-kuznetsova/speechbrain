@@ -233,20 +233,26 @@ class SparseBrain(sb.core.Brain):
             )
             trial_pairs = load_verification_trials(veri_file)
 
+            similarity = torch.nn.CosineSimilarity(dim=-1, eps=1e-6)
+
+            positive_scores = []
+            negative_scores = []
+
             for label, utt1, utt2 in trial_pairs:
                 spk_emb1 = self.eval_spk_embs.get(utt1)
                 spk_emb2 = self.eval_spk_embs.get(utt2)
-                if spk_emb1 is not None and spk_emb2 is not None:
-                    cos_sim = torch.nn.functional.cosine_similarity(
-                        spk_emb1.unsqueeze(0), spk_emb2.unsqueeze(0)
-                    ).item()
-                    self.spk_verification_metrics.append_verification_trial(
-                        label, cos_sim
-                    )
-                    logging.info(
-                        f"Verification trial: {utt1} vs {utt2}, label: {label}, cosine similarity: {cos_sim}"
-                    )
 
+                cos_sim = similarity(
+                    spk_emb1, spk_emb2
+                )
+                if label == "1":
+                    positive_scores.append(cos_sim.item())
+                else:
+                    negative_scores.append(cos_sim.item())
+            positive_scores = torch.tensor(positive_scores)
+            negative_scores = torch.tensor(negative_scores)
+            eer, _ = self.hparams.spk_verification_metrics(positive_scores, negative_scores)
+            stage_stats["EER"] = eer  
         # log stats and save checkpoint at end-of-epoch
         if stage == sb.Stage.VALID:
             if type(self.hparams.scheduler).__name__ == "NewBobScheduler":

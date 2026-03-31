@@ -25,13 +25,12 @@ data_folder: /storage/share_folder/LibriSpeech  # e.g., /path/to/LibriSpeech
 # data_folder_rirs: !ref <data_folder>
 train_splits: ["train-debug-set"]
 dev_splits: ["dev-clean"]
-test_splits: ["dev-clean", "test-clean", "test-other"]
+test_splits: ["test-clean"]
 skip_prep: False
 verification_trials: True
 train_csv: !ref <output_folder>/train.csv
 valid_csv: !ref <output_folder>/dev-clean.csv
 test_csv:
-   - !ref <output_folder>/dev-clean.csv
    - !ref <output_folder>/test-clean.csv
 
 valid_veri_file: !ref <output_folder>/veri_dev.txt
@@ -247,3 +246,4 @@ wer_computer: !name:speechbrain.utils.metric_stats.ErrorRateStats
 spk_error_stats: !name:speechbrain.utils.metric_stats.MetricStats
     metric: !name:speechbrain.nnet.losses.classification_error
         reduction: batch
+spk_verification_metrics: !name:speechbrain.utils.metric_stats.EER
