@@ -164,7 +164,7 @@ class SparseBrain(sb.core.Brain):
             "spk_reg_loss": spk_reg_loss,
             "content_reg_loss": content_reg_loss,
         }
-        if not hasattr(self, "stage_loss_dict"):
+        if not hasattr(self, "stage_loss_dict") or self.stage_loss_dict is None:
             self.stage_loss_dict = {
                 "loss": [],
                 "ctc_loss": [],
@@ -174,7 +174,7 @@ class SparseBrain(sb.core.Brain):
                 "content_reg_loss": [],
             }
         for key, item in loss_dict.items():
-            self.stage_loss_dict[key].append(item.item())
+            self.stage_loss_dict[key].append(item)
         return loss
 
     def on_evaluate_start(self, max_key=None, min_key=None):
@@ -186,7 +186,7 @@ class SparseBrain(sb.core.Brain):
             min_key=min_key,
             max_num_checkpoints=self.hparams.avg_checkpoints,
         )
-        print("DEBUG ckpts:", ckpts, max_key, min_key)
+
         ckpt = sb.utils.checkpoints.average_checkpoints(
             ckpts, recoverable_name="model"
         )
@@ -205,9 +205,10 @@ class SparseBrain(sb.core.Brain):
 
         stage_stats = {"loss": stage_loss}
 
-        if stage == sb.Stage.TRAIN and not hasattr(self, "stage_loss_dict"):
+        if stage == sb.Stage.TRAIN:
             self.train_stats = stage_stats
-        elif stage ==sb.Stage.TRAIN and hasattr(self, "stage_loss_dict"):
+
+        elif stage == sb.Stage.TRAIN and hasattr(self, "stage_loss_dict"):
             stage_stats = {
                 key: sum(self.stage_loss_dict[key]) / len(self.stage_loss_dict[key])
                 for key in self.stage_loss_dict
@@ -252,8 +253,9 @@ class SparseBrain(sb.core.Brain):
             positive_scores = torch.tensor(positive_scores)
             negative_scores = torch.tensor(negative_scores)
             eer, _ = self.hparams.spk_verification_metrics(positive_scores, negative_scores)
-            stage_stats["EER"] = eer  
+            stage_stats["EER"] = eer
         # log stats and save checkpoint at end-of-epoch
+        logger.info("Statistics for epoch %d: EER %s, WER %s", epoch, stage_stats["EER"], stage_stats["WER"])
         if stage == sb.Stage.VALID:
             if type(self.hparams.scheduler).__name__ == "NewBobScheduler":
                 lr, new_lr = self.hparams.scheduler(stage_stats["loss"])
@@ -263,11 +265,11 @@ class SparseBrain(sb.core.Brain):
             else:
                 raise NotImplementedError
 
-            optimizer = self.optimizer.__class__.__name__
+            #optimizer = self.optimizer.__class__.__name__
             epoch_stats = {
                 "epoch": epoch,
                 "lr": lr,
-                "optimizer": optimizer,
+            #    "optimizer": optimizer,
             }
             self.hparams.train_logger.log_stats(
                 stats_meta=epoch_stats,
