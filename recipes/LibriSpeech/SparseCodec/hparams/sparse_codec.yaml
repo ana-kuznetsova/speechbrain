@@ -1,44 +1,44 @@
 # ############################################################################
-# Model: E2E ASR with CTC
-# Auido Tokenizer: DAC
-# Encoder: LSTM Encoder
-# Decoder: CTC beam searcher and greedy searcher
-# Tokens: character
+# Model: SparseCodec
+# Audio Tokenizer: Sparse DAC
+# ASR encoder: LSTM Encoder
+# ASR decoder: Greedy searcher
+# ASR Tokens: character
+# Speaker embedding: ECAPA-TDNN
 # Training: Librispeech 960h
-# Authors: Pooneh Mousavi 2024
+# Authors: Anastasia Kuznetsova 2026
 # ############################################################################
 # Seed needs to be set at top of yaml, before objects with parameters are made
 
 seed: 1986
 __set_seed: !apply:torch.manual_seed [!ref <seed>]
-output_folder: /projects/bfje/akuznetsova/exp/SparseCodecDebug
+output_folder: ! PLACEHOLDER
 output_wer_folder: !ref <output_folder>/wer.txt
 save_folder: !ref <output_folder>/save
 train_log: !ref <output_folder>/train_log.txt
 
 
 # Data files
-data_folder: /projects/bfje/akuznetsova/datasets/LibriSpeech/ # e.g., /path/to/LibriSpeech
-# If RIRS_NOISES dir exists in /localscratch/xxx_corpus/RIRS_NOISES
-# then data_folder_rirs should be /localscratch/xxx_corpus
-# otherwise the dataset will automatically be downloaded
-# data_folder_rirs: !ref <data_folder>
+data_folder: !PLACEHOLDER # e.g., /path/to/LibriSpeech
 train_splits: ["train-clean-100"] # ["train-clean-100", "train-clean-360", "train-other-500"]
 dev_splits: ["dev-clean"]
-test_splits: ["test-clean"]
+test_splits: ["test-clean", "test-other", "dev-other"]
 skip_prep: False
 verification_trials: True
 train_csv: !ref <output_folder>/train.csv
 valid_csv: !ref <output_folder>/dev-clean.csv
 test_csv:
    - !ref <output_folder>/test-clean.csv
+   - !ref <output_folder>/test-other.csv
+   - !ref <output_folder>/dev-other.csv
+
 
 valid_veri_file: !ref <output_folder>/veri_dev.txt
 test_veri_file: !ref <output_folder>/veri_test.txt
 
 
 ####################### Training Parameters ####################################
-number_of_epochs: 3
+number_of_epochs: 50
 batch_size: 64 # This works for 2x GPUs with 32GB
 test_batch_size: 1
 grad_accumulation_factor: 2
@@ -55,10 +55,7 @@ weight_decay: 0.0005
 
 
 # Training parameters
-# To make Transformers converge, the global bath size should be large enough.
-# The global batch size is max_batch_len * n_gpus * gradient_accumulation.
-# Empirically, we used 850 * 8 A40 45G GPUs * 2 or 1700 * 4 A100 80G * 2.
-# Please, set your parameters accordingly.
+
 dynamic_batching: True
 max_batch_length_train: 128
 max_batch_len_val: 100
@@ -145,7 +142,6 @@ token_prune_min_logp: -1.2
 prune_history: False
 
 # Loss function parameters
-label_smoothing: 0.1
 loss_reduction: "sum"
 sparse_loss_weight: 0.1
 spk_reg_weight: 0.1
@@ -156,7 +152,6 @@ ctc_weight: 0.3
 seq_weight: 0.7
 
 ############################## models ################################
-# EnCodec model (see https://huggingface.co/docs/transformers/v4.31.0/en/model_doc/encodec)
 
 asr_encoder: !new:speechbrain.nnet.RNN.LSTM
    input_shape: [Null, Null, !ref <encoder_dim>]
