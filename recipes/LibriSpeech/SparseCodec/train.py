@@ -53,19 +53,16 @@ def compute_embedding_loop(data_loader):
 
     with torch.no_grad():
         for batch in tqdm(data_loader, dynamic_ncols=True):
-            seg_ids = batch["id"]
+            seg_ids = [batch["id"]]
             wavs = batch["sig"]
-
-            found = False
-            for seg_id in seg_ids:
-                if seg_id not in embedding_dict:
-                    found = True
-            if not found:
-                continue
             wavs = wavs.to(sparse_brain.device)
             emb = compute_speaker_embedding(wavs)
+
             for i, seg_id in enumerate(seg_ids):
-                embedding_dict[seg_id] = emb[i].detach().clone()
+                if seg_id in embedding_dict:
+                    continue
+                else:
+                    embedding_dict[seg_id] = emb[i].detach().clone()
     return embedding_dict
 
 
