@@ -23,7 +23,7 @@ data_folder: /projects/bfje/akuznetsova/datasets/LibriSpeech/ # e.g., /path/to/L
 # then data_folder_rirs should be /localscratch/xxx_corpus
 # otherwise the dataset will automatically be downloaded
 # data_folder_rirs: !ref <data_folder>
-train_splits: ["train-debug-set"] # ["train-clean-100", "train-clean-360", "train-other-500"]
+train_splits: ["train-clean-100"] # ["train-clean-100", "train-clean-360", "train-other-500"]
 dev_splits: ["dev-clean"]
 test_splits: ["test-clean"]
 skip_prep: False
@@ -38,7 +38,7 @@ test_veri_file: !ref <output_folder>/veri_test.txt
 
 
 ####################### Training Parameters ####################################
-number_of_epochs: 5
+number_of_epochs: 3
 batch_size: 64 # This works for 2x GPUs with 32GB
 test_batch_size: 1
 grad_accumulation_factor: 2
