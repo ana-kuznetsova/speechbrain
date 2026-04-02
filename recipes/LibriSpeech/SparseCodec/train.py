@@ -51,7 +51,7 @@ def compute_speaker_embedding(wavs: torch.Tensor) -> torch.Tensor:
 
 
 def compute_embedding_loop(
-    data_loader: torch.utils.data.DataLoader,
+    data_loaders: List[torch.utils.data.DataLoader],
 ) -> Dict[str, torch.Tensor]:
     """Computes the embeddings of all the waveforms specified in the
     dataloader.
@@ -63,17 +63,18 @@ def compute_embedding_loop(
     embedding_dict = {}
 
     with torch.no_grad():
-        for batch in tqdm(data_loader, dynamic_ncols=True):
-            seg_ids = [batch["id"]]
-            wavs = batch["sig"]
-            wavs = wavs.to(sparse_brain.device)
-            emb = compute_speaker_embedding(wavs)
+        for data_loader in data_loaders:
+            for batch in tqdm(data_loader, dynamic_ncols=True):
+                seg_ids = [batch["id"]]
+                wavs = batch["sig"]
+                wavs = wavs.to(sparse_brain.device)
+                emb = compute_speaker_embedding(wavs)
 
-            for i, seg_id in enumerate(seg_ids):
-                if seg_id in embedding_dict:
-                    continue
-                else:
-                    embedding_dict[seg_id] = emb[i].detach().clone()
+                for i, seg_id in enumerate(seg_ids):
+                    if seg_id in embedding_dict:
+                        continue
+                    else:
+                        embedding_dict[seg_id] = emb[i].detach().clone()
     return embedding_dict
 
 
@@ -670,23 +671,22 @@ if __name__ == "__main__":
     if not os.path.exists(hparams["output_wer_folder"]):
         os.makedirs(hparams["output_wer_folder"])
 
-    for k in test_datasets.keys():  # keys are test_clean, test_other etc
-        sparse_brain.hparams.output_wer_folder = os.path.join(
-            hparams["output_wer_folder"], f"wer_{k}.txt"
-        )
-        sparse_brain.evaluate(
-            test_datasets[k],
-            test_loader_kwargs=hparams["test_dataloader_opts"],
-            min_key="WER",
-        )
+    #for k in test_datasets.keys():  # keys are test_clean, test_other etc
+    #    sparse_brain.hparams.output_wer_folder = os.path.join(
+    #        hparams["output_wer_folder"], f"wer_{k}.txt"
+    #    )
+    #    sparse_brain.evaluate(
+    #        test_datasets[k],
+    #        test_loader_kwargs=hparams["test_dataloader_opts"],
+   #         min_key="WER",
+    #    )
 
     # Compute final EER
     logger.info("Computing final EER...")
     sparse_brain.modules.eval()
     train_data, valid_data, test_datasets, train_bsampler, valid_bsampler= dataio_prepare(hparams, tokenizer)
 
-    enroll_embedding_dict = compute_embedding_loop(valid_data)
-    test_embedding_dict = compute_embedding_loop(test_datasets["test-clean"])
+    test_embedding_dict = compute_embedding_loop(test_datasets.values())
 
     verification_trials = load_verification_trials(hparams["test_veri_file"])
     similarity = torch.nn.CosineSimilarity(dim=-1, eps=1e-6)
@@ -694,8 +694,8 @@ if __name__ == "__main__":
     negative_scores = []
 
     for label, utt1, utt2 in verification_trials:
-        spk_emb1 = enroll_embedding_dict.get(utt1) or test_embedding_dict.get(utt1)
-        spk_emb2 = enroll_embedding_dict.get(utt2) or test_embedding_dict.get(utt2)
+        spk_emb1 = test_embedding_dict[utt1]
+        spk_emb2 = test_embedding_dict[utt2]
 
         if spk_emb1 is None or spk_emb2 is None:
             logger.warning(f"Speaker embedding not found for {utt1} or {utt2}. Skipping this pair.")
