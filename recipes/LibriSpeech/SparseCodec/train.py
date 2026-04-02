@@ -671,15 +671,15 @@ if __name__ == "__main__":
     if not os.path.exists(hparams["output_wer_folder"]):
         os.makedirs(hparams["output_wer_folder"])
 
-    #for k in test_datasets.keys():  # keys are test_clean, test_other etc
-    #    sparse_brain.hparams.output_wer_folder = os.path.join(
-    #        hparams["output_wer_folder"], f"wer_{k}.txt"
-    #    )
-    #    sparse_brain.evaluate(
-    #        test_datasets[k],
-    #        test_loader_kwargs=hparams["test_dataloader_opts"],
-   #         min_key="WER",
-    #    )
+    for k in test_datasets.keys():  # keys are test_clean, test_other etc
+        sparse_brain.hparams.output_wer_folder = os.path.join(
+            hparams["output_wer_folder"], f"wer_{k}.txt"
+        )
+        sparse_brain.evaluate(
+            test_datasets[k],
+            test_loader_kwargs=hparams["test_dataloader_opts"],
+            min_key="WER",
+    )
 
     # Compute final EER
     logger.info("Computing final EER...")
