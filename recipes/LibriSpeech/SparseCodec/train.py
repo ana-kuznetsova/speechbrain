@@ -276,15 +276,12 @@ class SparseBrain(sb.core.Brain):
         stage_stats = {"loss": stage_loss}
 
         if stage == sb.Stage.TRAIN:
-            self.train_stats = stage_stats
-
-        elif stage == sb.Stage.TRAIN and hasattr(self, "stage_loss_dict"):
             # Log average of individual loss components for the training stage
             stage_stats = {
                 key: sum(self.stage_loss_dict[key]) / len(self.stage_loss_dict[key])
                 for key in self.stage_loss_dict
             }
-            self.stage_loss_dict = None  # reset for next epoch
+            self.train_stats = stage_stats
         else:
             stage_stats["WER"] = self.wer_metric.summarize("error_rate")
             stage_stats["ErrorRate"] = self.spk_error_metrics.summarize("average")
