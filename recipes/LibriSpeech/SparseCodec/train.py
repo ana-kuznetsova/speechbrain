@@ -230,7 +230,11 @@ class SparseBrain(sb.core.Brain):
         }
         # Append individual loss components to stage_loss_dict for logging and analysis
         for key, item in loss_dict.items():
-            self.stage_loss_dict[key].append(item)
+            # Store only scalars to avoid memory leaks
+            if hasattr(item, "item"):
+                self.stage_loss_dict[key].append(item.item())
+            else:
+                self.stage_loss_dict[key].append(float(item))
         return loss
 
     def on_evaluate_start(self, max_key=None, min_key=None):

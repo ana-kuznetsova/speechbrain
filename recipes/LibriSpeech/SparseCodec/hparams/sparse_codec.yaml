@@ -39,7 +39,7 @@ test_veri_file: !ref <output_folder>/veri_test.txt
 
 ####################### Training Parameters ####################################
 number_of_epochs: 20
-batch_size: 64 # This works for 2x GPUs with 32GB
+batch_size: 16 # This works for 2x GPUs with 32GB
 test_batch_size: 1
 grad_accumulation_factor: 2
 max_grad_norm: 5.0
@@ -165,7 +165,7 @@ ctc_lin: !new:speechbrain.nnet.linear.Linear
    n_neurons: !ref <output_neurons>
 
 ## Speaker Embedding branch
-out_n_neurons: 397 # Number of speakers in the full set
+out_n_neurons: 2484 # Number of speakers in the full set
 
 spk_encoder: !new:speechbrain.lobes.models.ECAPA_TDNN.ECAPA_TDNN
     input_size: !ref <encoder_dim>
