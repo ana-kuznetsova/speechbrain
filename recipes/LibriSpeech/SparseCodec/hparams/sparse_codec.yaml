@@ -16,11 +16,12 @@ output_folder: ! PLACEHOLDER
 output_wer_folder: !ref <output_folder>/wer.txt
 save_folder: !ref <output_folder>/save
 train_log: !ref <output_folder>/train_log.txt
+cached_data_folder: !ref <output_folder>/cache
 
 
 # Data files
 data_folder: !PLACEHOLDER # e.g., /path/to/LibriSpeech
-train_splits: ["train-clean-100", "train-clean-360", "train-other-500"]
+train_splits: ["train-clean-100"]
 dev_splits: ["dev-clean"]
 test_splits: ["test-clean", "test-other", "dev-other"]
 skip_prep: False
@@ -38,7 +39,7 @@ test_veri_file: !ref <output_folder>/veri_test.txt
 
 
 ####################### Training Parameters ####################################
-number_of_epochs: 30
+number_of_epochs: 2
 batch_size: 16 # This works for 2x GPUs with 32GB
 test_batch_size: 1
 grad_accumulation_factor: 2
@@ -104,7 +105,7 @@ test_dataloader_opts:
 # DAC Parameters
 model_type: 16khz
 vocab_size: 1024
-encoder_dim: 1024
+encoder_dim: 512
 model_bitrate: 8kbps
 freeze_embedding: False
 pretrain_embeddings: False
@@ -238,8 +239,8 @@ checkpointer: !new:speechbrain.utils.checkpoints.Checkpointer
 epoch_counter: !new:speechbrain.utils.epoch_loop.EpochCounter
    limit: !ref <number_of_epochs>
 
-train_logger: !new:speechbrain.utils.train_logger.TensorboardLogger
-   save_dir: !ref <output_folder>/tensorboard_logs
+train_logger: !new:speechbrain.utils.train_logger.FileTrainLogger
+   save_file: !ref <train_log>
 
 error_rate_computer: !name:speechbrain.utils.metric_stats.ErrorRateStats
 

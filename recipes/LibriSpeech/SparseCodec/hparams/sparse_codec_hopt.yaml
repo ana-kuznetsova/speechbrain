@@ -240,8 +240,6 @@ epoch_counter: !new:speechbrain.utils.epoch_loop.EpochCounter
 train_logger: !new:speechbrain.utils.train_logger.FileTrainLogger
     save_file: !ref <train_log>
 
-error_rate_computer: !name:speechbrain.utils.metric_stats.ErrorRateStats
-
 wer_computer: !name:speechbrain.utils.metric_stats.ErrorRateStats
 
 spk_error_stats: !name:speechbrain.utils.metric_stats.MetricStats

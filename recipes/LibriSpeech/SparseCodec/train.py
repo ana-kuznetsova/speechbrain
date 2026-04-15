@@ -108,7 +108,8 @@ class SparseBrain(sb.core.Brain):
 
         # ASR head forward pass
         in_toks = in_toks.transpose(1, 2)
-        enc_out, _ = self.modules.asr_encoder(in_toks, lengths=wav_lens)
+        # Top part of the in_tokens is used for ASR, and the bottom part is used for speaker classification
+        enc_out, _ = self.modules.asr_encoder(in_toks[:, :, : in_toks.shape[-1] // 2], lengths=wav_lens)
         logits = self.modules.ctc_lin(enc_out)
         p_ctc = self.hparams.log_softmax(logits)
 
@@ -122,7 +123,8 @@ class SparseBrain(sb.core.Brain):
             pred_hyps = test_searcher(p_ctc, wav_lens)
 
         # Speaker classification head forward pass
-        spk_emb = self.modules.spk_encoder(in_toks)
+        # Bottom part of the in_tokens is used for speaker classification
+        spk_emb = self.modules.spk_encoder(in_toks[:, :, in_toks.shape[-1] // 2 :])
         spk_logits = self.modules.spk_classifier(spk_emb).squeeze(1)
 
         # Collect utterance embeddings for Cosine similarity evaluation
@@ -218,7 +220,7 @@ class SparseBrain(sb.core.Brain):
             self.spk_error_metrics.append(
                 uttid, spk_predictions, batch.spk_id_encoded.data
             )
-
+        if stage == sb.Stage.TRAIN:
             #Log individual losses with file logger
             self.hparams.train_logger.log_stats(
                 stats_meta={"epoch": self.hparams.epoch_counter.current},
@@ -681,6 +683,7 @@ if __name__ == "__main__":
     )
 
     # Compute final EER
+    '''
     logger.info("Computing final EER...")
     sparse_brain.modules.eval()
     train_data, valid_data, test_datasets, train_bsampler, valid_bsampler= dataio_prepare(hparams, tokenizer)
@@ -709,3 +712,4 @@ if __name__ == "__main__":
     negative_scores = torch.tensor(negative_scores)
     eer, _ = hparams["spk_verification_metrics"](positive_scores, negative_scores)
     logger.info(f"Final EER: {eer:.4f}")
+    '''
