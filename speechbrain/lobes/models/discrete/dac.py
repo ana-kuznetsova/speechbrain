@@ -370,16 +370,8 @@ class VectorQuantize(nn.Module):
 
 class SparseVectorQuantize(nn.Module):
     """
-    An implementation for Vector Quantization
-
-    Implementation of VQ similar to Karpathy's repo:
-    https://github.com/karpathy/deep-vector-quantization
-    Additionally uses following tricks from Improved VQGAN
-    (https://arxiv.org/pdf/2110.04627.pdf):
-        1. Factorized codes: Perform nearest neighbor lookup in low-dimensional space
-            for improved codebook usage
-        2. l2-normalized codes: Converts euclidean distance to cosine similarity which
-            improves training stability
+    An implementation of Sparse Factorized VQ. 
+    To ensure separate subspaces (groups) for speaker and content coding.
 
     Arguments
     ---------
@@ -401,8 +393,8 @@ class SparseVectorQuantize(nn.Module):
         self.codebook = nn.Embedding(codebook_size, codebook_dim)
         # Add dictionary and sparse code matrices to learn basis vectors
         # for sparse coding per attribute (content, speaker, etc.)
-        self.codebook_dict = nn.Parameter(torch.randn(codebook_size, codebook_dim))
-        self.codebook_sparse_mat = nn.Parameter(torch.randn(codebook_dim, codebook_dim))
+        self.w_mat = nn.Parameter(torch.randn(codebook_size, codebook_dim))
+        self.h_mat = nn.Parameter(torch.randn(codebook_dim, codebook_dim))
 
     def forward(self, z: torch.Tensor):
         """Quantized the input tensor using a fixed codebook and returns
@@ -441,15 +433,16 @@ class SparseVectorQuantize(nn.Module):
         z_q = self.out_proj(z_q)
 
         # Compute sparse coding approximation
-        codebook_approx = torch.matmul(self.codebook_dict, self.codebook_sparse_mat)
+        codebook_approx = torch.matmul(self.w_mat, self.h_mat)
         sparse_loss = F.mse_loss(codebook_approx, self.codebook.weight)
+        # Apply L1 regularization to columns of H matrix
+        h_mat_t = self.h_mat.t()  # shape: [codebook_dim, codebook_dim] -> [codebook_dim, codebook_dim] (transpose)
         l1_reg_speaker = torch.norm(
-            self.codebook_sparse_mat[: self.codebook_dim // 2], p=1
+            h_mat_t[:, : self.codebook_dim // 2], p=1
         )
         l1_reg_content = torch.norm(
-            self.codebook_sparse_mat[self.codebook_dim // 2 :], p=1
+            h_mat_t[:, self.codebook_dim // 2 :], p=1
         )
-
         return (
             z_q,
             commitment_loss,

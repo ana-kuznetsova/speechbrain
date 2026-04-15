@@ -20,7 +20,7 @@ train_log: !ref <output_folder>/train_log.txt
 
 # Data files
 data_folder: !PLACEHOLDER # e.g., /path/to/LibriSpeech
-train_splits: ["train-clean-100", "train-clean-360", "train-other-500"]
+train_splits: ["train-clean-100"]
 dev_splits: ["dev-clean"]
 test_splits: ["test-clean", "test-other", "dev-other"]
 skip_prep: False
@@ -38,7 +38,7 @@ test_veri_file: !ref <output_folder>/veri_test.txt
 
 
 ####################### Training Parameters ####################################
-number_of_epochs: 30
+number_of_epochs: 2
 batch_size: 16 # This works for 2x GPUs with 32GB
 test_batch_size: 1
 grad_accumulation_factor: 2
@@ -50,7 +50,7 @@ valid_search_interval: 1
 avg_checkpoints: 10 # Number of checkpoints to average for evaluation
 cache_size: 1.e+10
 
-lr_model: 0.001
+lr_model: 0.001 # @orion_step1: --lr_model~"loguniform(0.0000001,0.1)"
 weight_decay: 0.0005
 
 
@@ -143,11 +143,10 @@ prune_history: False
 
 # Loss function parameters
 loss_reduction: "sum"
-sparse_loss_weight: 0.1
-spk_reg_weight: 0.1
-spk_aam_loss_weight: 0.5
-content_reg_weight: 0.1
-spk_loss_weight: 0.5
+sparse_loss_weight: 0.1 # @orion_step1: --sparse_loss_weight~"loguniform(0.1, 1.0)"
+spk_reg_weight: 0.1 # @orion_step1: --spk_reg_weight~"loguniform(0.1, 1.0)"
+spk_aam_loss_weight: 0.5 # @orion_step1: --spk_aam_loss_weight~"loguniform(0.1, 1.0)"
+content_reg_weight: 0.1 # @orion_step1: --content_reg_weight~"loguniform(0.1, 1.0)"
 ctc_weight: 0.3
 seq_weight: 0.7
 
@@ -165,7 +164,7 @@ ctc_lin: !new:speechbrain.nnet.linear.Linear
    n_neurons: !ref <output_neurons>
 
 ## Speaker Embedding branch
-out_n_neurons: 2484 # Number of speakers in the full set
+out_n_neurons: 397 # Number of speakers in the full set
 
 spk_encoder: !new:speechbrain.lobes.models.ECAPA_TDNN.ECAPA_TDNN
     input_size: !ref <encoder_dim>
@@ -238,8 +237,8 @@ checkpointer: !new:speechbrain.utils.checkpoints.Checkpointer
 epoch_counter: !new:speechbrain.utils.epoch_loop.EpochCounter
    limit: !ref <number_of_epochs>
 
-train_logger: !new:speechbrain.utils.train_logger.TensorboardLogger
-   save_dir: !ref <output_folder>/tensorboard_logs
+train_logger: !new:speechbrain.utils.train_logger.FileTrainLogger
+    save_file: !ref <train_log>
 
 error_rate_computer: !name:speechbrain.utils.metric_stats.ErrorRateStats
 

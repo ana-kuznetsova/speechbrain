@@ -219,22 +219,20 @@ class SparseBrain(sb.core.Brain):
                 uttid, spk_predictions, batch.spk_id_encoded.data
             )
 
-        # Return all losses as a dict
-        loss_dict = {
-            "loss": loss,
-            "ctc_loss": ctc_batch_loss,
-            "sparse_loss": sparse_batch_loss,
-            "aam_loss": batch_aam_loss,
-            "spk_reg_loss": spk_reg_loss,
-            "content_reg_loss": content_reg_loss,
-        }
-        # Append individual loss components to stage_loss_dict for logging and analysis
-        for key, item in loss_dict.items():
-            # Store only scalars to avoid memory leaks
-            if hasattr(item, "item"):
-                self.stage_loss_dict[key].append(item.item())
-            else:
-                self.stage_loss_dict[key].append(float(item))
+            #Log individual losses with file logger
+            self.hparams.train_logger.log_stats(
+                stats_meta={"epoch": self.hparams.epoch_counter.current},
+                train_stats={
+                    "loss": loss.item(),
+                    "loss_ctc": ctc_batch_loss.item(),
+                    "loss_sparse": sparse_batch_loss.item(),
+                    "loss_aam": batch_aam_loss.item(),
+                    "loss_spk_reg": spk_reg_loss.item(),
+                    "loss_content_reg": content_reg_loss.item(),
+                },
+                verbose=True,
+                )
+
         return loss
 
     def on_evaluate_start(self, max_key=None, min_key=None):
@@ -261,14 +259,6 @@ class SparseBrain(sb.core.Brain):
         if stage != sb.Stage.TRAIN:
             self.wer_metric = self.hparams.error_rate_computer()
             self.spk_error_metrics = self.hparams.spk_error_stats()
-        self.stage_loss_dict = {
-                "loss": [],
-                "ctc_loss": [],
-                "sparse_loss": [],
-                "aam_loss": [],
-                "spk_reg_loss": [],
-                "content_reg_loss": [],
-            }
 
     def on_stage_end(self, stage, stage_loss, epoch):
         """Gets called at the end of a epoch."""
@@ -277,10 +267,6 @@ class SparseBrain(sb.core.Brain):
 
         if stage == sb.Stage.TRAIN:
             # Log average of individual loss components for the training stage
-            stage_stats = {
-                key: sum(self.stage_loss_dict[key]) / len(self.stage_loss_dict[key])
-                for key in self.stage_loss_dict
-            }
             self.train_stats = stage_stats
         else:
             stage_stats["WER"] = self.wer_metric.summarize("error_rate")
@@ -308,7 +294,9 @@ class SparseBrain(sb.core.Brain):
             for label, utt1, utt2 in trial_pairs:
                 spk_emb1 = self.eval_spk_embs.get(utt1)
                 spk_emb2 = self.eval_spk_embs.get(utt2)
-
+                if spk_emb1 is None or spk_emb2 is None:
+                    logger.warning(f"Speaker embedding not found for {utt1} or {utt2}. Skipping this pair.")
+                    continue
                 cos_sim = similarity(spk_emb1, spk_emb2)
                 if label == "1":
                     positive_scores.append(cos_sim.item())
@@ -321,8 +309,8 @@ class SparseBrain(sb.core.Brain):
             )
             stage_stats["EER"] = eer
             logger.info(
-                "Statistics for epoch %d: EER %s, WER %s",
-                epoch,
+                "Statistics for epoch %s: EER %s, WER %s",
+                str(epoch),
                 stage_stats["EER"],
                 stage_stats["WER"],
             )
@@ -335,10 +323,14 @@ class SparseBrain(sb.core.Brain):
                 lr = self.hparams.scheduler.current_lr
             else:
                 raise NotImplementedError
+            steps = self.optimizer_step
+            optimizer = self.optimizer.__class__.__name__
 
             epoch_stats = {
                 "epoch": epoch,
                 "lr": lr,
+                "steps": steps,
+                "optimizer": optimizer,
             }
             self.hparams.train_logger.log_stats(
                 stats_meta=epoch_stats,
@@ -359,6 +351,12 @@ class SparseBrain(sb.core.Brain):
             if if_main_process():
                 with open(self.hparams.output_wer_folder, "w", encoding="utf-8") as w:
                     self.wer_metric.write_stats(w)
+            
+            self.checkpointer.save_and_keep_only(
+                meta={"WER": 0.0, "epoch": epoch},
+                min_keys=["WER"],
+                num_to_keep=1,
+            )
 
     def on_fit_batch_end(self, batch, outputs, loss, should_step):
         if (

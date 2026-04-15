@@ -131,7 +131,6 @@ def aggregate_metrics(prototype, metrics):
 if __name__ == "__main__":
     output_folder = sys.argv[1]
     eval_metric = sys.argv[2]
-
     try:
 
         # Getting the list of the result files in the output folder
