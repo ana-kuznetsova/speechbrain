@@ -71,34 +71,42 @@ def get_metrics(res_files, eval_metric):
     res_files: list
         List of all the result files.
     eval_metric: path
-        Metric of interest (e.g, acc or f1).
+        Metric of interest (e.g, acc or f1, or 'combined').
 
     Returns
     ---------
     metrics: np.array
         Matrix (n_metrics, n_files) containing the metrics of interest.
     """
-
-    # Metric initialization
-    metrics = np.zeros([n_metrics, len(res_files)])
-
-    # Loop over files
-    for i in range(len(res_files)):
-        cnt = 0
-        # Metric extraction
-        with open(res_files[i]) as file_in:
-            for line in file_in:
-                if eval_metric in line:
-                    # Use regex to find the test WER value
-                    match = re.search(
-                        rf"{eval_metric}: (\d+\.\d+(?:e[+-]?\d+)?)", line
-                    )
-                    if match:
-                        value = match.group(1)
-                        value = float(value)
-                        metrics[cnt, i] = value
-                        cnt = cnt + 1
-    return metrics
+    if eval_metric == "combined":
+        # For combined, we need both WER and EER
+        metrics = np.zeros([2, len(res_files)])
+        for i in range(len(res_files)):
+            with open(res_files[i]) as file_in:
+                for line in file_in:
+                    wer_match = re.search(r"WER: (\d+\.\d+(?:e[+-]?\d+)?)", line)
+                    if wer_match:
+                        metrics[0, i] = float(wer_match.group(1))
+                    eer_match = re.search(r"EER: (\d+\.\d+(?:e[+-]?\d+)?)", line)
+                    if eer_match:
+                        metrics[1, i] = float(eer_match.group(1))
+        return metrics
+    else:
+        metrics = np.zeros([n_metrics, len(res_files)])
+        for i in range(len(res_files)):
+            cnt = 0
+            with open(res_files[i]) as file_in:
+                for line in file_in:
+                    if eval_metric in line:
+                        match = re.search(
+                            rf"{eval_metric}: (\d+\.\d+(?:e[+-]?\d+)?)", line
+                        )
+                        if match:
+                            value = match.group(1)
+                            value = float(value)
+                            metrics[cnt, i] = value
+                            cnt = cnt + 1
+        return metrics
 
 
 def aggregate_metrics(prototype, metrics):
@@ -132,29 +140,33 @@ if __name__ == "__main__":
     output_folder = sys.argv[1]
     eval_metric = sys.argv[2]
     try:
-
-        # Getting the list of the result files in the output folder
         res_files = get_all_files(output_folder, match_and=["train_log.txt"])
-
-        # Gettin a prototype file
-        prototype, n_metrics = get_prototype(res_files[0], eval_metric)
-
-        # Extracting the metrics of interest
-        metrics = get_metrics(res_files, eval_metric)
-
-        # print aggregated metrics
-        aggregate_metrics(prototype, metrics)
-
-        final_metric = metrics.mean(axis=1).min()
-
-        # Report final metric to Orion
-        # Remember: orion expects metrics to be minimized!
-        if (
-            eval_metric == "acc"
-            or eval_metric == "f1"
-        ):
-            final_metric = 1 - final_metric
-        report_objective(final_metric)
+        if eval_metric == "combined":
+            # For combined, we don't need prototype, just aggregate WER and EER
+            metrics = get_metrics(res_files, eval_metric)
+            mean_wer = metrics[0, :].mean()
+            mean_eer = metrics[1, :].mean()
+            # Normalize WER to [0,1] scale (assuming WER is in percentage)
+            norm_wer = mean_wer / 100.0
+            # You can adjust weights here
+            weight_wer = 0.5
+            weight_eer = 0.5
+            combined_metric = weight_wer * norm_wer + weight_eer * mean_eer
+            print(f"Mean WER: {mean_wer:.4f} (normalized: {norm_wer:.4f})")
+            print(f"Mean EER: {mean_eer:.4f}")
+            print(f"Combined metric (weighted sum): {combined_metric:.4f}")
+            report_objective(combined_metric)
+        else:
+            prototype, n_metrics = get_prototype(res_files[0], eval_metric)
+            metrics = get_metrics(res_files, eval_metric)
+            aggregate_metrics(prototype, metrics)
+            final_metric = metrics.mean(axis=1).min()
+            if (
+                eval_metric == "acc"
+                or eval_metric == "f1"
+            ):
+                final_metric = 1 - final_metric
+            report_objective(final_metric)
     except Exception as e:
         logger.warning(f"Error processing aggregation: {e}")
         report_objective(float('inf'))
