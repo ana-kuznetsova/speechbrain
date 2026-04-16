@@ -32,13 +32,15 @@ test_csv:
    - !ref <output_folder>/test-other.csv
    - !ref <output_folder>/dev-other.csv
 
+cached_data_folder: !ref <output_folder>/cache
+
 
 valid_veri_file: !ref <output_folder>/veri_dev.txt
 test_veri_file: !ref <output_folder>/veri_test.txt
 
 
 ####################### Training Parameters ####################################
-number_of_epochs: 2
+number_of_epochs: 20
 batch_size: 16 # This works for 2x GPUs with 32GB
 test_batch_size: 1
 grad_accumulation_factor: 2
@@ -104,7 +106,7 @@ test_dataloader_opts:
 # DAC Parameters
 model_type: 16khz
 vocab_size: 1024
-encoder_dim: 1024
+encoder_dim: 512
 model_bitrate: 8kbps
 freeze_embedding: False
 pretrain_embeddings: False
@@ -143,9 +145,9 @@ prune_history: False
 
 # Loss function parameters
 loss_reduction: "sum"
-sparse_loss_weight: 0.1 # @orion_step1: --sparse_loss_weight~"loguniform(0.1, 1.0)"
+sparse_loss_weight: 1.0
 spk_reg_weight: 0.1 # @orion_step1: --spk_reg_weight~"loguniform(0.1, 1.0)"
-spk_aam_loss_weight: 0.5 # @orion_step1: --spk_aam_loss_weight~"loguniform(0.1, 1.0)"
+spk_aam_loss_weight: 1.0 # @orion_step1: --spk_aam_loss_weight~"loguniform(0.1, 1.0)"
 content_reg_weight: 0.1 # @orion_step1: --content_reg_weight~"loguniform(0.1, 1.0)"
 ctc_weight: 0.3
 seq_weight: 0.7
@@ -239,6 +241,8 @@ epoch_counter: !new:speechbrain.utils.epoch_loop.EpochCounter
 
 train_logger: !new:speechbrain.utils.train_logger.FileTrainLogger
     save_file: !ref <train_log>
+
+error_rate_computer: !name:speechbrain.utils.metric_stats.ErrorRateStats
 
 wer_computer: !name:speechbrain.utils.metric_stats.ErrorRateStats
 

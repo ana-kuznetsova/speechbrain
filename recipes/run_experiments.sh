@@ -146,9 +146,17 @@ done
 
 
 # Check for required arguments
-if  [ -z "$hparams" ] ||[ -z "$data_folder" ] || [ -z "$output_folder" ]  || [ -z "$nruns" ]; then
-    echo "ERROR: Missing required arguments! Please provide all required options."
-    print_argument_descriptions
+if  [ -z "$hparams" ] || [ -z "$data_folder" ] || [ -z "$output_folder" ]  || [ -z "$nruns" ]; then
+  echo "ERROR: Missing required arguments! Please provide all required options."
+  print_argument_descriptions
+fi
+
+# Check for required model path variables
+if [ -z "$dataset" ] || [ -z "$task" ] || [ -z "$architecture" ]; then
+  echo "ERROR: One or more of the following variables are empty: dataset, task, architecture."
+  echo "Current values: dataset='$dataset', task='$task', architecture='$architecture'"
+  echo "Please provide all required options."
+  print_argument_descriptions
 fi
 
 # Manage Seed (optional argument)
