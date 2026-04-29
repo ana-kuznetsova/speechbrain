@@ -80,25 +80,6 @@ def compute_embedding_loop(
 
 # Define training procedure
 class SparseBrain(sb.core.Brain):
-    def on_fit_batch_start(self, batch, should_step):
-        """Freeze speaker branch for first 1000 steps, unfreeze after."""
-        if not hasattr(self, "global_step"):
-            self.global_step = 0
-        # Freeze speaker branch for first 1000 steps
-        if self.global_step < 1000:
-            for p in self.modules.spk_encoder.parameters():
-                p.requires_grad = False
-            for p in self.modules.spk_classifier.parameters():
-                p.requires_grad = False
-        elif self.global_step == 1000:
-            # Unfreeze at step 1000
-            for p in self.modules.spk_encoder.parameters():
-                p.requires_grad = True
-            for p in self.modules.spk_classifier.parameters():
-                p.requires_grad = True
-        # Increment step counter
-        self.global_step += 1
-        super().on_fit_batch_start(batch, should_step)
 
     def compute_forward(self, batch: Dict[str, torch.Tensor], stage: sb.Stage) -> Tuple:
         """Forward computations from the waveform batches to the output probabilities.
@@ -112,31 +93,20 @@ class SparseBrain(sb.core.Brain):
 
         batch = batch.to(self.device)
         wavs, wav_lens = batch.sig
-
+        logger.info("Input waveforms shape: %s", wavs.shape)
         # Codec forward pass
-        (
-            in_toks,
-            in_h_spk,
-            _,
-            _,
-            commitment_loss,
-            codebook_loss,
-            sparse_loss,
-            l1_reg_spk,
-            l1_reg_cont,
-        ) = self.hparams.codec(wavs, n_quantizers=self.hparams.num_codebooks)
+        enc_out = self.hparams.codec.encoder(wavs.unsqueeze(1))
+        logger.info("Codec encoder output shape: %s", enc_out.shape)
+        x_approx, _, l1_cont, l1_sid = self.hparams.disentangle_module(enc_out)
+        logger.info("Disentangle output shape: %s", x_approx.shape)
+        logger.info("L1 regularization - content: %s, speaker: %s", l1_cont.item(), l1_sid.item())
 
         # ASR head forward pass
         in_toks = in_toks.transpose(1, 2)
-        in_toks_subsample = self.modules.cnn(in_toks)
-
         # Top part of the in_tokens is used for ASR, and the bottom part is used for speaker classification
-        enc_out, _ = self.modules.asr_encoder(
-            in_toks_subsample, lengths=wav_lens
-        )
+        enc_out, _ = self.modules.asr_encoder(in_toks, lengths=wav_lens)
         logits = self.modules.ctc_lin(enc_out)
         p_ctc = self.hparams.log_softmax(logits)
-
 
         # Compute ASR predictions (words) for validation and testing stages
         pred_hyps = None
@@ -149,7 +119,7 @@ class SparseBrain(sb.core.Brain):
 
         # Speaker classification head forward pass
         # Bottom part of the in_tokens is used for speaker classification
-        spk_emb = self.modules.spk_encoder(in_h_spk)
+        spk_emb = self.modules.spk_encoder(in_toks)
         spk_logits = self.modules.spk_classifier(spk_emb).squeeze(1)
 
         # Collect utterance embeddings for Cosine similarity evaluation
@@ -200,23 +170,27 @@ class SparseBrain(sb.core.Brain):
         tokens, tokens_lens = batch.tokens
         spk_targets, _ = batch.spk_id_encoded
 
+        # Convert spk_targets to one-hot
+        spk_targets = torch.nn.functional.one_hot(
+            spk_targets, num_classes=self.hparams.out_n_neurons
+        ).squeeze(1)
+
         ctc_batch_loss = self.hparams.ctc_cost(
             p_seq, tokens, wav_lens, tokens_lens, reduction=self.hparams.loss_reduction
         )
         ctc_batch_loss = ctc_batch_loss * self.hparams.ctc_weight
         sparse_batch_loss = sparse_loss * self.hparams.sparse_loss_weight
 
-        # Speaker branch warmup: zero out speaker losses during warmup
-        if stage == sb.Stage.TRAIN and hasattr(self, "global_step") and self.global_step <= 1000:
-            batch_aam_loss = torch.tensor(0.0, device=ctc_batch_loss.device)
-            spk_reg_loss = torch.tensor(0.0, device=ctc_batch_loss.device)
+        # Only compute AAM loss during training, as it requires speaker labels and is not needed for evaluation
+        if stage == sb.Stage.TRAIN:
+            batch_aam_loss = self.hparams.spk_aam_loss(
+                spk_logits, spk_targets.transpose(0, 1)
+            )
+            batch_aam_loss = batch_aam_loss * self.hparams.spk_aam_loss_weight
         else:
-            if stage == sb.Stage.TRAIN:
-                batch_aam_loss = self.hparams.spk_aam_loss(spk_logits, spk_targets)
-                batch_aam_loss = batch_aam_loss * self.hparams.spk_aam_loss_weight
-            else:
-                batch_aam_loss = torch.tensor(0.0, device=ctc_batch_loss.device)
-            spk_reg_loss = l1_reg_spk * self.hparams.spk_reg_weight
+            batch_aam_loss = torch.tensor(0.0, device=ctc_batch_loss.device)
+
+        spk_reg_loss = l1_reg_spk * self.hparams.spk_reg_weight
         content_reg_loss = l1_reg_cont * self.hparams.content_reg_weight
 
         loss = (
@@ -242,7 +216,7 @@ class SparseBrain(sb.core.Brain):
                 uttid, spk_predictions, batch.spk_id_encoded.data
             )
         if stage == sb.Stage.TRAIN:
-            # Log individual losses with file logger
+            #Log individual losses with file logger
             self.hparams.train_logger.log_stats(
                 stats_meta={"epoch": self.hparams.epoch_counter.current},
                 train_stats={
@@ -374,7 +348,7 @@ class SparseBrain(sb.core.Brain):
             if if_main_process():
                 with open(self.hparams.output_wer_folder, "w", encoding="utf-8") as w:
                     self.wer_metric.write_stats(w)
-
+            
             self.checkpointer.save_and_keep_only(
                 meta={"WER": 0.0, "epoch": epoch},
                 min_keys=["WER"],
@@ -470,11 +444,8 @@ def dataio_prepare(hparams: dict, tokenizer: SentencePiece) -> Tuple:
         test_datasets[name] = test_datasets[name].filtered_sorted(sort_key="duration")
 
     datasets = [train_data, valid_data] + [i for k, i in test_datasets.items()]
-    # Create the encoder
-    spk_label_encoder = sb.dataio.encoder.CategoricalEncoder()
 
-    # 1. IMPORTANT: Tell the encoder to handle unknown labels
-    spk_label_encoder.add_unk('<unk>')
+    spk_label_encoder = sb.dataio.encoder.CategoricalEncoder()
 
     # 2. Define Speaker ID label pipeline.
     @sb.utils.data_pipeline.takes("spk_id")
@@ -482,27 +453,26 @@ def dataio_prepare(hparams: dict, tokenizer: SentencePiece) -> Tuple:
     def label_pipeline(spk_id):
         spk_id_prefix = spk_id.split("-")[0]
         yield spk_id_prefix
-        # Add allow_unk=True here
-        spk_id_encoded = spk_label_encoder.encode_sequence_torch([spk_id_prefix], allow_unk=True)
+        spk_id_encoded = spk_label_encoder.encode_sequence_torch([spk_id_prefix])
         yield spk_id_encoded
 
     sb.dataio.dataset.add_dynamic_item(datasets, label_pipeline)
 
     # 3. Fit encoder:
-    # ONLY extract unique speaker prefixes from TRAINING set
+    # Extract unique speaker prefixes from training set
     unique_spk_prefixes = set()
 
-    df = pd.read_csv(hparams["train_csv"])
-    if "spk_id" in df.columns:
-        spk_ids = df["spk_id"].tolist()
-        for spk_id in spk_ids:
-            # LibriSpeech format is SPK-CHAPTER-UTT
-            spk_id_prefix = spk_id.split("-")[0]
-            unique_spk_prefixes.add(spk_id_prefix)
+    # Combine speaker IDs from train, valid, and all test CSVs
+    spk_ids = []
+    for csv_path in [hparams["train_csv"], hparams["valid_csv"]] + hparams["test_csv"]:
+        df = pd.read_csv(csv_path)
+        if "spk_id" in df.columns:
+            spk_ids.extend(df["spk_id"].tolist())
+    for spk_id in spk_ids:
+        spk_id_prefix = spk_id.split("-")[0]
+        unique_spk_prefixes.add(spk_id_prefix)
 
     lab_enc_file = os.path.join(hparams["save_folder"], "label_encoder.txt")
-    
-    # This will now only contain the training speakers (likely 251)
     spk_label_encoder.load_or_create(
         path=lab_enc_file,
         from_iterables=[unique_spk_prefixes],
@@ -513,7 +483,13 @@ def dataio_prepare(hparams: dict, tokenizer: SentencePiece) -> Tuple:
     @sb.utils.data_pipeline.provides("sig")
     def audio_pipeline(wav):
         sig = sb.dataio.dataio.read_audio(wav)
-        return sig
+        sample_rate = librosa.get_samplerate(wav)
+        resampled = torchaudio.transforms.Resample(
+            sample_rate,
+            hparams["sample_rate"],
+        )(sig)
+        # resampled = resampled.unsqueeze(0)
+        return resampled
 
     sb.dataio.dataset.add_dynamic_item(datasets, audio_pipeline)
 

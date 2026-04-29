@@ -383,18 +383,22 @@ class SparseVectorQuantize(nn.Module):
         Dimensionality of codebook
     """
 
-    def __init__(self, input_dim: int, codebook_size: int, codebook_dim: int):
+    def __init__(self, input_dim: int, codebook_size: int, codebook_dim: int, sparse_dim: int):
         super().__init__()
         self.codebook_size = codebook_size
         self.codebook_dim = codebook_dim
+        self.sparse_dim = sparse_dim
 
         self.in_proj = WNConv1d(input_dim, codebook_dim, kernel_size=1)
         self.out_proj = WNConv1d(codebook_dim, input_dim, kernel_size=1)
         self.codebook = nn.Embedding(codebook_size, codebook_dim)
+        # LayerNorm to stabilize the input to the sparse encoder
+        self.ln = nn.LayerNorm(codebook_dim)
         # Add dictionary and sparse code matrices to learn basis vectors
         # for sparse coding per attribute (content, speaker, etc.)
-        self.w_mat = nn.Parameter(torch.randn(codebook_size, codebook_dim))
-        self.h_mat = nn.Parameter(torch.randn(codebook_dim, codebook_dim))
+        self.w_mat = nn.Parameter(torch.randn(sparse_dim, codebook_dim) * 0.01)
+        self.w_mat.data.copy_(self.codebook.weight[:sparse_dim].clone())
+        self.h_encoder = nn.Linear(codebook_dim, sparse_dim)  
 
     def forward(self, z: torch.Tensor):
         """Quantized the input tensor using a fixed codebook and returns
@@ -418,33 +422,51 @@ class SparseVectorQuantize(nn.Module):
         torch.Tensor[B x D x T]
             Projected latents (continuous representation of input before quantization)
         """
-
-        # Factorized codes (ViT-VQGAN) Project input into low-dimensional space
         z_e = self.in_proj(z)  # z_e : (B x D x T)
         z_q, indices = self.decode_latents(z_e)
 
         commitment_loss = F.mse_loss(z_e, z_q.detach(), reduction="none").mean([1, 2])
         codebook_loss = F.mse_loss(z_q, z_e.detach(), reduction="none").mean([1, 2])
 
-        z_q = (
-            z_e + (z_q - z_e).detach()
-        )  # noop in forward pass, straight-through gradient estimator in backward pass
+        # --- 3. SPARSE DICTIONARY LEARNING ---
+        # We use z_q_flat as the target for our dictionary approximation
+        
+        # Flatten z_e: (B*T, 8)
+        z_e_flat = z_e.permute(0, 2, 1).reshape(-1, self.codebook_dim)
 
-        z_q = self.out_proj(z_q)
+        # Apply LayerNorm before the Sparse Encoder
+        z_e_norm = self.ln(z_e_flat)
+        
+        # 3. Calculate Sparse Coefficients H (B*T, 128)
+        h = self.h_encoder(z_e_norm)
+        # Reconstruct: (B*T, 128) @ (128, 8) -> (B*T, 8)
+        z_q_approx = torch.matmul(h, self.w_mat)
 
-        # Compute sparse coding approximation
-        codebook_approx = torch.matmul(self.w_mat, self.h_mat)
-        sparse_loss = F.mse_loss(codebook_approx, self.codebook.weight)
-        # Apply L1 regularization to columns of H matrix
-        h_mat_t = self.h_mat.t()  # shape: [codebook_dim, codebook_dim] -> [codebook_dim, codebook_dim] (transpose)
-        l1_reg_speaker = torch.norm(
-            h_mat_t[:, : self.codebook_dim // 2], p=1
-        )
-        l1_reg_content = torch.norm(
-            h_mat_t[:, self.codebook_dim // 2 :], p=1
-        )
+        
+        # Normalize if you are using DAC (hypersphere alignment)
+        z_e_target = F.normalize(z_e_flat, p=2, dim=-1)
+        z_q_approx = F.normalize(z_q_approx, p=2, dim=-1)
+        
+        sparse_loss = F.mse_loss(z_q_approx, z_e_target.detach())
+        
+        # Subspace L1 penalties
+        mid = h.shape[1] // 2
+        #l1_reg_speaker = torch.norm(h[:, :mid], p=1)
+        l1_reg_speaker = h[:, :mid].abs().mean()
+        #l1_reg_content = torch.norm(h[:, mid:], p=1)
+        l1_reg_content = h[:, mid:].abs().mean()
+        spk_h = h[:, :mid].reshape(z_e.shape[0], z_e.shape[2], -1).permute(0, 2, 1)  # Reshape back to (B, sparse_dim//2, T)
+        # --- 4. THE GRADIENT TRICK (STE) ---
+        # This is done ONCE, right before the final projection
+        # This flows gradients from z_q back to z_e
+        z_q_ste = z_e + (z_q - z_e).detach()
+
+        # --- 5. FINAL EXIT PROJECTION ---
+        z_out = self.out_proj(z_q_ste)
+
         return (
-            z_q,
+            z_out,
+            spk_h,
             commitment_loss,
             codebook_loss,
             indices,
@@ -768,6 +790,7 @@ class SparseResidualVectorQuantize(nn.Module):
         codebook_size: int = 1024,
         codebook_dim: Union[int, list] = 8,
         quantizer_dropout: float = 0.0,
+        sparse_dim: int = 128,
     ):
         super().__init__()
         if isinstance(codebook_dim, int):
@@ -779,12 +802,85 @@ class SparseResidualVectorQuantize(nn.Module):
 
         self.quantizers = nn.ModuleList(
             [
-                SparseVectorQuantize(input_dim, codebook_size, codebook_dim[i])
+                SparseVectorQuantize(input_dim, codebook_size, codebook_dim[i], sparse_dim)
                 for i in range(n_codebooks)
             ]
         )
         self.quantizer_dropout = quantizer_dropout
+        self.spk_proj = nn.Linear(sparse_dim // 2, 256)  # Project speaker code to input_dim for accumulation
 
+    def forward(self, z, n_quantizers: Optional[int] = None):
+        z_q = 0
+        residual = z
+        commitment_loss, codebook_loss = 0, 0
+        sparse_loss, l1_reg_speaker, l1_reg_content = 0, 0, 0
+        spk_h_accumulated = 0
+
+        codebook_indices = []
+        latents = []
+
+        # Determine n_quantizers for this batch
+        if n_quantizers is None:
+            n_quantizers = torch.full((z.shape[0],), self.n_codebooks, device=z.device)
+        elif isinstance(n_quantizers, int):
+            n_quantizers = torch.full((z.shape[0],), n_quantizers, device=z.device)
+
+        if self.training:
+            # Standard RVQ Dropout logic
+            dropout = torch.randint(
+                1, self.n_codebooks + 1, (z.shape[0],), device=z.device
+            )
+            n_dropout = int(z.shape[0] * self.quantizer_dropout)
+            n_quantizers[:n_dropout] = dropout[:n_dropout]
+
+        for i, quantizer in enumerate(self.quantizers):
+            # Optimization: if no samples in batch need this quantizer, skip it
+            if not (n_quantizers > i).any():
+                break
+
+            (z_q_i, spk_h_i, c_loss_i, cb_loss_i, idx_i, z_e_i, s_loss_i, l1_spk_i, l1_cnt_i) = (
+                quantizer(residual)
+            )
+
+            mask = (i < n_quantizers).float()[:, None, None]  # Shape [B, 1, 1]
+
+            # Use masked version for both accumulation and residual calculation
+            contribution = z_q_i * mask
+            z_q = z_q + contribution
+            residual = residual - contribution
+
+            # --- SPEAKER (Additive Path) ---
+            # Sum the activations across the hierarchy
+            spk_h_accumulated = spk_h_accumulated + spk_h_i
+
+            # Scale and sum losses (using .mean() over the batch)
+            m = mask.squeeze()
+            commitment_loss += (c_loss_i * m).mean()
+            codebook_loss += (cb_loss_i * m).mean()
+            sparse_loss += (s_loss_i * m).mean()
+            l1_reg_speaker += (l1_spk_i * m).mean()
+            l1_reg_content += (l1_cnt_i * m).mean()
+
+            codebook_indices.append(idx_i)
+            latents.append(z_e_i)
+
+        spk_h_accumulated = self.spk_proj(spk_h_accumulated.transpose(1, 2))  # Project to input_dim for accumulation
+        codes = torch.stack(codebook_indices, dim=1)
+        latents = torch.cat(latents, dim=1)
+
+        return (
+            z_q,
+            spk_h_accumulated,
+            codes,
+            latents,
+            commitment_loss,
+            codebook_loss,
+            sparse_loss,
+            l1_reg_speaker,
+            l1_reg_content,
+        )
+
+    '''
     def forward(self, z, n_quantizers: Optional[int] = None):
         """Quantized the input tensor using a fixed set of `n` codebooks and returns
         the corresponding codebook vectors
@@ -852,15 +948,15 @@ class SparseResidualVectorQuantize(nn.Module):
                 torch.full((z.shape[0],), fill_value=i, device=z.device) < n_quantizers
             )
             z_q = z_q + z_q_i * mask[:, None, None]
-            residual = residual - z_q_i
+            residual = residual - z_q_i * mask[:, None, None]
 
             # Sum losses
             # Note anakuzne (reduction sum for matching the scale of ASR losses)
-            commitment_loss += (commitment_loss_i * mask).sum()
-            codebook_loss += (codebook_loss_i * mask).sum()
-            sparse_loss += (sparse_loss_i * mask).sum()
-            l1_reg_speaker += (l1_reg_speaker_i * mask).sum()
-            l1_reg_content += (l1_reg_content_i * mask).sum()
+            commitment_loss += (commitment_loss_i * mask).mean()
+            codebook_loss += (codebook_loss_i * mask).mean()
+            sparse_loss += (sparse_loss_i * mask).mean()
+            l1_reg_speaker += (l1_reg_speaker_i * mask).mean()
+            l1_reg_content += (l1_reg_content_i * mask).mean()
 
             codebook_indices.append(indices_i)
             latents.append(z_e_i)
@@ -878,6 +974,7 @@ class SparseResidualVectorQuantize(nn.Module):
             l1_reg_speaker,
             l1_reg_content,
         )
+    '''
 
     def from_sparse_codes(self, codes: torch.Tensor):
         """
@@ -1370,6 +1467,7 @@ class DAC(nn.Module):
         n_codebooks: int = 9,
         codebook_size: int = 1024,
         codebook_dim: Union[int, list] = 8,
+        sparse_dim: int = 128,
         quantizer_dropout: bool = False,
         quantizer_type: str = "sparse",
         freeze_sparse_mat: bool = False,
@@ -1393,6 +1491,7 @@ class DAC(nn.Module):
         self.n_codebooks = n_codebooks
         self.codebook_size = codebook_size
         self.codebook_dim = codebook_dim
+        self.sparse_dim = sparse_dim
         self.latent_dim = latent_dim
         self.quantizer_dropout = quantizer_dropout
         self.quantizer_type = quantizer_type
@@ -1428,6 +1527,7 @@ class DAC(nn.Module):
                 n_codebooks=self.n_codebooks,
                 codebook_size=self.codebook_size,
                 codebook_dim=self.codebook_dim,
+                sparse_dim=self.sparse_dim,
                 quantizer_dropout=self.quantizer_dropout,
             )
         self.decoder = Decoder(
@@ -1486,11 +1586,12 @@ class DAC(nn.Module):
         """
         z = self.encoder(audio_data)
         if self.quantizer_type == "sparse":
-            z, codes, latents, commitment_loss, codebook_loss, sparse_loss, l1_reg_speaker, l1_reg_content = self.quantizer(
+            z, h_spk, codes, latents, commitment_loss, codebook_loss, sparse_loss, l1_reg_speaker, l1_reg_content = self.quantizer(
                 z, n_quantizers
             )
             return (
                 z,
+                h_spk,
                 codes,
                 latents,
                 commitment_loss,
@@ -1558,6 +1659,7 @@ class DAC(nn.Module):
         if self.quantizer_type == "sparse":
             (
                 z,
+                h_spk,
                 codes,
                 latents,
                 commitment_loss,
@@ -1568,6 +1670,7 @@ class DAC(nn.Module):
             ) = self.encode(audio_data, n_quantizers)
             return (
                 z,
+                h_spk,
                 codes,
                 latents,
                 commitment_loss,

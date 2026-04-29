@@ -106,7 +106,7 @@ test_dataloader_opts:
 # DAC Parameters
 model_type: 16khz
 vocab_size: 1024
-encoder_dim: 512
+encoder_dim: 1024
 model_bitrate: 8kbps
 freeze_embedding: False
 pretrain_embeddings: False
@@ -143,14 +143,13 @@ beam_prune_logp: -12.0
 token_prune_min_logp: -1.2
 prune_history: False
 
-# Loss function parameters
 loss_reduction: "sum"
 sparse_loss_weight: 1.0
-spk_reg_weight: 0.1 # @orion_step1: --spk_reg_weight~"loguniform(0.1, 1.0)"
-spk_aam_loss_weight: 1.0 # @orion_step1: --spk_aam_loss_weight~"loguniform(0.1, 1.0)"
-content_reg_weight: 0.1 # @orion_step1: --content_reg_weight~"loguniform(0.1, 1.0)"
-ctc_weight: 0.3
-seq_weight: 0.7
+spk_reg_weight: 1.0
+spk_aam_loss_weight: 1.0
+content_reg_weight: 1.0
+spk_loss_weight: 1.0
+ctc_weight: 1.0
 
 ############################## models ################################
 
