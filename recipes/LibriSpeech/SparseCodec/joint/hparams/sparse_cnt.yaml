@@ -39,7 +39,7 @@ test_veri_file: !ref <output_folder>/veri_test.txt
 
 
 ####################### Training Parameters ####################################
-number_of_epochs: 2
+number_of_epochs: 10
 batch_size: 16 # This works for 2x GPUs with 32GB
 test_batch_size: 1
 grad_accumulation_factor: 2
@@ -104,24 +104,24 @@ test_dataloader_opts:
 ####################### Model parameters ###########################
 # DAC Parameters
 model_type: 16khz
-vocab_size: 1024
-encoder_dim: 512
+encoder_dim: 1024
 model_bitrate: 8kbps
 freeze_embedding: False
 pretrain_embeddings: False
 num_codebooks: 6 # For 3kbps bitrate
 sample_rate: 16000
+sparse_dim: 64
 
 codec: !new:speechbrain.lobes.models.discrete.dac.DAC
     model_type: !ref <model_type>
     model_bitrate: !ref <model_bitrate>
-    freeze_codec: True
     load_pretrained: True
     tag: latest
 
-disentangle_module: !new:speechbrain.lobes.models.sparse_disentangle.SparseDisentangle
-   input_dim: 1024
-   dict_dim: 64
+disentangle: !new:speechbrain.lobes.models.sparse_disentangle.ResidualSparseDisentangle
+    input_dim: !ref <encoder_dim>
+    dict_dim: !ref <sparse_dim>
+    num_sparse_layers: 4
 
 
 # LSTM
@@ -145,19 +145,26 @@ token_prune_min_logp: -1.2
 prune_history: False
 
 # Loss function parameters
-loss_reduction: "sum"
+loss_reduction: batchmean
 sparse_loss_weight: 1.0
-spk_reg_weight: 1.0
-spk_aam_loss_weight: 1.0
-content_reg_weight: 1.0
+spk_reg_weight: 1e-4
+spk_aam_loss_weight: 10.0
+content_reg_weight: 1e-4
 spk_loss_weight: 1.0
 ctc_weight: 1.0
-#seq_weight: 0.7
 
 ############################## models ################################
 
+subsampler: !new:speechbrain.nnet.containers.Sequential
+    input_shape: [Null, Null, 1024]  # Your z_q dim
+    conv1: !name:speechbrain.nnet.CNN.Conv1d
+        out_channels: 256
+        kernel_size: 3
+        stride: 2
+    act1: !new:torch.nn.LeakyReLU       # Recommended when dims are large
+
 asr_encoder: !new:speechbrain.nnet.RNN.LSTM
-   input_shape: [Null, Null, !ref <encoder_dim>]
+   input_shape: [Null, Null, 256]  # Output dim of subsampler
    num_layers: !ref <dnn_layers>
    bidirectional: True
    dropout: !ref <dropout>
@@ -168,7 +175,7 @@ ctc_lin: !new:speechbrain.nnet.linear.Linear
    n_neurons: !ref <output_neurons>
 
 ## Speaker Embedding branch
-out_n_neurons: 397 # Number of speakers in the full set
+out_n_neurons: 252 # Number of speakers in the full set + <unk>
 
 spk_encoder: !new:speechbrain.lobes.models.ECAPA_TDNN.ECAPA_TDNN
     input_size: !ref <encoder_dim>
@@ -184,15 +191,16 @@ spk_classifier: !new:speechbrain.lobes.models.ECAPA_TDNN.Classifier
     out_neurons: !ref <out_n_neurons>
 
 modules:
+   cnn: !ref <subsampler>
    asr_encoder: !ref <asr_encoder>
    ctc_lin: !ref <ctc_lin>
-   tokenizer: !ref <codec>
-   disentangle_module: !ref <disentangle_module>
+   codec: !ref <codec>
+   disentangle: !ref <disentangle>
    spk_encoder: !ref <spk_encoder>
    spk_classifier: !ref <spk_classifier>
 
 model: !new:torch.nn.ModuleList
-   - [!ref <codec>, !ref <disentangle_module>, !ref <asr_encoder>, !ref <ctc_lin>, !ref <spk_encoder>, !ref <spk_classifier>]
+   - [!ref <codec>, !ref <disentangle>, !ref <subsampler>, !ref <asr_encoder>, !ref <ctc_lin>, !ref <spk_encoder>, !ref <spk_classifier>]
 ####################### Decoding & optimiser ###########################
 # Decoding parameters
 test_beam_search:
@@ -213,7 +221,7 @@ log_softmax: !new:speechbrain.nnet.activations.Softmax
 
 spk_aam_loss: !new:speechbrain.nnet.losses.LogSoftmaxWrapper
     loss_fn: !new:speechbrain.nnet.losses.AdditiveAngularMargin
-        margin: 0.2
+        margin: 0.4
         scale: 30
 
 scheduler: !new:speechbrain.nnet.schedulers.NewBobScheduler
@@ -253,5 +261,3 @@ spk_error_stats: !name:speechbrain.utils.metric_stats.MetricStats
     metric: !name:speechbrain.nnet.losses.classification_error
         reduction: batch
 spk_verification_metrics: !name:speechbrain.utils.metric_stats.EER
-
-final_verification: True
