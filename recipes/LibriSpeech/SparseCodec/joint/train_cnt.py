@@ -80,26 +80,6 @@ def compute_embedding_loop(
 
 # Define training procedure
 class SparseBrain(sb.core.Brain):
-    # def on_fit_batch_start(self, batch, should_step):
-    #    """Freeze speaker branch for first 1000 steps, unfreeze after."""
-    #    if not hasattr(self, "global_step"):
-    #        self.global_step = 0
-    #    # Freeze speaker branch for first 1000 steps
-    #    if self.global_step < 1000:
-    #        for p in self.modules.spk_encoder.parameters():
-    #            p.requires_grad = False
-    #        for p in self.modules.spk_classifier.parameters():
-    #            p.requires_grad = False
-    #    elif self.global_step == 1000:
-    #        # Unfreeze at step 1000
-    #        for p in self.modules.spk_encoder.parameters():
-    #            p.requires_grad = True
-    #        for p in self.modules.spk_classifier.parameters():
-    #            p.requires_grad = True
-    #    # Increment step counter
-    #    self.global_step += 1
-    #    super().on_fit_batch_start(batch, should_step)
-
     def compute_forward(self, batch: Dict[str, torch.Tensor], stage: sb.Stage) -> Tuple:
         """Forward computations from the waveform batches to the output probabilities.
         Computes the outputs for both the ASR head and the speaker classification head.
@@ -125,7 +105,13 @@ class SparseBrain(sb.core.Brain):
         content_enc_input = self.modules.cnn(z_proj_content)
 
         # Top part of the in_tokens is used for ASR, and the bottom part is used for speaker classification
-        enc_out, _ = self.modules.asr_encoder(content_enc_input, lengths=wav_lens)
+        # Handle different ASR encoder types
+        if isinstance(self.modules.asr_encoder, sb.nnet.RNN.LSTM):
+            enc_out, _ = self.modules.asr_encoder(content_enc_input, lengths=wav_lens)
+        else:
+            # Conformer or other types
+            target_tokens, _ = batch.tokens
+            enc_out, _, _, _ = self.modules.asr_encoder(content_enc_input, target_tokens, wav_lens)
         logits = self.modules.ctc_lin(enc_out)
         p_ctc = self.hparams.log_softmax(logits)
 

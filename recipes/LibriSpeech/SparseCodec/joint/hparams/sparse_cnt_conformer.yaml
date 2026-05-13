@@ -21,7 +21,7 @@ cached_data_folder: !ref <output_folder>/cache
 
 # Data files
 data_folder: !PLACEHOLDER # e.g., /path/to/LibriSpeech
-train_splits: ["train-clean-100"]
+train_splits: ["train-clean-100", "train-clean-360", "train-other-500"]
 dev_splits: ["dev-clean"]
 test_splits: ["test-clean", "test-other", "dev-other"]
 skip_prep: False
@@ -51,7 +51,8 @@ valid_search_interval: 1
 avg_checkpoints: 10 # Number of checkpoints to average for evaluation
 cache_size: 1.e+10
 
-lr_model: 0.001
+
+lr_model: 1.639e-05
 weight_decay: 0.0005
 
 
@@ -124,15 +125,8 @@ disentangle: !new:speechbrain.lobes.models.sparse_disentangle.ResidualSparseDise
     num_sparse_layers: 4
 
 
-# LSTM
-#activation: !name:torch.nn.Sigmoid
-#dnn_layers: 2
-#dnn_neurons: 1024
-#dropout: 0.2
-#output_neurons: 31
-
 # BPE parameters
-token_type: char  # ["unigram", "bpe", "char"]
+token_type: bpe  # ["unigram", "bpe", "char"]
 character_coverage: 1.0
 blank_index: 0
 bos_index: 1
@@ -163,12 +157,6 @@ subsampler: !new:speechbrain.nnet.containers.Sequential
         stride: 2
     act1: !new:torch.nn.LeakyReLU       # Recommended when dims are large
 
-#asr_encoder: !new:speechbrain.nnet.RNN.LSTM
-#   input_shape: [Null, Null, 256]  # Output dim of subsampler
-#   num_layers: !ref <dnn_layers>
-#   bidirectional: True
-#   dropout: !ref <dropout>
-#   hidden_size: !ref <dnn_neurons>
 
 # Conformer parameters
 d_model: 256
@@ -178,7 +166,7 @@ num_decoder_layers: 3
 d_ffn: 1024
 transformer_dropout: 0.1
 activation: !name:torch.nn.GELU
-output_neurons: 31
+output_neurons: 3000
 
 asr_encoder: !new:speechbrain.lobes.models.transformer.TransformerASR.TransformerASR # yamllint disable-line rule:line-length
    input_size: 256
@@ -200,7 +188,7 @@ ctc_lin: !new:speechbrain.nnet.linear.Linear
    n_neurons: !ref <output_neurons>
 
 ## Speaker Embedding branch
-out_n_neurons: 252 # Number of speakers in the full set + <unk>
+out_n_neurons: 2339 # Number of speakers in the full set + <unk>
 
 spk_encoder: !new:speechbrain.lobes.models.ECAPA_TDNN.ECAPA_TDNN
     input_size: !ref <encoder_dim>

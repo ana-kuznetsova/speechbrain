@@ -14,10 +14,11 @@ class SparseDisentangle(nn.Module):
         dict_dim: The number of dictionary atoms (columns in W).
     """
 
-    def __init__(self, input_dim, dict_dim):
+    def __init__(self, input_dim, dict_dim, content_ratio=0.5):
         super().__init__()
         self.input_dim = input_dim
         self.dict_dim = dict_dim
+        self.content_ratio = content_ratio
         # Dictionary matrix W: shape (dict_dim, input_dim)
         self.W = nn.Parameter(torch.randn(dict_dim, input_dim) * 0.1)
         # Encoder to produce h from x: shape (input_dim) -> (dict_dim)
@@ -53,9 +54,9 @@ class SparseDisentangle(nn.Module):
         x_approx = torch.matmul(h, self.W)  # (B*T, input_dim)
 
         # Subspace L1 penalties
-        mid = h.shape[1] // 2
-        l1_reg_speaker = h[:, :mid].abs().mean()
-        l1_reg_content = h[:, mid:].abs().mean()
+        mid = int(h.shape[1] * self.content_ratio)
+        l1_reg_content = h[:, :mid].abs().mean()
+        l1_reg_speaker = h[:, mid:].abs().mean()
         sparse_loss = F.mse_loss(x_approx, x.view(-1, self.input_dim))
 
         # Reshape outputs to match input
@@ -75,6 +76,7 @@ class ResidualSparseDisentangle(nn.Module):
         input_dim: The dimension of the input representation.
         dict_dim: The number of dictionary atoms (columns in W) for each SparseDisentangle layer.
         num_sparse_layers: The number of SparseDisentangle layers to stack.
+        content_ratio: The ratio of dictionary atoms responsible for content vs speaker information.
     Returns:
     - total_reconstruction: The sum of the approximations from all layers, shape (B, D, T)
     - h_stacked: The stacked sparse codes from all layers, shape (B, num_layers, dict_dim, T)
@@ -82,18 +84,19 @@ class ResidualSparseDisentangle(nn.Module):
     - total_l1_reg_speaker: The sum of speaker L1 regularization across all layers (scalar)
     """
 
-    def __init__(self, input_dim, dict_dim, num_sparse_layers=4):
+    def __init__(self, input_dim, dict_dim, num_sparse_layers=4, content_ratio=0.5):
         super().__init__()
         self.input_dim = input_dim
         self.dict_dim = dict_dim
         self.num_layers = num_sparse_layers
+        self.content_ratio = content_ratio
         self.sparse_module_list = nn.ModuleList(
-            [SparseDisentangle(input_dim, dict_dim) for _ in range(num_sparse_layers)]
+            [SparseDisentangle(input_dim, dict_dim, content_ratio) for _ in range(num_sparse_layers)]
         )
         # Internal Projections
-        mid = dict_dim // 2
+        mid = int(dict_dim * content_ratio)
         self.asr_proj = nn.Linear(mid, input_dim)  # Or keep original dim
-        self.spk_proj = nn.Linear(mid, input_dim)
+        self.spk_proj = nn.Linear(dict_dim - mid, input_dim)
 
     def forward(self, z):
         """
@@ -129,16 +132,16 @@ class ResidualSparseDisentangle(nn.Module):
         # Stack H: Shape (B, num_layers, dict_dim, T)
         # This allows you to pool across layers for the Speaker Head
         h_stacked = torch.stack(all_h, dim=1)
-        mid = h_stacked.shape[-1] // 2
+        mid = int(h_stacked.shape[-1] * self.content_ratio)
 
         # --- INTERNAL CONTENT PROJECTION ---
         # Mean across layers, keep Time for ASR
-        h_cnt = h_stacked[:, :, :, mid:].mean(dim=1)  # [B, T, 32]
+        h_cnt = h_stacked[:, :, :, :mid].mean(dim=1)  # [B, T, 32]
         z_proj_content = self.asr_proj(h_cnt)
 
         # --- INTERNAL SPEAKER PROJECTION ---
         # Sum across layers, Pool Time for Identity
-        h_spk = h_stacked[:, :, :, :mid].sum(dim=1)  # [B, T, 32]
+        h_spk = h_stacked[:, :, :, mid:].sum(dim=1)  # [B, T, 32]
         z_proj_speaker = self.spk_proj(h_spk)
 
         return (
