@@ -152,3 +152,30 @@ class ResidualSparseDisentangle(nn.Module):
             total_l1_reg_content,
             total_l1_reg_speaker,
         )
+    def vc_decode(self, h_source: torch.Tensor, h_target: torch.Tensor) -> torch.Tensor:
+        """
+        h_source/target: [B, num_layers, dict_dim, T]
+        """
+        # Assuming dict_dim is the dimension being sliced
+        mid = int(h_source.shape[-1] * self.content_ratio)
+        
+        # 1. Extract Content from Source (Keep temporal resolution)
+        # Average across layers, keep content indices [0:mid]
+        h_cnt_source = h_source[:, :, :, :mid].mean(dim=1) 
+        
+        # 2. Extract Speaker from Target (Collapse temporal resolution)
+        # Sum across layers, keep speaker indices [mid:]
+        h_spk_target_seq = h_target[:, :, :, mid:].sum(dim=1) 
+        
+        # Global average pooling over time to get the "identity"
+        h_spk_target_global = h_spk_target_seq.mean(dim=-2, keepdim=True)
+        
+        # 3. Align Speaker to Source Time
+        # Broadcast the single target speaker vector to every frame of the source
+        T_src = h_cnt_source.shape[-2]
+        h_spk_tiled = h_spk_target_global.expand(-1, T_src, -1)
+        
+        # 4. Final Recombination
+        # Concatenate along the dictionary dimension
+        h_out = torch.cat([h_cnt_source, h_spk_tiled], dim=-1).transpose(1, 2)  # [B, T, dict_dim] -> [B, dict_dim, T]
+        return h_out
