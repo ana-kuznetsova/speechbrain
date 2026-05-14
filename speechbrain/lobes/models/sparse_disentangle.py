@@ -3,6 +3,32 @@ import torch.nn.functional as F
 import torch.nn as nn
 import logging
 
+class SparseLayerMixer(nn.Module):
+    def __init__(self, num_layers):
+        super().__init__()
+        # Initialize weights to zero (results in equal weighting at the start)
+        self.weights = nn.Parameter(torch.zeros(num_layers))
+
+    def forward(self, h_stacked, mid):
+        """
+        h_stacked shape: [B, num_layers, dict_dim, T]
+        """
+        # 1. Slice for content
+
+        h_content_layers = h_stacked[:, :, :, mid:]
+        
+        # 2. Normalize weights to sum to 1
+        norm_weights = F.softmax(self.weights, dim=0)
+        
+        # 3. Apply weights across the layer dimension
+        # Reshape norm_weights for broadcasting: [1, num_layers, 1, 1]
+        weighted_h = h_content_layers * norm_weights.view(1, -1, 1, 1)
+        
+        # 4. Sum across the layer dimension
+        h_cnt = weighted_h.sum(dim=1) # [B, mid, T]
+        
+        # Permute to [B, T, mid] to match your expected output
+        return h_cnt
 
 class SparseDisentangle(nn.Module):
     """
@@ -97,6 +123,8 @@ class ResidualSparseDisentangle(nn.Module):
         mid = int(dict_dim * content_ratio)
         self.asr_proj = nn.Linear(mid, input_dim)  # Or keep original dim
         self.spk_proj = nn.Linear(dict_dim - mid, input_dim)
+        self.layer_mixer = SparseLayerMixer(num_sparse_layers)
+        self.decoder_adapter = nn.Linear(dict_dim, input_dim)  # For VC decoding
 
     def forward(self, z):
         """
@@ -135,19 +163,22 @@ class ResidualSparseDisentangle(nn.Module):
         mid = int(h_stacked.shape[-1] * self.content_ratio)
 
         # --- INTERNAL CONTENT PROJECTION ---
-        # Mean across layers, keep Time for ASR
-        h_cnt = h_stacked[:, :, :, :mid].mean(dim=1)  # [B, T, 32]
+        # Weighted sum across layers for content, Pool Time for ASR
+        h_cnt = self.layer_mixer(h_stacked, mid)  # [B, T, 32]
         z_proj_content = self.asr_proj(h_cnt)
 
         # --- INTERNAL SPEAKER PROJECTION ---
         # Sum across layers, Pool Time for Identity
         h_spk = h_stacked[:, :, :, mid:].sum(dim=1)  # [B, T, 32]
         z_proj_speaker = self.spk_proj(h_spk)
+        h_projected = torch.cat([h_cnt, h_spk], dim=-1)
+        h_projected = self.decoder_adapter(h_projected)  # [B, T, input_dim]
 
         return (
             z_proj_content,
             z_proj_speaker,
             h_stacked,
+            h_projected,
             total_sparse_loss,
             total_l1_reg_content,
             total_l1_reg_speaker,

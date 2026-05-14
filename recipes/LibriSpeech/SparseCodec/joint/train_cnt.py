@@ -94,10 +94,24 @@ class SparseBrain(sb.core.Brain):
         wavs, wav_lens = batch.sig
 
         encoder_out = self.modules.codec.encoder(wavs.unsqueeze(1))
+        # 2. Prepare for SpecAug: [B, T, Channels]
+        # SpeechBrain's SpecAugment expects the "Frequency" dim to be the last one
+        enc_out = encoder_out.permute(0, 2, 1)
+
+        # 3. Apply Augmentation (Treating Channels as 'Frequency' bins)
+        if stage == sb.Stage.TRAIN and hasattr(self.hparams, "fea_augment"):
+            enc_out, enc_lens = self.hparams.fea_augment(enc_out, wav_lens)
+            enc_out = enc_out.permute(0, 2, 1)  # Back to [B, T, Channels]
+            #tokens_bos = self.hparams.fea_augment.replicate_labels(
+            #    tokens_bos
+            #)
+        logger.info(f"Encoder output shape after SpecAugment: {enc_out.shape}")
+
         (
             z_proj_content,
             z_proj_speaker,
             h,
+            _,
             sparse_loss,
             l1_reg_content,
             l1_reg_speaker,
