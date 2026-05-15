@@ -105,7 +105,6 @@ class SparseBrain(sb.core.Brain):
             #tokens_bos = self.hparams.fea_augment.replicate_labels(
             #    tokens_bos
             #)
-        logger.info(f"Encoder output shape after SpecAugment: {enc_out.shape}")
 
         (
             z_proj_content,
@@ -115,6 +114,7 @@ class SparseBrain(sb.core.Brain):
             sparse_loss,
             l1_reg_content,
             l1_reg_speaker,
+            adapter_loss
         ) = self.modules.disentangle(encoder_out)
         content_enc_input = self.modules.cnn(z_proj_content)
 
@@ -159,6 +159,7 @@ class SparseBrain(sb.core.Brain):
             h,
             l1_reg_content,
             l1_reg_speaker,
+            adapter_loss
         )
 
     def compute_objectives(
@@ -183,6 +184,7 @@ class SparseBrain(sb.core.Brain):
             h,
             l1_reg_content,
             l1_reg_speaker,
+            adapter_loss
         ) = predictions
 
         uttid = batch.id
@@ -194,6 +196,7 @@ class SparseBrain(sb.core.Brain):
         )
         ctc_batch_loss = ctc_batch_loss * self.hparams.ctc_weight
         sparse_batch_loss = sparse_loss * self.hparams.sparse_loss_weight
+        adapter_batch_loss = adapter_loss * self.hparams.adapter_loss_weight
 
         # Speaker branch warmup: zero out speaker losses during warmup
         if (
@@ -218,6 +221,7 @@ class SparseBrain(sb.core.Brain):
             + batch_aam_loss
             + spk_reg_loss
             + content_reg_loss
+            + adapter_batch_loss
         )
         # Decode words for ASR predictions
         if stage == sb.Stage.VALID:
@@ -251,6 +255,7 @@ class SparseBrain(sb.core.Brain):
                     "loss": loss.item(),
                     "loss_ctc": ctc_batch_loss.item(),
                     "loss_sparse": sparse_batch_loss.item(),
+                    "adapter_loss": adapter_batch_loss.item(),
                     "loss_aam": batch_aam_loss.item(),
                     "loss_spk_reg": spk_reg_loss.item(),
                     "loss_content_reg": content_reg_loss.item(),

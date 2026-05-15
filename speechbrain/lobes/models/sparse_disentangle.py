@@ -173,6 +173,7 @@ class ResidualSparseDisentangle(nn.Module):
         z_proj_speaker = self.spk_proj(h_spk)
         h_projected = torch.cat([h_cnt, h_spk], dim=-1)
         h_projected = self.decoder_adapter(h_projected)  # [B, T, input_dim]
+        adapter_loss = F.mse_loss(h_projected, z.permute(0, 2, 1))  # Match input shape for loss
 
         return (
             z_proj_content,
@@ -182,6 +183,7 @@ class ResidualSparseDisentangle(nn.Module):
             total_sparse_loss,
             total_l1_reg_content,
             total_l1_reg_speaker,
+            adapter_loss
         )
     def vc_decode(self, h_source: torch.Tensor, h_target: torch.Tensor) -> torch.Tensor:
         """
