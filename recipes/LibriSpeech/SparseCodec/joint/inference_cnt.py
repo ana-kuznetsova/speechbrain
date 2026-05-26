@@ -6,6 +6,7 @@ Usage:
     python inference_cnt.py hparams/hparams.yaml --test_csv <test_csv_path> --output_folder <output_folder> [--checkpoint <ckpt_path>]
 
 """
+
 import os
 import torch
 from speechbrain.dataio.dataloader import SaveableDataLoader, PaddedBatch
@@ -15,6 +16,8 @@ import speechbrain as sb
 from pathlib import Path
 from tqdm import tqdm
 import logging
+import soundfile as sf
+import scipy.signal
 
 
 # Setup logging
@@ -216,15 +219,40 @@ for batch in tqdm(test_loader, desc="Extracting sparse codes for all utterances"
     # Move tensors to device
     batch_sig = batch["sig"].to(device)
     with torch.no_grad():
+        logging.info(batch_sig.shape)
         encoder_out = modules["codec"].encoder(batch_sig.unsqueeze(1))
-        _, _, h_out, _, _, _ = modules["disentangle"](encoder_out)
-        utt_zspk[utt_id] = h_out.squeeze(0).cpu().numpy()
-        utt_spkid[utt_id] = batch["spk_id"][0] if "spk_id" in batch else None
-        utt_spkid_encoded[utt_id] = batch["spk_id_encoded"][0].cpu().numpy() if "spk_id_encoded" in batch else None
+    
+        disentangle_outs = modules["disentangle"](encoder_out)
+        # Quick test: scale up the adapter output manually to match the magnitude
+        h_projected = modules["disentangle"].decoder_adapter(disentangle_outs[3]) * 15.0
+        #dec_inputs = disentangle_outs[3]
+        #dec_inputs = torch.tanh(dec_inputs) * 0.5 # Assuming decoder adapter output is pre-activation, apply sigmoid to get [0,1] range
+        #inpt_min = dec_inputs.min().item()
+        #inpt_max = dec_inputs.max().item()
+        #logging.info(f"Decoder input range for {utt_id}: min={inpt_min:.4f}, max={inpt_max:.4f}")
+        decoded_audio = modules["codec"].decoder(h_projected.permute(0, 2, 1).contiguous())
+        wav = decoded_audio.squeeze().cpu().numpy()
+        out_fname = f"debug_test.wav"
+        out_path = os.path.join(args.output_folder, out_fname)
+        sf.write(out_path, wav, 16000)
+    break
+        
+        #disentangle_outs = modules["disentangle"](encoder_out)
+        #h_out = disentangle_outs[2]
+        #utt_zspk[utt_id] = h_out.squeeze(0).cpu().numpy()
+        #utt_spkid[utt_id] = batch["spk_id"][0] if "spk_id" in batch else None
+        #utt_spkid_encoded[utt_id] = batch["spk_id_encoded"][0].cpu().numpy() if "spk_id_encoded" in batch else None
 
 
+'''
 
-results = []
+
+# Prepare output directory
+os.makedirs(output_folder, exist_ok=True)
+audio_dir = os.path.join(output_folder, "converted_wavs")
+os.makedirs(audio_dir, exist_ok=True)
+
+conversion_pairs = []
 
 for label, utt1, utt2 in trial_pairs:
     emb1 = utt_zspk.get(utt1)
@@ -232,28 +260,38 @@ for label, utt1, utt2 in trial_pairs:
     if emb1 is None or emb2 is None:
         logging.warning(f"Missing embedding for {utt1} or {utt2}, skipping pair.")
         continue
-    with torch.no_grad():
-        emb1_tensor = torch.from_numpy(emb1).unsqueeze(0).to(device)
-        emb2_tensor = torch.from_numpy(emb2).unsqueeze(0).to(device)
-        logging.info(f"emb1_tensor shape: {emb1_tensor.shape}, emb2_tensor shape: {emb2_tensor.shape}")
-        h_out = modules["disentangle"].vc_decode(emb1_tensor, emb2_tensor)
-        logging.info("h_out shape: {}".format(h_out.shape))
-        decoded = modules["codec"].decoder(h_out)
-        logging.info("decoded shape: {}".format(decoded.shape))
+    try:
+        with torch.no_grad():
+            emb1_tensor = torch.from_numpy(emb1).unsqueeze(0).to(device)
+            emb2_tensor = torch.from_numpy(emb2).unsqueeze(0).to(device)
+            h_out_target = modules["disentangle"].vc_decode(emb1_tensor, emb2_tensor)
+            h_out_target = h_out_target.permute(0, 2, 1).contiguous()
+            quantized_latent =  modules["codec"].quantizer(h_out_target)
+            z = quantized_latent[0]  # [B, D, T]
+            # Now decode
+            decoded_audio = modules["codec"].decoder(z)
+            #decoded = modules["codec"].decoder(h_out_target)
+            
+            # decoded: [1, T] or [1, 1, T]
+            wav = decoded_audio.squeeze().cpu().numpy()
+            # Resample to 16kHz if needed (assume model output is 24kHz or 22.05kHz, adjust as needed)
+            orig_sr = 24000 if wav.shape[0] > 16000 else 16000  # crude guess, adjust if known
+            if orig_sr != 16000:
+                wav_16k = scipy.signal.resample_poly(wav, 16000, orig_sr)
+            else:
+                wav_16k = wav
+            # Save audio
+            out_fname = f"{utt1}_to_{utt2}.wav"
+            out_path = os.path.join(audio_dir, out_fname)
+            sf.write(out_path, wav_16k, 16000)
+            conversion_pairs.append(f"{utt1}\t{utt2}\t{out_fname}")
+    except Exception as e:
+        logging.warning(f"Failed to convert or save pair {utt1}->{utt2}: {e}")
 
-   
-'''
-# Save trial pair embeddings as TSV
-os.makedirs(output_folder, exist_ok=True)
-output_path = os.path.join(output_folder, "spk_trial_embeddings.tsv")
-with open(output_path, "w", encoding="utf-8") as f:
-    emb_dim = results[0]["z_proj_speaker1"].shape[0]
-    header = ["label", "utt1", "utt2", "spk_id1", "spk_id2", "spk_id_encoded1", "spk_id_encoded2"] + [f"emb1_{i}" for i in range(emb_dim)] + [f"emb2_{i}" for i in range(emb_dim)]
-    f.write("\t".join(header) + "\n")
-    for r in results:
-        row = [r["label"], r["utt1"], r["utt2"], str(r["spk_id1"]), str(r["spk_id2"]), str(r["spk_id_encoded1"]), str(r["spk_id_encoded2"])]
-        row += [str(x) for x in r["z_proj_speaker1"]]
-        row += [str(x) for x in r["z_proj_speaker2"]]
-        f.write("\t".join(row) + "\n")
-print(f"Speaker trial embeddings saved to {output_path}")
+# Save list of successful conversion pairs
+pair_list_path = os.path.join(output_folder, "conversion_pairs.txt")
+with open(pair_list_path, "w", encoding="utf-8") as f:
+    for line in conversion_pairs:
+        f.write(line + "\n")
+print(f"Saved {len(conversion_pairs)} conversion pairs to {pair_list_path}")
 '''

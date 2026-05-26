@@ -24,6 +24,7 @@ import torch
 import torchaudio
 from hyperpyyaml import load_hyperpyyaml
 from tqdm import tqdm
+import torch.nn.functional as F
 
 import speechbrain as sb
 from speechbrain.nnet import loss
@@ -93,10 +94,10 @@ class SparseBrain(sb.core.Brain):
         batch = batch.to(self.device)
         wavs, wav_lens = batch.sig
 
-        encoder_out = self.modules.codec.encoder(wavs.unsqueeze(1))
+        enc_out = self.modules.codec.encoder(wavs.unsqueeze(1))
         # 2. Prepare for SpecAug: [B, T, Channels]
         # SpeechBrain's SpecAugment expects the "Frequency" dim to be the last one
-        enc_out = encoder_out.permute(0, 2, 1)
+        enc_out = enc_out.permute(0, 2, 1)
 
         # 3. Apply Augmentation (Treating Channels as 'Frequency' bins)
         if stage == sb.Stage.TRAIN and hasattr(self.hparams, "fea_augment"):
@@ -110,12 +111,12 @@ class SparseBrain(sb.core.Brain):
             z_proj_content,
             z_proj_speaker,
             h,
-            _,
+            h_projected,
             sparse_loss,
             l1_reg_content,
             l1_reg_speaker,
             adapter_loss
-        ) = self.modules.disentangle(encoder_out)
+        ) = self.modules.disentangle(enc_out)
         content_enc_input = self.modules.cnn(z_proj_content)
 
         # Top part of the in_tokens is used for ASR, and the bottom part is used for speaker classification
@@ -157,6 +158,7 @@ class SparseBrain(sb.core.Brain):
             spk_logits,
             sparse_loss,
             h,
+            h_projected,
             l1_reg_content,
             l1_reg_speaker,
             adapter_loss
@@ -182,6 +184,7 @@ class SparseBrain(sb.core.Brain):
             spk_logits,
             sparse_loss,
             h,
+            h_projected,
             l1_reg_content,
             l1_reg_speaker,
             adapter_loss
@@ -190,6 +193,16 @@ class SparseBrain(sb.core.Brain):
         uttid = batch.id
         tokens, tokens_lens = batch.tokens
         spk_targets, _ = batch.spk_id_encoded
+        batch_sig_target, _ = batch.sig
+    
+
+        # Compute reconstruction loss for the adapter
+        #h_sig_decoded = self.modules.codec.decoder(h_projected.permute(0, 2, 1).contiguous()).squeeze(1)
+        #min_len = min(batch_sig_target.shape[-1], h_sig_decoded.shape[-1])
+        #h_sig_decoded = h_sig_decoded[:, :min_len]
+        #batch_sig_target = batch_sig_target[:, :min_len]
+
+        #wav_loss = F.mse_loss(h_sig_decoded, batch_sig_target)
 
         ctc_batch_loss = self.hparams.ctc_cost(
             p_seq, tokens, wav_lens, tokens_lens, reduction=self.hparams.loss_reduction
@@ -198,21 +211,13 @@ class SparseBrain(sb.core.Brain):
         sparse_batch_loss = sparse_loss * self.hparams.sparse_loss_weight
         adapter_batch_loss = adapter_loss * self.hparams.adapter_loss_weight
 
-        # Speaker branch warmup: zero out speaker losses during warmup
-        if (
-            stage == sb.Stage.TRAIN
-            and hasattr(self, "global_step")
-            and self.global_step <= 1000
-        ):
-            batch_aam_loss = torch.tensor(0.0, device=ctc_batch_loss.device)
-            spk_reg_loss = torch.tensor(0.0, device=ctc_batch_loss.device)
+   
+        if stage == sb.Stage.TRAIN:
+            batch_aam_loss = self.hparams.spk_aam_loss(spk_logits, spk_targets)
+            batch_aam_loss = batch_aam_loss * self.hparams.spk_aam_loss_weight
         else:
-            if stage == sb.Stage.TRAIN:
-                batch_aam_loss = self.hparams.spk_aam_loss(spk_logits, spk_targets)
-                batch_aam_loss = batch_aam_loss * self.hparams.spk_aam_loss_weight
-            else:
-                batch_aam_loss = torch.tensor(0.0, device=ctc_batch_loss.device)
-            spk_reg_loss = l1_reg_speaker * self.hparams.spk_reg_weight
+            batch_aam_loss = torch.tensor(0.0, device=ctc_batch_loss.device)
+        spk_reg_loss = l1_reg_speaker * self.hparams.spk_reg_weight
         content_reg_loss = l1_reg_content * self.hparams.content_reg_weight
 
         loss = (
@@ -222,6 +227,7 @@ class SparseBrain(sb.core.Brain):
             + spk_reg_loss
             + content_reg_loss
             + adapter_batch_loss
+
         )
         # Decode words for ASR predictions
         if stage == sb.Stage.VALID:
@@ -260,6 +266,7 @@ class SparseBrain(sb.core.Brain):
                     "loss_spk_reg": spk_reg_loss.item(),
                     "loss_content_reg": content_reg_loss.item(),
                     "sparsity": sparsity_level.item(),
+                    #"wav_loss": wav_loss.item(),
                     **{
                         f"active_atoms_layer_{i}": active_per_layer[i].item()
                         for i in range(len(active_per_layer))

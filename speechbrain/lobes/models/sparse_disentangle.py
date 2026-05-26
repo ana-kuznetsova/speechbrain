@@ -3,6 +3,26 @@ import torch.nn.functional as F
 import torch.nn as nn
 import logging
 
+
+class DecoderAdapter(nn.Module):
+    def __init__(self, input_dim=64, output_dim=1024):
+        super().__init__()
+        # First linear layer to expand capacity
+        self.fc1 = nn.Linear(input_dim, 512)
+        self.relu = nn.ReLU()
+        
+        # Final projection to DAC dimension (Strictly NO activation at the end!)
+        self.fc2 = nn.Linear(512, output_dim)
+        
+        # Normalize the outputs to help match the variance of the ±18 range
+        self.ln = nn.LayerNorm(output_dim)
+
+    def forward(self, x):
+        x = self.relu(self.fc1(x))
+        x = self.fc2(x)
+        x = self.ln(x) 
+        return x
+
 class SparseLayerMixer(nn.Module):
     def __init__(self, num_layers):
         super().__init__()
@@ -124,7 +144,7 @@ class ResidualSparseDisentangle(nn.Module):
         self.asr_proj = nn.Linear(mid, input_dim)  # Or keep original dim
         self.spk_proj = nn.Linear(dict_dim - mid, input_dim)
         self.layer_mixer = SparseLayerMixer(num_sparse_layers)
-        self.decoder_adapter = nn.Linear(dict_dim, input_dim)  # For VC decoding
+        self.decoder_adapter = DecoderAdapter(dict_dim, input_dim)  # For VC decoding
 
     def forward(self, z):
         """
@@ -173,7 +193,7 @@ class ResidualSparseDisentangle(nn.Module):
         z_proj_speaker = self.spk_proj(h_spk)
         h_projected = torch.cat([h_cnt, h_spk], dim=-1)
         h_projected = self.decoder_adapter(h_projected)  # [B, T, input_dim]
-        adapter_loss = F.mse_loss(h_projected, z.permute(0, 2, 1))  # Match input shape for loss
+        adapter_loss = F.mse_loss(h_projected, z.permute(0, 2, 1).contiguous())  # Match input shape for loss
 
         return (
             z_proj_content,
@@ -193,22 +213,23 @@ class ResidualSparseDisentangle(nn.Module):
         mid = int(h_source.shape[-1] * self.content_ratio)
         
         # 1. Extract Content from Source (Keep temporal resolution)
-        # Average across layers, keep content indices [0:mid]
-        h_cnt_source = h_source[:, :, :, :mid].mean(dim=1) 
-        
+        h_cnt_source = self.layer_mixer(h_source, mid)
+    
         # 2. Extract Speaker from Target (Collapse temporal resolution)
         # Sum across layers, keep speaker indices [mid:]
-        h_spk_target_seq = h_target[:, :, :, mid:].sum(dim=1) 
+        h_spk_source = h_source[:, :, :, mid:].sum(dim=1)
         
         # Global average pooling over time to get the "identity"
-        h_spk_target_global = h_spk_target_seq.mean(dim=-2, keepdim=True)
+        #h_spk_target_global = h_spk_target.mean(dim=-2, keepdim=True)
         
         # 3. Align Speaker to Source Time
         # Broadcast the single target speaker vector to every frame of the source
-        T_src = h_cnt_source.shape[-2]
-        h_spk_tiled = h_spk_target_global.expand(-1, T_src, -1)
+        #T_src = h_cnt_source.shape[-2]
+        #h_spk_tiled = h_spk_target_global.expand(-1, T_src, -1)
         
         # 4. Final Recombination
         # Concatenate along the dictionary dimension
-        h_out = torch.cat([h_cnt_source, h_spk_tiled], dim=-1).transpose(1, 2)  # [B, T, dict_dim] -> [B, dict_dim, T]
-        return h_out
+
+        h_projected = torch.cat([h_cnt_source, h_spk_source], dim=-1)
+        h_projected = self.decoder_adapter(h_projected)
+        return h_projected
