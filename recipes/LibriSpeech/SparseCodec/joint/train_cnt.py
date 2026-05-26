@@ -95,8 +95,6 @@ class SparseBrain(sb.core.Brain):
         wavs, wav_lens = batch.sig
 
         enc_out = self.modules.codec.encoder(wavs.unsqueeze(1))
-        # 2. Prepare for SpecAug: [B, T, Channels]
-        # SpeechBrain's SpecAugment expects the "Frequency" dim to be the last one
         enc_out = enc_out.permute(0, 2, 1)
 
         # 3. Apply Augmentation (Treating Channels as 'Frequency' bins)
@@ -197,12 +195,13 @@ class SparseBrain(sb.core.Brain):
     
 
         # Compute reconstruction loss for the adapter
-        #h_sig_decoded = self.modules.codec.decoder(h_projected.permute(0, 2, 1).contiguous()).squeeze(1)
-        #min_len = min(batch_sig_target.shape[-1], h_sig_decoded.shape[-1])
-        #h_sig_decoded = h_sig_decoded[:, :min_len]
-        #batch_sig_target = batch_sig_target[:, :min_len]
+        h_sig_decoded = self.modules.codec.decoder(h_projected.permute(0, 2, 1).contiguous()).squeeze(1)
+        min_len = min(batch_sig_target.shape[-1], h_sig_decoded.shape[-1])
+        h_sig_decoded = h_sig_decoded[:, :min_len]
+        batch_sig_target = batch_sig_target[:, :min_len]
 
-        #wav_loss = F.mse_loss(h_sig_decoded, batch_sig_target)
+        wav_batch_loss = F.mse_loss(h_sig_decoded, batch_sig_target)
+        wav_batch_loss = wav_batch_loss * self.hparams.wav_loss_weight
 
         ctc_batch_loss = self.hparams.ctc_cost(
             p_seq, tokens, wav_lens, tokens_lens, reduction=self.hparams.loss_reduction
@@ -227,6 +226,7 @@ class SparseBrain(sb.core.Brain):
             + spk_reg_loss
             + content_reg_loss
             + adapter_batch_loss
+            + wav_batch_loss
 
         )
         # Decode words for ASR predictions
@@ -266,7 +266,7 @@ class SparseBrain(sb.core.Brain):
                     "loss_spk_reg": spk_reg_loss.item(),
                     "loss_content_reg": content_reg_loss.item(),
                     "sparsity": sparsity_level.item(),
-                    #"wav_loss": wav_loss.item(),
+                    "wav_loss": wav_batch_loss.item(),
                     **{
                         f"active_atoms_layer_{i}": active_per_layer[i].item()
                         for i in range(len(active_per_layer))
@@ -299,6 +299,42 @@ class SparseBrain(sb.core.Brain):
         if stage != sb.Stage.TRAIN:
             self.wer_metric = self.hparams.error_rate_computer()
             self.spk_error_metrics = self.hparams.spk_error_stats()
+
+        # Handle selective freezing if adapter_only_warmup is enabled in hyperparams
+        if stage == sb.Stage.TRAIN:
+            warmup_enabled = getattr(self.hparams, "adapter_only_warmup", False)
+            warmup_epochs = getattr(self.hparams, "adapter_warmup_epochs", 2)
+
+            if warmup_enabled and epoch <= warmup_epochs:
+                logging.info(f">>> STAGE 1 [Epoch {epoch}]: Freezing backbone. Optimizing ONLY decoder_adapter.")
+                
+                # 1. Freeze absolutely everything first
+                for module_name, module in self.modules.items():
+                    for param in module.parameters():
+                        param.requires_grad = False
+                    module.eval()  # Sets to eval mode (freezes BatchNorm/Dropout)
+
+                # 2. Unfreeze ONLY your decoder adapter layer
+                if "decoder_adapter" in self.modules:
+                    adapter = self.modules["decoder_adapter"]
+                else:
+                    adapter = self.modules["disentangle"].decoder_adapter
+
+                for param in adapter.parameters():
+                    param.requires_grad = True
+                adapter.train()  # Put adapter back into training mode
+            else:
+                # If warmup is disabled, or we are past the warmup epochs, ensure everything is active
+                if warmup_enabled and epoch == warmup_epochs + 1:
+                    logging.info(f">>> STAGE 2 [Epoch {epoch}]: Warmup complete. Unfreezing entire model for Joint Fine-Tuning.")
+                else:
+                    logging.info(f">>> Standard Run [Epoch {epoch}]: Entire model graph is unfrozen and active.")
+                
+                # Unfreeze everything for normal training or joint co-optimization
+                for module in self.modules.values():
+                    for param in module.parameters():
+                        param.requires_grad = True
+                    module.train()
 
     def on_stage_end(self, stage, stage_loss, epoch):
         """Gets called at the end of a epoch."""
@@ -643,6 +679,12 @@ if __name__ == "__main__":
         train_bsampler,
         valid_bsampler,
     ) = dataio_prepare(hparams, tokenizer)
+    
+    if hasattr(hparams, "pretrainer") and hparams["pretrainer"] is not None:
+        # Load collected checkpoints
+        hparams["pretrainer"].collect_files()
+        hparams["pretrainer"].load_collected()
+        logger.info("Pretrained model loaded from %s", hparams["pretrainer"])
 
     # Trainer initialization
     sparse_brain = SparseBrain(
