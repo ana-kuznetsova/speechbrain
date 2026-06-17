@@ -15,6 +15,7 @@ from speechbrain.tokenizers.SentencePiece import SentencePiece
 import speechbrain as sb
 from pathlib import Path
 from tqdm import tqdm
+import torch.nn.functional as F
 import logging
 import soundfile as sf
 import scipy.signal
@@ -221,19 +222,28 @@ for batch in tqdm(test_loader, desc="Extracting sparse codes for all utterances"
     with torch.no_grad():
         logging.info(batch_sig.shape)
         encoder_out = modules["codec"].encoder(batch_sig.unsqueeze(1))
+        logging.info("Encoder output shape: {}".format(encoder_out.shape))
     
         disentangle_outs = modules["disentangle"](encoder_out)
+        logging.info("h_projected shape: {}".format(disentangle_outs[3].shape))
         # Quick test: scale up the adapter output manually to match the magnitude
-        h_projected = modules["disentangle"].decoder_adapter(disentangle_outs[3]) * 15.0
+        h_projected = disentangle_outs[3]
+        curr_loss = F.mse_loss(h_projected, encoder_out.permute(0, 2, 1).contiguous())
+        logging.info("h_projected permuted shape: {}".format(h_projected.shape))
+        logging.info("MSE loss between h_projected and encoder_out: {:.6f}".format(curr_loss.item()))
+  
         #dec_inputs = disentangle_outs[3]
         #dec_inputs = torch.tanh(dec_inputs) * 0.5 # Assuming decoder adapter output is pre-activation, apply sigmoid to get [0,1] range
         #inpt_min = dec_inputs.min().item()
         #inpt_max = dec_inputs.max().item()
         #logging.info(f"Decoder input range for {utt_id}: min={inpt_min:.4f}, max={inpt_max:.4f}")
         decoded_audio = modules["codec"].decoder(h_projected.permute(0, 2, 1).contiguous())
+        #decoded_audio = modules["codec"].decoder(encoder_out)
+        logging.info("Decoded audio shape: {}".format(decoded_audio.shape))
         wav = decoded_audio.squeeze().cpu().numpy()
         out_fname = f"debug_test.wav"
         out_path = os.path.join(args.output_folder, out_fname)
+        os.makedirs(args.output_folder, exist_ok=True)
         sf.write(out_path, wav, 16000)
     break
         

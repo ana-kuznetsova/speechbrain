@@ -78,6 +78,22 @@ def compute_embedding_loop(
                         embedding_dict[seg_id] = emb[i].detach().clone()
     return embedding_dict
 
+def set_sparse_only_training(residual_sparse_module, enable_sparse_only):
+    """
+    If enable_sparse_only is True, freeze all parameters except SparseDisentangle modules inside ResidualSparseDisentangle.
+    If False, unfreeze all parameters in ResidualSparseDisentangle.
+    """
+    for name, param in residual_sparse_module.named_parameters():
+        # Only SparseDisentangle modules should be trainable in sparse-only mode
+        if enable_sparse_only:
+            if "sparse_module_list" in name:
+                param.requires_grad = True
+            else:
+                param.requires_grad = False
+            logger.info(f"{'Enabling' if param.requires_grad else 'Freezing'} parameter: {name}")
+        else:
+            param.requires_grad = True
+
 
 # Define training procedure
 class SparseBrain(sb.core.Brain):
@@ -94,16 +110,27 @@ class SparseBrain(sb.core.Brain):
         batch = batch.to(self.device)
         wavs, wav_lens = batch.sig
 
+        # 1. Extract raw features. Shape from DAC encoder is usually [B, Channels, T]
         enc_out = self.modules.codec.encoder(wavs.unsqueeze(1))
-        enc_out = enc_out.permute(0, 2, 1)
 
-        # 3. Apply Augmentation (Treating Channels as 'Frequency' bins)
+        # 2. Apply Augmentation only during training
         if stage == sb.Stage.TRAIN and hasattr(self.hparams, "fea_augment"):
+            enc_out = enc_out.permute(0, 2, 1)
             enc_out, enc_lens = self.hparams.fea_augment(enc_out, wav_lens)
-            enc_out = enc_out.permute(0, 2, 1)  # Back to [B, T, Channels]
-            #tokens_bos = self.hparams.fea_augment.replicate_labels(
-            #    tokens_bos
-            #)
+            enc_out = enc_out.permute(0, 2, 1)  
+        else:
+            pass
+
+        (
+            z_proj_content,
+            z_proj_speaker,
+            h,
+            h_projected,
+            sparse_loss,
+            l1_reg_content,
+            l1_reg_speaker,
+            adapter_loss
+        ) = self.modules.disentangle(enc_out)
 
         (
             z_proj_content,
@@ -191,44 +218,41 @@ class SparseBrain(sb.core.Brain):
         uttid = batch.id
         tokens, tokens_lens = batch.tokens
         spk_targets, _ = batch.spk_id_encoded
-        batch_sig_target, _ = batch.sig
-    
 
-        # Compute reconstruction loss for the adapter
-        h_sig_decoded = self.modules.codec.decoder(h_projected.permute(0, 2, 1).contiguous()).squeeze(1)
-        min_len = min(batch_sig_target.shape[-1], h_sig_decoded.shape[-1])
-        h_sig_decoded = h_sig_decoded[:, :min_len]
-        batch_sig_target = batch_sig_target[:, :min_len]
-
-        wav_batch_loss = F.mse_loss(h_sig_decoded, batch_sig_target)
-        wav_batch_loss = wav_batch_loss * self.hparams.wav_loss_weight
-
-        ctc_batch_loss = self.hparams.ctc_cost(
-            p_seq, tokens, wav_lens, tokens_lens, reduction=self.hparams.loss_reduction
-        )
-        ctc_batch_loss = ctc_batch_loss * self.hparams.ctc_weight
-        sparse_batch_loss = sparse_loss * self.hparams.sparse_loss_weight
-        adapter_batch_loss = adapter_loss * self.hparams.adapter_loss_weight
-
-   
-        if stage == sb.Stage.TRAIN:
-            batch_aam_loss = self.hparams.spk_aam_loss(spk_logits, spk_targets)
-            batch_aam_loss = batch_aam_loss * self.hparams.spk_aam_loss_weight
+        # Sparse-only training for first two epochs
+        if stage == sb.Stage.TRAIN and getattr(self, "sparse_only", False):
+            # Only use sparse_loss for optimization
+            loss = sparse_loss * self.hparams.sparse_loss_weight
+            # Optionally log other losses as zero
+            ctc_batch_loss = torch.tensor(0.0, device=sparse_loss.device)
+            batch_aam_loss = torch.tensor(0.0, device=sparse_loss.device)
+            spk_reg_loss = torch.tensor(0.0, device=sparse_loss.device)
+            content_reg_loss = torch.tensor(0.0, device=sparse_loss.device)
+            adapter_batch_loss = torch.tensor(0.0, device=sparse_loss.device)
         else:
-            batch_aam_loss = torch.tensor(0.0, device=ctc_batch_loss.device)
-        spk_reg_loss = l1_reg_speaker * self.hparams.spk_reg_weight
-        content_reg_loss = l1_reg_content * self.hparams.content_reg_weight
+            ctc_batch_loss = self.hparams.ctc_cost(
+                p_seq, tokens, wav_lens, tokens_lens, reduction=self.hparams.loss_reduction
+            )
+            ctc_batch_loss = ctc_batch_loss * self.hparams.ctc_weight
+            sparse_batch_loss = sparse_loss * self.hparams.sparse_loss_weight
+            adapter_batch_loss = adapter_loss * self.hparams.adapter_loss_weight
 
-        loss = (
-            ctc_batch_loss
-            + sparse_batch_loss
-            + batch_aam_loss
-            + spk_reg_loss
-            + content_reg_loss
-            + adapter_batch_loss
-            + wav_batch_loss
+            if stage == sb.Stage.TRAIN:
+                batch_aam_loss = self.hparams.spk_aam_loss(spk_logits, spk_targets)
+                batch_aam_loss = batch_aam_loss * self.hparams.spk_aam_loss_weight
+            else:
+                batch_aam_loss = torch.tensor(0.0, device=ctc_batch_loss.device)
+            spk_reg_loss = l1_reg_speaker * self.hparams.spk_reg_weight
+            content_reg_loss = l1_reg_content * self.hparams.content_reg_weight
 
-        )
+            loss = (
+                ctc_batch_loss
+                + sparse_batch_loss
+                + batch_aam_loss
+                + spk_reg_loss
+                + content_reg_loss
+                + adapter_batch_loss
+            )
         # Decode words for ASR predictions
         if stage == sb.Stage.VALID:
             # Decode token terms to words
@@ -247,31 +271,47 @@ class SparseBrain(sb.core.Brain):
         if stage == sb.Stage.TRAIN:
             with torch.no_grad():
                 # 1. Sparsity Percentage (How many are zero?)
-                # predictions['h'] shape: [B, L, T, D]
                 n_elements = h.numel()
                 n_zero = (h.abs() < 1e-4).sum().float()
                 sparsity_level = (n_zero / n_elements) * 100
 
                 # 2. Active atoms per layer
                 active_per_layer = (h.abs() > 1e-4).float().mean(dim=(0, 2, 3))
-            # Log individual losses with file logger
-            self.hparams.train_logger.log_stats(
-                stats_meta={"epoch": self.hparams.epoch_counter.current},
-                train_stats={
+
+            # Prepare logging dictionary
+            if getattr(self, "sparse_only", False):
+                log_stats = {
+                    "loss": loss.item(),
+                    "loss_ctc": 0.0,
+                    "sparse_recon_loss": loss.item(),
+                    "adapter_loss": 0.0,
+                    "loss_aam": 0.0,
+                    "loss_spk_reg": 0.0,
+                    "loss_content_reg": 0.0,
+                    "sparsity": sparsity_level.item(),
+                    **{
+                        f"active_atoms_layer_{i}": active_per_layer[i].item()
+                        for i in range(len(active_per_layer))
+                    },
+                }
+            else:
+                log_stats = {
                     "loss": loss.item(),
                     "loss_ctc": ctc_batch_loss.item(),
-                    "loss_sparse": sparse_batch_loss.item(),
+                    "sparse_recon_loss": sparse_batch_loss.item(),
                     "adapter_loss": adapter_batch_loss.item(),
                     "loss_aam": batch_aam_loss.item(),
                     "loss_spk_reg": spk_reg_loss.item(),
                     "loss_content_reg": content_reg_loss.item(),
                     "sparsity": sparsity_level.item(),
-                    "wav_loss": wav_batch_loss.item(),
                     **{
                         f"active_atoms_layer_{i}": active_per_layer[i].item()
                         for i in range(len(active_per_layer))
                     },
-                },
+                }
+            self.hparams.train_logger.log_stats(
+                stats_meta={"epoch": self.hparams.epoch_counter.current},
+                train_stats=log_stats,
                 verbose=True,
             )
 
@@ -300,41 +340,19 @@ class SparseBrain(sb.core.Brain):
             self.wer_metric = self.hparams.error_rate_computer()
             self.spk_error_metrics = self.hparams.spk_error_stats()
 
-        # Handle selective freezing if adapter_only_warmup is enabled in hyperparams
+        # Freeze/unfreeze logic for sparse-only training
         if stage == sb.Stage.TRAIN:
-            warmup_enabled = getattr(self.hparams, "adapter_only_warmup", False)
-            warmup_epochs = getattr(self.hparams, "adapter_warmup_epochs", 2)
-
-            if warmup_enabled and epoch <= warmup_epochs:
-                logging.info(f">>> STAGE 1 [Epoch {epoch}]: Freezing backbone. Optimizing ONLY decoder_adapter.")
-                
-                # 1. Freeze absolutely everything first
-                for module_name, module in self.modules.items():
-                    for param in module.parameters():
-                        param.requires_grad = False
-                    module.eval()  # Sets to eval mode (freezes BatchNorm/Dropout)
-
-                # 2. Unfreeze ONLY your decoder adapter layer
-                if "decoder_adapter" in self.modules:
-                    adapter = self.modules["decoder_adapter"]
-                else:
-                    adapter = self.modules["disentangle"].decoder_adapter
-
-                for param in adapter.parameters():
-                    param.requires_grad = True
-                adapter.train()  # Put adapter back into training mode
+            warmup_epochs = getattr(self.hparams, "number_warmup_epochs", 0)
+            if warmup_epochs > 0 and epoch <= warmup_epochs:  # Optional sparse-only warmup phase
+                # Only train SparseDisentangle modules
+                logger.info("Epoch %d: Starting sparse-only training. Only SparseDisentangle modules will be updated.", epoch)
+                set_sparse_only_training(self.modules.disentangle, enable_sparse_only=True)
+                self.sparse_only = True
             else:
-                # If warmup is disabled, or we are past the warmup epochs, ensure everything is active
-                if warmup_enabled and epoch == warmup_epochs + 1:
-                    logging.info(f">>> STAGE 2 [Epoch {epoch}]: Warmup complete. Unfreezing entire model for Joint Fine-Tuning.")
-                else:
-                    logging.info(f">>> Standard Run [Epoch {epoch}]: Entire model graph is unfrozen and active.")
-                
-                # Unfreeze everything for normal training or joint co-optimization
-                for module in self.modules.values():
-                    for param in module.parameters():
-                        param.requires_grad = True
-                    module.train()
+                set_sparse_only_training(self.modules.disentangle, enable_sparse_only=False)
+                self.sparse_only = False
+        else:
+            self.sparse_only = False
 
     def on_stage_end(self, stage, stage_loss, epoch):
         """Gets called at the end of a epoch."""
@@ -630,7 +648,6 @@ if __name__ == "__main__":
     hparams_file, run_opts, overrides = sb.parse_arguments(sys.argv[1:])
     with open(hparams_file, encoding="utf-8") as fin:
         hparams = load_hyperpyyaml(fin, overrides)
-
     # create ddp_group with the right communication protocol
     sb.utils.distributed.ddp_init_group(run_opts)
 

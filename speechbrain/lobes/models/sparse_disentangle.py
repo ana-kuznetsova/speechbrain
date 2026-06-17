@@ -29,26 +29,22 @@ class SparseLayerMixer(nn.Module):
         # Initialize weights to zero (results in equal weighting at the start)
         self.weights = nn.Parameter(torch.zeros(num_layers))
 
-    def forward(self, h_stacked, mid):
+    def forward(self, h_stacked, mid, type="cnt"):
         """
-        h_stacked shape: [B, num_layers, dict_dim, T]
+        h_stacked shape: [B, num_layers, T, dict_dim]
         """
-        # 1. Slice for content
+        # 1. Slice content subspace for each sparse layer
+        if type == "cnt":
+            h_layers = h_stacked[:, :, :, :mid]
+        elif type == "spk":
+            h_layers = h_stacked[:, :, :, mid:]
 
-        h_content_layers = h_stacked[:, :, :, mid:]
-        
-        # 2. Normalize weights to sum to 1
-        norm_weights = F.softmax(self.weights, dim=0)
-        
-        # 3. Apply weights across the layer dimension
-        # Reshape norm_weights for broadcasting: [1, num_layers, 1, 1]
-        weighted_h = h_content_layers * norm_weights.view(1, -1, 1, 1)
-        
-        # 4. Sum across the layer dimension
-        h_cnt = weighted_h.sum(dim=1) # [B, mid, T]
-        
-        # Permute to [B, T, mid] to match your expected output
-        return h_cnt
+        # 2. Concatenate layer-wise content features instead of summing.
+        # [B, L, T, C] -> [B, T, L, C] -> [B, T, L*C]
+        h_cnt_spk = h_layers.permute(0, 2, 1, 3).contiguous()
+        h_cnt_spk = h_cnt_spk.view(h_cnt_spk.shape[0], h_cnt_spk.shape[1], -1)
+
+        return h_cnt_spk
 
 class SparseDisentangle(nn.Module):
     """
@@ -103,7 +99,7 @@ class SparseDisentangle(nn.Module):
         mid = int(h.shape[1] * self.content_ratio)
         l1_reg_content = h[:, :mid].abs().mean()
         l1_reg_speaker = h[:, mid:].abs().mean()
-        sparse_loss = F.mse_loss(x_approx, x.view(-1, self.input_dim))
+        sparse_loss = F.mse_loss(x_approx, x.reshape(-1, self.input_dim))
 
         # Reshape outputs to match input
         if len(shape_out) == 3:
@@ -141,10 +137,14 @@ class ResidualSparseDisentangle(nn.Module):
         )
         # Internal Projections
         mid = int(dict_dim * content_ratio)
-        self.asr_proj = nn.Linear(mid, input_dim)  # Or keep original dim
-        self.spk_proj = nn.Linear(dict_dim - mid, input_dim)
+        content_dim = dict_dim - mid
+        self.content_concat_dim = content_dim * num_sparse_layers
+        self.asr_proj = nn.Linear(self.content_concat_dim, input_dim)
+        self.spk_proj = nn.Linear(self.content_concat_dim, input_dim)
         self.layer_mixer = SparseLayerMixer(num_sparse_layers)
-        self.decoder_adapter = DecoderAdapter(dict_dim, input_dim)  # For VC decoding
+        self.decoder_adapter = DecoderAdapter(
+            self.content_concat_dim * 2, input_dim
+        )  # For VC decoding
 
     def forward(self, z):
         """
@@ -184,12 +184,13 @@ class ResidualSparseDisentangle(nn.Module):
 
         # --- INTERNAL CONTENT PROJECTION ---
         # Weighted sum across layers for content, Pool Time for ASR
-        h_cnt = self.layer_mixer(h_stacked, mid)  # [B, T, 32]
+        h_cnt = self.layer_mixer(h_stacked, mid, type="cnt")  # [B, T, 32 * num_layers]
         z_proj_content = self.asr_proj(h_cnt)
 
         # --- INTERNAL SPEAKER PROJECTION ---
         # Sum across layers, Pool Time for Identity
-        h_spk = h_stacked[:, :, :, mid:].sum(dim=1)  # [B, T, 32]
+        #h_spk = h_stacked[:, :, :, mid:].mean(dim=1)  # [B, T, 32]
+        h_spk = self.layer_mixer(h_stacked, mid, type="spk")  # [B, T, 32 * num_layers]
         z_proj_speaker = self.spk_proj(h_spk)
         h_projected = torch.cat([h_cnt, h_spk], dim=-1)
         h_projected = self.decoder_adapter(h_projected)  # [B, T, input_dim]
@@ -215,9 +216,8 @@ class ResidualSparseDisentangle(nn.Module):
         # 1. Extract Content from Source (Keep temporal resolution)
         h_cnt_source = self.layer_mixer(h_source, mid)
     
-        # 2. Extract Speaker from Target (Collapse temporal resolution)
-        # Sum across layers, keep speaker indices [mid:]
-        h_spk_source = h_source[:, :, :, mid:].sum(dim=1)
+        # 2. Extract Speaker from Target with the same layer-mixing strategy used in forward
+        h_spk_target = self.layer_mixer(h_target, mid, type="spk")
         
         # Global average pooling over time to get the "identity"
         #h_spk_target_global = h_spk_target.mean(dim=-2, keepdim=True)
@@ -230,6 +230,6 @@ class ResidualSparseDisentangle(nn.Module):
         # 4. Final Recombination
         # Concatenate along the dictionary dimension
 
-        h_projected = torch.cat([h_cnt_source, h_spk_source], dim=-1)
+        h_projected = torch.cat([h_cnt_source, h_spk_target], dim=-1)
         h_projected = self.decoder_adapter(h_projected)
         return h_projected

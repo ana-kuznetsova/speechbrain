@@ -17,7 +17,7 @@ output_wer_folder: !ref <output_folder>/wer.txt
 save_folder: !ref <output_folder>/save
 train_log: !ref <output_folder>/train_log.txt
 cached_data_folder: !ref <output_folder>/cache
-pretrained_folder: /projects/bfje/akuznetsova/exp/sparse_cnt_lstm_v2/save/CKPT+2026-05-16+17-40-24+00
+#pretrained_folder: /projects/bfje/akuznetsova/exp/sparse_cnt_lstm_v2/save/CKPT+2026-05-16+17-40-24+00
 
 
 # Data files
@@ -41,7 +41,8 @@ test_veri_file: !ref <output_folder>/veri_test.txt
 
 
 ####################### Training Parameters ####################################
-number_of_epochs: 2
+number_of_epochs: 20
+#number_warmup_epochs: 5
 batch_size: 16 # This works for 2x GPUs with 32GB
 test_batch_size: 1
 grad_accumulation_factor: 2
@@ -54,7 +55,6 @@ avg_checkpoints: 10 # Number of checkpoints to average for evaluation
 cache_size: 1.e+10
 
 lr_model: 0.001
-#lr_model: 1.639e-05
 weight_decay: 0.0005
 
 
@@ -128,16 +128,16 @@ freq_drop: !new:speechbrain.augment.freq_domain.SpectrogramDrop
     dim: 2
 
 # Time warp
-time_warp: !new:speechbrain.augment.freq_domain.Warping
+#time_warp: !new:speechbrain.augment.freq_domain.Warping
 
-fea_augment: !new:speechbrain.augment.augmenter.Augmenter
-    min_augmentations: 3
-    max_augmentations: 3
-    augment_prob: 1.0
-    augmentations: [
-        !ref <time_drop>,
-        !ref <freq_drop>,
-        !ref <time_warp>]
+#fea_augment: !new:speechbrain.augment.augmenter.Augmenter
+#    min_augmentations: 3
+#    max_augmentations: 3
+#    augment_prob: 1.0
+#    augmentations: [
+#        !ref <time_drop>,
+#        !ref <freq_drop>,
+#        !ref <time_warp>]
 
 
 ####################### Model parameters ###########################
@@ -188,27 +188,19 @@ prune_history: False
 
 # Loss function parameters
 loss_reduction: batchmean
-#sparse_loss_weight: 1.0
-sparse_loss_weight: 0.0 
-#spk_reg_weight: 1e-4
-spk_reg_weight: 0.0
+sparse_loss_weight: 1.0
+spk_reg_weight: 1e-4
 #spk_aam_loss_weight: 10.0
-adapter_loss_weight: 1.0
-#content_reg_weight: 1e-4
-content_reg_weight: 0.0
-#spk_loss_weight: 1.0
+#adapter_loss_weight: 1.0
+content_reg_weight: 1e-4
+spk_loss_weight: 1.0
 #ctc_weight: 1.0
-#wav_loss_weight: 1.0
 
-# Adapter optimization parameters
-# Control settings for Stage 1 adapter training
-adapter_only_warmup: True
-adapter_warmup_epochs: 2  # Train only the adapter for the first 2 epochs
+# Bring task weights down, and push reconstruction weights up
+ctc_weight: 0.01          # 269.0 * 0.01 = ~2.69
+spk_aam_loss_weight: 0.1  # 14.71 * 0.1  = ~1.47
+adapter_loss_weight: 5.0  # 2.21  * 5.0  = ~11.05
 
-# Remember to temporarily scale down task weights so they don't impact gradients
-ctc_weight: 0.0
-spk_aam_loss_weight: 0.0
-wav_loss_weight: 1.0
 
 ############################## models ################################
 
@@ -318,14 +310,3 @@ spk_error_stats: !name:speechbrain.utils.metric_stats.MetricStats
     metric: !name:speechbrain.nnet.losses.classification_error
         reduction: batch
 spk_verification_metrics: !name:speechbrain.utils.metric_stats.EER
-
-
-# For adapter finetuning
-# Define your pretrainer block
-pretrainer: !new:speechbrain.utils.parameter_transfer.Pretrainer
-    collect_in: !ref <save_folder>
-    loadables:
-        model: !ref <model>
-    paths:
-        model: !ref <pretrained_folder>/model.ckpt
-
