@@ -109,6 +109,7 @@ class SparseBrain(sb.core.Brain):
 
         batch = batch.to(self.device)
         wavs, wav_lens = batch.sig
+        speaker_codes = batch.spk_id_encoded[0]  # Assuming spk_id_encoded is a tuple (tensor, lengths)
 
         # 1. Extract raw features. Shape from DAC encoder is usually [B, Channels, T]
         enc_out = self.modules.codec.encoder(wavs.unsqueeze(1))
@@ -130,18 +131,12 @@ class SparseBrain(sb.core.Brain):
             l1_reg_content,
             l1_reg_speaker,
             adapter_loss
-        ) = self.modules.disentangle(enc_out)
+        ) = self.modules.disentangle(
+            enc_out,
+            speaker_codes=speaker_codes,
+            frame_lens=wav_lens,
+        )
 
-        (
-            z_proj_content,
-            z_proj_speaker,
-            h,
-            h_projected,
-            sparse_loss,
-            l1_reg_content,
-            l1_reg_speaker,
-            adapter_loss
-        ) = self.modules.disentangle(enc_out)
         content_enc_input = self.modules.cnn(z_proj_content)
 
         # Top part of the in_tokens is used for ASR, and the bottom part is used for speaker classification

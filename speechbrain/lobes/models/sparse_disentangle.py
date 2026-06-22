@@ -4,6 +4,132 @@ import torch.nn as nn
 import logging
 
 
+class SpeakerStrategy(nn.Module):
+    """Abstract base class to support different speaker strategies in modular way.
+    """
+    def build_train_speaker(
+        self,
+        h_stacked,
+        mid,
+        layer_mixer,
+        speaker_codes=None,
+        **kwargs,
+    ):
+        raise NotImplementedError
+
+    def build_vc_speaker(self, h_target, mid, layer_mixer, target_length=None):
+        raise NotImplementedError
+    
+
+class GlobalSpeakerStrategy(SpeakerStrategy):
+    def __init__(self):
+        super().__init__()
+        self.speaker_frame_map = {}
+
+    def _get_or_sample_frame(self, speaker_code, num_frames):
+        speaker_code = int(speaker_code)
+        if speaker_code not in self.speaker_frame_map:
+            self.speaker_frame_map[speaker_code] = torch.randint(
+                low=0, high=num_frames, size=(1,)
+            ).item()
+        # Protect against varying sequence lengths across batches.
+        return self.speaker_frame_map[speaker_code] % num_frames
+
+    def build_train_speaker(
+        self,
+        h_stacked,
+        mid,
+        layer_mixer,
+        speaker_codes=None,
+        **kwargs,
+    ):
+        h_spk_time = layer_mixer(h_stacked, mid, type="spk")
+        B, T, D = h_spk_time.shape
+
+        unit_vec = torch.ones(B, 1, T, device=h_spk_time.device, dtype=h_spk_time.dtype)
+        
+        if speaker_codes.ndim > 1 and speaker_codes.shape[-1] == 1:
+            speaker_codes = speaker_codes.squeeze(-1)
+        if speaker_codes.shape[0] != B:
+            raise ValueError(
+                f"speaker_codes batch size mismatch: expected {B}, got {speaker_codes.shape[0]}"
+            )
+        selected_frames = torch.tensor(
+            [self._get_or_sample_frame(code, T) for code in speaker_codes.tolist()],
+            device=h_spk_time.device,
+            dtype=torch.long,
+        )
+        batch_idx = torch.arange(B, device=h_spk_time.device)
+        h_spk_time = h_spk_time[batch_idx, selected_frames].unsqueeze(-1)
+                                                 
+        h_spk_global = h_spk_time * unit_vec
+
+        h_spk_global = h_spk_global.permute(0, 2, 1).contiguous()
+        return h_spk_global
+
+
+class TimeVaryingAttentionSpeakerStrategy(SpeakerStrategy):
+    def __init__(self, feature_dim, query_dim=None, num_heads=4, dropout=0.1):
+        super().__init__()
+        if feature_dim % num_heads != 0:
+            raise ValueError(
+                f"feature_dim ({feature_dim}) must be divisible by num_heads ({num_heads})"
+            )
+        if query_dim is None:
+            query_dim = feature_dim
+        self.query_proj = (
+            nn.Identity() if query_dim == feature_dim else nn.Linear(query_dim, feature_dim)
+        )
+        self.attn = nn.MultiheadAttention(
+            embed_dim=feature_dim,
+            num_heads=num_heads,
+            dropout=dropout,
+            batch_first=True,
+        )
+        self.norm = nn.LayerNorm(feature_dim)
+        self.dropout = nn.Dropout(dropout)
+
+    def _refine(self, h_spk_time, query_features=None, key_padding_mask=None):
+        # If no explicit query is provided, fall back to self-attention behavior.
+        query = h_spk_time if query_features is None else self.query_proj(query_features)
+        attn_out, _ = self.attn(
+            query,
+            h_spk_time,
+            h_spk_time,
+            key_padding_mask=key_padding_mask,
+            need_weights=False,
+        )
+        return self.norm(query + self.dropout(attn_out))
+
+    def build_train_speaker(
+        self,
+        h_stacked,
+        mid,
+        layer_mixer,
+        speaker_codes=None,
+        **kwargs,
+    ):
+        h_spk_time = layer_mixer(h_stacked, mid, type="spk")
+        query_features = kwargs.get("query_features", None)
+        # Optional frame lengths can be passed via kwargs as [B] (counts or relative [0, 1]).
+        frame_lens = kwargs.get("frame_lens", None)
+        key_padding_mask = None
+        if frame_lens is not None:
+            max_t = h_spk_time.shape[1]
+            frame_lens = frame_lens.to(h_spk_time.device)
+            if torch.is_floating_point(frame_lens):
+                frame_lens = (frame_lens * max_t).round().long()
+            else:
+                frame_lens = frame_lens.long()
+            frame_lens = frame_lens.clamp(min=1, max=max_t)
+            time_ids = torch.arange(max_t, device=h_spk_time.device).unsqueeze(0)
+            key_padding_mask = time_ids >= frame_lens.unsqueeze(1)
+        return self._refine(
+            h_spk_time,
+            query_features=query_features,
+            key_padding_mask=key_padding_mask,
+        )
+
 class DecoderAdapter(nn.Module):
     def __init__(self, input_dim=64, output_dim=1024):
         super().__init__()
@@ -26,8 +152,6 @@ class DecoderAdapter(nn.Module):
 class SparseLayerMixer(nn.Module):
     def __init__(self, num_layers):
         super().__init__()
-        # Initialize weights to zero (results in equal weighting at the start)
-        self.weights = nn.Parameter(torch.zeros(num_layers))
 
     def forward(self, h_stacked, mid, type="cnt"):
         """
@@ -38,6 +162,8 @@ class SparseLayerMixer(nn.Module):
             h_layers = h_stacked[:, :, :, :mid]
         elif type == "spk":
             h_layers = h_stacked[:, :, :, mid:]
+        else:
+            raise ValueError("type must be 'cnt' or 'spk'")
 
         # 2. Concatenate layer-wise content features instead of summing.
         # [B, L, T, C] -> [B, T, L, C] -> [B, T, L*C]
@@ -110,7 +236,7 @@ class SparseDisentangle(nn.Module):
                 h = h.permute(out_permute[0], out_permute[2], out_permute[1])
         return x_approx, h, sparse_loss, l1_reg_content, l1_reg_speaker
 
-
+'''
 class ResidualSparseDisentangle(nn.Module):
     """Hierachical sparse disentanglement with residual connections. Stacks multiple SparseDisentangle modules, where each module tries to explain the residual left by the previous modules. This allows for a more flexible
     decomposition where different layers can capture different aspects of the signal, and the final output is the sum of all approximations.
@@ -233,3 +359,127 @@ class ResidualSparseDisentangle(nn.Module):
         h_projected = torch.cat([h_cnt_source, h_spk_target], dim=-1)
         h_projected = self.decoder_adapter(h_projected)
         return h_projected
+'''
+
+class ResidualSparseDisentangle(nn.Module):
+    def __init__(
+        self,
+        input_dim,
+        dict_dim,
+        num_sparse_layers=4,
+        content_ratio=0.5,
+        speaker_strategy="global",
+        speaker_num_heads=4,
+        speaker_attn_dropout=0.1,
+    ):
+        super().__init__()
+        self.input_dim = input_dim
+        self.dict_dim = dict_dim
+        self.num_layers = num_sparse_layers
+        self.content_ratio = content_ratio
+        self.speaker_strategy_name = speaker_strategy
+
+        self.sparse_module_list = nn.ModuleList(
+            [
+                SparseDisentangle(input_dim, dict_dim, content_ratio)
+                for _ in range(num_sparse_layers)
+            ]
+        )
+
+        mid = int(dict_dim * content_ratio)
+        spk_dim = dict_dim - mid
+        self.spk_concat_dim = spk_dim * num_sparse_layers
+        self.cnt_concat_dim = mid * num_sparse_layers
+
+        self.layer_mixer = SparseLayerMixer(num_sparse_layers)
+        self.asr_proj = nn.Linear(self.cnt_concat_dim, input_dim)
+        self.spk_proj = nn.Linear(self.spk_concat_dim, input_dim)
+
+        if speaker_strategy == "global":
+            self.speaker_strategy = GlobalSpeakerStrategy()
+        elif speaker_strategy == "time_varying_attention":
+            self.speaker_strategy = TimeVaryingAttentionSpeakerStrategy(
+                feature_dim=self.spk_concat_dim,
+                query_dim=self.cnt_concat_dim,
+                num_heads=speaker_num_heads,
+                dropout=speaker_attn_dropout,
+            )
+        else:
+            raise ValueError(
+                f"Unknown speaker_strategy: {speaker_strategy}"
+            )
+
+        self.decoder_adapter = DecoderAdapter(
+            self.cnt_concat_dim + self.spk_concat_dim,
+            input_dim,
+        )
+
+    def _build_content_features(self, h_stacked, mid):
+        return self.layer_mixer(h_stacked, mid, type="cnt")
+
+    def _build_speaker_features(
+        self,
+        h_stacked,
+        mid,
+        speaker_codes=None,
+        query_features=None,
+        **kwargs,
+    ):
+        return self.speaker_strategy.build_train_speaker(
+            h_stacked,
+            mid,
+            self.layer_mixer,
+            speaker_codes=speaker_codes,
+            query_features=query_features,
+            **kwargs,
+        )
+    
+    def forward(self, z, speaker_codes=None, **kwargs):
+        residual = z
+        all_h = []
+        total_reconstruction = 0
+        total_l1_reg_content = 0.0
+        total_l1_reg_speaker = 0.0
+        total_sparse_loss = 0.0
+
+        for sparse_module in self.sparse_module_list:
+            x_approx_i, h_i, sparse_loss_i, l1_cnt_i, l1_spk_i = sparse_module(residual)
+            residual = residual - x_approx_i
+            total_reconstruction = total_reconstruction + x_approx_i
+            all_h.append(h_i)
+            total_l1_reg_content += l1_cnt_i
+            total_l1_reg_speaker += l1_spk_i
+            total_sparse_loss += sparse_loss_i
+
+        h_stacked = torch.stack(all_h, dim=1)
+        mid = int(h_stacked.shape[-1] * self.content_ratio)
+
+        h_cnt = self._build_content_features(h_stacked, mid)
+        h_spk = self._build_speaker_features(
+            h_stacked,
+            mid,
+            speaker_codes=speaker_codes,
+            query_features=h_cnt,
+            **kwargs,
+        )
+
+        z_proj_content = self.asr_proj(h_cnt)
+        z_proj_speaker = self.spk_proj(h_spk)
+
+        h_projected = torch.cat([h_cnt, h_spk], dim=-1)
+        h_projected = self.decoder_adapter(h_projected)
+        adapter_loss = F.mse_loss(
+            h_projected,
+            z.permute(0, 2, 1).contiguous(),
+        )
+
+        return (
+            z_proj_content,
+            z_proj_speaker,
+            h_stacked,
+            h_projected,
+            total_sparse_loss,
+            total_l1_reg_content,
+            total_l1_reg_speaker,
+            adapter_loss,
+        )
