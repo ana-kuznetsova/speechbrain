@@ -22,8 +22,8 @@ cached_data_folder: !ref <output_folder>/cache
 
 # Data files
 data_folder: !PLACEHOLDER # e.g., /path/to/LibriSpeech
-train_splits: ["train-clean-100", "train-clean-360", "train-other-500"]
-#train_splits: ["train-clean-100"]
+#train_splits: ["train-clean-100", "train-clean-360", "train-other-500"]
+train_splits: ["train-clean-100"]
 dev_splits: ["dev-clean"]
 test_splits: ["test-clean", "test-other", "dev-other"]
 skip_prep: False
@@ -41,7 +41,7 @@ test_veri_file: !ref <output_folder>/veri_test.txt
 
 
 ####################### Training Parameters ####################################
-number_of_epochs: 25
+number_of_epochs: 30
 #number_warmup_epochs: 5
 batch_size: 16 # This works for 2x GPUs with 32GB
 test_batch_size: 1
@@ -56,7 +56,7 @@ cache_size: 1.e+10
 
 lr_model: 0.001
 weight_decay: 0.0005
-spk_strategy: global
+
 
 # Training parameters
 
@@ -164,7 +164,7 @@ disentangle: !new:speechbrain.lobes.models.sparse_disentangle.ResidualSparseDise
     dict_dim: !ref <sparse_dim>
     num_sparse_layers: !ref <num_sparse_layers>
     content_ratio: !ref <content_ratio>
-    speaker_strategy: !ref <spk_strategy>
+    num_speakers: 252 # Number of speakers in the train-clean-100 set + <unk>
 
 
 # LSTM
@@ -205,16 +205,16 @@ ctc_weight: 1.0
 
 ############################## models ################################
 
-subsampler: !new:speechbrain.nnet.containers.Sequential
-    input_shape: [Null, Null, 1024]  # Your z_q dim
-    conv1: !name:speechbrain.nnet.CNN.Conv1d
-        out_channels: 256
-        kernel_size: 3
-        stride: 2
-    act1: !new:torch.nn.LeakyReLU       # Recommended when dims are large
+#subsampler: !new:speechbrain.nnet.containers.Sequential
+#    input_shape: [Null, Null, 1024]  # Your z_q dim
+#    conv1: !name:speechbrain.nnet.CNN.Conv1d
+#        out_channels: 256
+#        kernel_size: 3
+#        stride: 2
+#   act1: !new:torch.nn.LeakyReLU       # Recommended when dims are large
 
 asr_encoder: !new:speechbrain.nnet.RNN.LSTM
-   input_shape: [Null, Null, 256]  # Output dim of subsampler
+   input_shape: [Null, Null, 128]  # Output dim of subsampler
    num_layers: !ref <dnn_layers>
    bidirectional: True
    dropout: !ref <dropout>
@@ -225,10 +225,12 @@ ctc_lin: !new:speechbrain.nnet.linear.Linear
    n_neurons: !ref <output_neurons>
 
 ## Speaker Embedding branch
-out_n_neurons: 2339 # Number of speakers in the full set + <unk>
+#out_n_neurons: 2339 # Number of speakers in the full set + <unk>
+out_n_neurons: 252 # Number of speakers in the train-clean-100 set + <unk>
 
 spk_encoder: !new:speechbrain.lobes.models.ECAPA_TDNN.ECAPA_TDNN
-    input_size: !ref <encoder_dim>
+    #input_size: !ref <encoder_dim>
+    input_size: 128
     channels: [1024, 1024, 1024, 1024, 3072]
     kernel_sizes: [5, 3, 3, 3, 1]
     dilations: [1, 2, 3, 4, 1]
@@ -241,7 +243,7 @@ spk_classifier: !new:speechbrain.lobes.models.ECAPA_TDNN.Classifier
     out_neurons: !ref <out_n_neurons>
 
 modules:
-   cnn: !ref <subsampler>
+#   cnn: !ref <subsampler>
    asr_encoder: !ref <asr_encoder>
    ctc_lin: !ref <ctc_lin>
    codec: !ref <codec>
@@ -250,7 +252,7 @@ modules:
    spk_classifier: !ref <spk_classifier>
 
 model: !new:torch.nn.ModuleList
-   - [!ref <codec>, !ref <disentangle>, !ref <subsampler>, !ref <asr_encoder>, !ref <ctc_lin>, !ref <spk_encoder>, !ref <spk_classifier>]
+   - [!ref <codec>, !ref <disentangle>, !ref <asr_encoder>, !ref <ctc_lin>, !ref <spk_encoder>, !ref <spk_classifier>]
 ####################### Decoding & optimiser ###########################
 # Decoding parameters
 test_beam_search:

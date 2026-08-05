@@ -122,12 +122,13 @@ class SparseBrain(sb.core.Brain):
         else:
             pass
 
+
         (
             z_proj_content,
             z_proj_speaker,
             h,
             h_projected,
-            sparse_loss,
+            recon_loss,
             l1_reg_content,
             l1_reg_speaker,
             adapter_loss
@@ -137,7 +138,8 @@ class SparseBrain(sb.core.Brain):
             frame_lens=wav_lens,
         )
 
-        content_enc_input = self.modules.cnn(z_proj_content)
+        #content_enc_input = self.modules.cnn(z_proj_content)
+        content_enc_input = z_proj_content  # Directly use z_proj_content without CNN
 
         # Top part of the in_tokens is used for ASR, and the bottom part is used for speaker classification
         # Handle different ASR encoder types
@@ -176,7 +178,7 @@ class SparseBrain(sb.core.Brain):
             pred_hyps,  # predicted hypotheses (token ids)
             wav_lens,
             spk_logits,
-            sparse_loss,
+            recon_loss,
             h,
             h_projected,
             l1_reg_content,
@@ -202,7 +204,7 @@ class SparseBrain(sb.core.Brain):
             pred_hyps,  # predicted hypotheses (token ids)
             wav_lens,
             spk_logits,
-            sparse_loss,
+            recon_loss,
             h,
             h_projected,
             l1_reg_content,
@@ -216,20 +218,20 @@ class SparseBrain(sb.core.Brain):
 
         # Sparse-only training for first two epochs
         if stage == sb.Stage.TRAIN and getattr(self, "sparse_only", False):
-            # Only use sparse_loss for optimization
-            loss = sparse_loss * self.hparams.sparse_loss_weight
+            # Only use recon_loss for optimization
+            loss = recon_loss * self.hparams.sparse_loss_weight
             # Optionally log other losses as zero
-            ctc_batch_loss = torch.tensor(0.0, device=sparse_loss.device)
-            batch_aam_loss = torch.tensor(0.0, device=sparse_loss.device)
-            spk_reg_loss = torch.tensor(0.0, device=sparse_loss.device)
-            content_reg_loss = torch.tensor(0.0, device=sparse_loss.device)
-            adapter_batch_loss = torch.tensor(0.0, device=sparse_loss.device)
+            ctc_batch_loss = torch.tensor(0.0, device=recon_loss.device)
+            batch_aam_loss = torch.tensor(0.0, device=recon_loss.device)
+            spk_reg_loss = torch.tensor(0.0, device=recon_loss.device)
+            content_reg_loss = torch.tensor(0.0, device=recon_loss.device)
+            adapter_batch_loss = torch.tensor(0.0, device=recon_loss.device)
         else:
             ctc_batch_loss = self.hparams.ctc_cost(
                 p_seq, tokens, wav_lens, tokens_lens, reduction=self.hparams.loss_reduction
             )
             ctc_batch_loss = ctc_batch_loss * self.hparams.ctc_weight
-            sparse_batch_loss = sparse_loss * self.hparams.sparse_loss_weight
+            recon_batch_loss = recon_loss * self.hparams.sparse_loss_weight
             adapter_batch_loss = adapter_loss * self.hparams.adapter_loss_weight
 
             if stage == sb.Stage.TRAIN:
@@ -242,7 +244,7 @@ class SparseBrain(sb.core.Brain):
 
             loss = (
                 ctc_batch_loss
-                + sparse_batch_loss
+                + recon_batch_loss
                 + batch_aam_loss
                 + spk_reg_loss
                 + content_reg_loss
@@ -266,6 +268,7 @@ class SparseBrain(sb.core.Brain):
         if stage == sb.Stage.TRAIN:
             with torch.no_grad():
                 # 1. Sparsity Percentage (How many are zero?)
+                h = h.abs()
                 n_elements = h.numel()
                 n_zero = (h.abs() < 1e-4).sum().float()
                 sparsity_level = (n_zero / n_elements) * 100
@@ -293,7 +296,7 @@ class SparseBrain(sb.core.Brain):
                 log_stats = {
                     "loss": loss.item(),
                     "loss_ctc": ctc_batch_loss.item(),
-                    "sparse_recon_loss": sparse_batch_loss.item(),
+                    "sparse_recon_loss": recon_batch_loss.item(),
                     "adapter_loss": adapter_batch_loss.item(),
                     "loss_aam": batch_aam_loss.item(),
                     "loss_spk_reg": spk_reg_loss.item(),
