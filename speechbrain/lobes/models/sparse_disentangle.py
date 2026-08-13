@@ -63,28 +63,6 @@ class DecoderAdapter(nn.Module):
         x = self.ln(x) 
         return x
 
-class SparseLayerMixer(nn.Module):
-    def __init__(self, num_layers):
-        super().__init__()
-
-    def forward(self, h_stacked, mid, type="cnt"):
-        """
-        h_stacked shape: [B, num_layers, T, dict_dim]
-        """
-        # 1. Slice content subspace for each sparse layer
-        if type == "cnt":
-            h_layers = h_stacked[:, :, :mid, ].permute(0,1,3,2).contiguous()
-        elif type == "spk":
-            h_layers = h_stacked[:, :, mid:, ].permute(0,1,3,2).contiguous()
-        else:
-            raise ValueError("type must be 'cnt' or 'spk'")
-
-        # 2. Concatenate layer-wise content features.
-        # [B, L, T, C] -> [B, T, L, C] -> [B, T, L*C]
-        h_cnt_spk = h_layers.permute(0, 2, 1, 3).contiguous()
-        h_cnt_spk = h_cnt_spk.view(h_cnt_spk.shape[0], h_cnt_spk.shape[1], -1)
-
-        return h_cnt_spk
 
 class SparseDisentangle(nn.Module):
     """Sparse dictionary module using unrolled ISTA iterations with asymmetric latent codes:
@@ -298,8 +276,6 @@ class ResidualSparseDisentangle(nn.Module):
         spk_dim = dict_dim - self.mid
         self.spk_concat_dim = spk_dim * num_sparse_layers
         self.cnt_concat_dim = self.mid * num_sparse_layers
-
-        #self.layer_mixer = SparseLayerMixer(num_sparse_layers)
 
 
         self.decoder_adapter = DecoderAdapter(
