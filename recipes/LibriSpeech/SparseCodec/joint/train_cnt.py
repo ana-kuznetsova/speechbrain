@@ -80,17 +80,21 @@ def compute_embedding_loop(
 
 def set_sparse_only_training(residual_sparse_module, enable_sparse_only):
     """
-    If enable_sparse_only is True, freeze all parameters except SparseDisentangle modules inside ResidualSparseDisentangle.
+    If enable_sparse_only is True, freeze all parameters except the sparse dictionary modules
+    and the decoder adapter needed to project sparse representations back to the input space.
     If False, unfreeze all parameters in ResidualSparseDisentangle.
     """
     for name, param in residual_sparse_module.named_parameters():
-        # Only SparseDisentangle modules should be trainable in sparse-only mode
         if enable_sparse_only:
-            if "sparse_module_list" in name:
-                param.requires_grad = True
-            else:
-                param.requires_grad = False
-            logger.info(f"{'Enabling' if param.requires_grad else 'Freezing'} parameter: {name}")
+            should_train = (
+                "sparse_module_list" in name or "decoder_adapter" in name
+            )
+            param.requires_grad = should_train
+            logger.info(
+                "%s parameter: %s",
+                "Enabling" if should_train else "Freezing",
+                name,
+            )
         else:
             param.requires_grad = True
 
@@ -124,8 +128,8 @@ class SparseBrain(sb.core.Brain):
 
 
         (
-            z_proj_content,
-            z_proj_speaker,
+            h_cnt,
+            h_spk,
             h,
             h_projected,
             recon_loss,
@@ -138,17 +142,16 @@ class SparseBrain(sb.core.Brain):
             frame_lens=wav_lens,
         )
 
-        #content_enc_input = self.modules.cnn(z_proj_content)
-        content_enc_input = z_proj_content  # Directly use z_proj_content without CNN
-
         # Top part of the in_tokens is used for ASR, and the bottom part is used for speaker classification
         # Handle different ASR encoder types
+
+        h_cnt = h_cnt.permute(0, 2, 1)  # [B, T, D] for RNN or Conformer
         if isinstance(self.modules.asr_encoder, sb.nnet.RNN.LSTM):
-            enc_out, _ = self.modules.asr_encoder(content_enc_input, lengths=wav_lens)
+            enc_out, _ = self.modules.asr_encoder(h_cnt, lengths=wav_lens)
         else:
             # Conformer or other types
             target_tokens, _ = batch.tokens
-            enc_out, _, _, _ = self.modules.asr_encoder(content_enc_input, target_tokens, wav_lens)
+            enc_out, _, _, _ = self.modules.asr_encoder(h_cnt, target_tokens, wav_lens)
         logits = self.modules.ctc_lin(enc_out)
         p_ctc = self.hparams.log_softmax(logits)
 
@@ -163,16 +166,19 @@ class SparseBrain(sb.core.Brain):
 
         # Speaker classification head forward pass
         # Bottom part of the in_tokens is used for speaker classification
-        spk_emb = self.modules.spk_encoder(z_proj_speaker)
-        spk_logits = self.modules.spk_classifier(spk_emb).squeeze(1)
+        h_spk = h_spk.permute(0, 2, 1)
+        spk_logits = self.modules.spk_classifier(h_spk)
 
         # Collect utterance embeddings for Cosine similarity evaluation
         if stage != sb.Stage.TRAIN:
             if not hasattr(self, "eval_spk_embs"):
                 self.eval_spk_embs = {}
             utt_ids = batch.id
-            for utt_id, spk_embedding in zip(utt_ids, spk_emb):
-                self.eval_spk_embs[utt_id] = spk_embedding.cpu().detach()
+            for utt_id, spk_embedding in zip(utt_ids, h_spk):
+                # Keep one fixed-size vector per utterance for verification scoring.
+                self.eval_spk_embs[utt_id] = (
+                    spk_embedding.squeeze(-1).reshape(-1).cpu().detach()
+                )
         return (
             p_ctc,  # ctc probabilities
             pred_hyps,  # predicted hypotheses (token ids)
@@ -218,14 +224,17 @@ class SparseBrain(sb.core.Brain):
 
         # Sparse-only training for first two epochs
         if stage == sb.Stage.TRAIN and getattr(self, "sparse_only", False):
-            # Only use recon_loss for optimization
-            loss = recon_loss * self.hparams.sparse_loss_weight
+            recon_batch_loss = recon_loss * self.hparams.sparse_loss_weight
+            adapter_batch_loss = adapter_loss * self.hparams.adapter_loss_weight
+
+            # During sparse-only warmup, optimize reconstruction and adapter alignment.
+            loss = recon_batch_loss + adapter_batch_loss
+
             # Optionally log other losses as zero
             ctc_batch_loss = torch.tensor(0.0, device=recon_loss.device)
             batch_aam_loss = torch.tensor(0.0, device=recon_loss.device)
             spk_reg_loss = torch.tensor(0.0, device=recon_loss.device)
             content_reg_loss = torch.tensor(0.0, device=recon_loss.device)
-            adapter_batch_loss = torch.tensor(0.0, device=recon_loss.device)
         else:
             ctc_batch_loss = self.hparams.ctc_cost(
                 p_seq, tokens, wav_lens, tokens_lens, reduction=self.hparams.loss_reduction
@@ -281,8 +290,8 @@ class SparseBrain(sb.core.Brain):
                 log_stats = {
                     "loss": loss.item(),
                     "loss_ctc": 0.0,
-                    "sparse_recon_loss": loss.item(),
-                    "adapter_loss": 0.0,
+                    "sparse_recon_loss": recon_batch_loss.item(),
+                    "adapter_loss": adapter_batch_loss.item(),
                     "loss_aam": 0.0,
                     "loss_spk_reg": 0.0,
                     "loss_content_reg": 0.0,
@@ -389,6 +398,17 @@ class SparseBrain(sb.core.Brain):
                 if spk_emb1 is None or spk_emb2 is None:
                     logger.warning(
                         f"Speaker embedding not found for {utt1} or {utt2}. Skipping this pair."
+                    )
+                    continue
+                spk_emb1 = spk_emb1.reshape(-1)
+                spk_emb2 = spk_emb2.reshape(-1)
+                if spk_emb1.numel() != spk_emb2.numel():
+                    logger.warning(
+                        "Mismatched embedding sizes for %s (%d) and %s (%d). Skipping pair.",
+                        utt1,
+                        spk_emb1.numel(),
+                        utt2,
+                        spk_emb2.numel(),
                     )
                     continue
                 cos_sim = similarity(spk_emb1, spk_emb2)

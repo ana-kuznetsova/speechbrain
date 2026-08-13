@@ -23,7 +23,7 @@ cached_data_folder: !ref <output_folder>/cache
 # Data files
 data_folder: !PLACEHOLDER # e.g., /path/to/LibriSpeech
 #train_splits: ["train-clean-100", "train-clean-360", "train-other-500"]
-train_splits: ["train-clean-100"]
+train_splits: ["train-clean-360"]
 dev_splits: ["dev-clean"]
 test_splits: ["test-clean", "test-other", "dev-other"]
 skip_prep: False
@@ -41,8 +41,8 @@ test_veri_file: !ref <output_folder>/veri_test.txt
 
 
 ####################### Training Parameters ####################################
-number_of_epochs: 10
-number_warmup_epochs: 10
+number_of_epochs: 20
+#number_warmup_epochs: 5
 batch_size: 16 # This works for 2x GPUs with 32GB
 test_batch_size: 1
 grad_accumulation_factor: 2
@@ -149,8 +149,8 @@ freeze_embedding: False
 pretrain_embeddings: False
 num_codebooks: 6 # For 3kbps bitrate
 sample_rate: 16000
-sparse_dim: 2048
-num_sparse_layers: 2
+sparse_dim: 64
+num_sparse_layers: 4
 content_ratio: 0.5 #regulates how many atoms are responsible for content vs speaker information. 
 
 codec: !new:speechbrain.lobes.models.discrete.dac.DAC
@@ -164,7 +164,6 @@ disentangle: !new:speechbrain.lobes.models.sparse_disentangle.ResidualSparseDise
     dict_dim: !ref <sparse_dim>
     num_sparse_layers: !ref <num_sparse_layers>
     content_ratio: !ref <content_ratio>
-    num_steps: 10 # Steps for inner ISTA recon loop
     num_speakers: 922 # Number of speakers in the train-clean-360 set + <unk>
 
 
@@ -211,7 +210,7 @@ adapter_loss_weight: 1.0
 #   act1: !new:torch.nn.LeakyReLU
 
 asr_encoder: !new:speechbrain.nnet.RNN.LSTM
-   input_shape: [Null, Null, 2048]  # Output dim of subsampler
+   input_shape: [Null, Null, 128]  # Output dim of subsampler
    num_layers: !ref <dnn_layers>
    bidirectional: True
    dropout: !ref <dropout>
@@ -235,9 +234,11 @@ out_n_neurons: 922 # Number of speakers in the train-clean-360 set + <unk>
 ##    attention_channels: 128
 ##    lin_neurons: 192
 
-spk_classifier: !new:speechbrain.lobes.models.ECAPA_TDNN.Classifier
-    input_size: 2048
-    out_neurons: !ref <out_n_neurons>
+
+spk_classifier: !new:speechbrain.nnet.linear.Linear
+    input_size: 128
+    n_neurons: !ref <out_n_neurons>
+    bias: True
 
 modules:
 #   cnn: !ref <subsampler>

@@ -4,6 +4,7 @@ import torch
 import torch.nn.functional as F
 import torch.nn as nn
 from torch.autograd import Function
+import speechbrain as sb
 import logging
 
 
@@ -109,7 +110,7 @@ class SparseDisentangle(nn.Module):
         dict_dim: int,
         num_speakers: int = 252,
         content_ratio: float = 0.5,
-        num_steps: int = 10,
+        num_steps: int = 20,
         step_size: float = 2.0,
         l1_lambda: float = 1e-4,
     ):
@@ -187,7 +188,9 @@ class SparseDisentangle(nn.Module):
         return torch.sign(H) * torch.relu(torch.abs(H) - threshold)
 
     def forward(
-        self, z: torch.Tensor, speaker_codes: torch.Tensor = None
+        self, z: torch.Tensor, 
+        speaker_codes: torch.Tensor = None,
+        stage: sb.Stage = sb.Stage.TRAIN
     ) -> tuple:
         if speaker_codes is None:
             raise ValueError(
@@ -215,46 +218,48 @@ class SparseDisentangle(nn.Module):
         )  # (B, K_spk, 1)
 
         # 3. Dynamic Lipschitz Step Size Calculation
-        with torch.no_grad():
-            s = torch.linalg.svdvals(W_normalized)[0]
-            L = (s**2).item()
-            # Safe step size for joint descent
-            eta = 1.0 / max(L, 1e-5)
-            threshold = eta * self.l1_lambda
+        if stage == sb.Stage.TRAIN:
+            with torch.no_grad():
+                s = torch.linalg.svdvals(W_normalized)[0]
+                L = (s**2).item()
+                # Safe step size for joint descent
+                eta = 1.0 / max(L, 1e-5)
+                threshold = eta * self.l1_lambda
 
-        # 4. ISTA Optimization Loop
 
-        # 4. ISTA Optimization Loop
-        for step in range(self.num_steps):
-            # z_cnt: (B, D_in, T)
-            z_cnt = torch.einsum("dk, bkt -> bdt", W_cnt, H_cnt)
-            
-            # z_spk: (B, D_in, 1) -- contract K_spk, keep single frame dimension 'r' (size 1)
-            z_spk = torch.einsum("dk, bkr -> bdr", W_spk, H_spk)
-            
-            # PyTorch automatically broadcasts z_spk (B, D_in, 1) across T when subtracting
-            residual = z - (z_cnt + z_spk)
+            # 4. ISTA Optimization Loop
+            for step in range(self.num_steps):
+                # z_cnt: (B, D_in, T)
+                z_cnt = torch.einsum("dk, bkt -> bdt", W_cnt, H_cnt)
 
-            # Content update: (B, K_cnt, T)
-            grad_cnt = torch.einsum("dk, bdt -> bkt", W_cnt, residual)
-            H_cnt = self.soft_threshold(H_cnt + eta * grad_cnt, threshold)
+                # z_spk: (B, D_in, 1) -- contract K_spk, keep single frame dimension 'r' (size 1)
+                z_spk = torch.einsum("dk, bkr -> bdr", W_spk, H_spk)
+                
+                # PyTorch automatically broadcasts z_spk (B, D_in, 1) across T when subtracting
+                residual = z - (z_cnt + z_spk)
 
-            # Speaker update: contract d and t -> (B, K_spk), unsqueeze to (B, K_spk, 1)
-            grad_spk = torch.einsum("dk, bdt -> bk", W_spk, residual).unsqueeze(-1) / T
-            H_spk = self.soft_threshold(H_spk + eta * grad_spk, threshold)
+                # Content update: (B, K_cnt, T)
+                grad_cnt = torch.einsum("dk, bdt -> bkt", W_cnt, residual)
+                H_cnt = self.soft_threshold(H_cnt + eta * grad_cnt, threshold)
 
-            #with torch.no_grad():
-            #    residual_norm = residual.norm().item()
-            #    print(f"Step {step}: Residual Norm = {residual_norm:.4f}")
+                # Speaker update: contract d and t -> (B, K_spk), unsqueeze to (B, K_spk, 1)
+                grad_spk = torch.einsum("dk, bdt -> bk", W_spk, residual).unsqueeze(-1) / T
+                H_spk = self.soft_threshold(H_spk + eta * grad_spk, threshold)
 
         # 5. Final Reconstruction
         z_cnt = torch.einsum("dk, bkt -> bdt", W_cnt, H_cnt)
         z_spk = torch.einsum("dk, bkr -> bdr", W_spk, H_spk)
         z_approx = z_cnt + z_spk  # Broadcasts (B, D_in, 1) across T
 
+
         # 6. Regularization penalties
         l1_cnt = H_cnt.abs().mean()
         l1_spk = H_spk.abs().mean()
+
+        # Compute L2 only for inner loop logging purposes, not for backpropagation
+        #with torch.no_grad():
+        #    l2_err =  F.mse_loss(z_approx, z)
+        #    logging.info(f"Inner Loop L2 error: {l2_err.item():.6f}")
 
         return z_approx, H_cnt, H_spk, l1_cnt, l1_spk
 
@@ -264,6 +269,7 @@ class ResidualSparseDisentangle(nn.Module):
         input_dim,
         dict_dim,
         num_sparse_layers=4,
+        num_steps=20,
         content_ratio=0.5,
         num_speakers=252,
     ):
@@ -273,6 +279,7 @@ class ResidualSparseDisentangle(nn.Module):
         self.dict_dim = dict_dim
         self.num_layers = num_sparse_layers
         self.content_ratio = content_ratio
+        self.num_steps = num_steps
 
         self.sparse_module_list = nn.ModuleList(
             [
@@ -280,57 +287,69 @@ class ResidualSparseDisentangle(nn.Module):
                     input_dim,
                     dict_dim,
                     content_ratio=content_ratio,
+                    num_steps=num_steps,
                     num_speakers=num_speakers
                 )
                 for _ in range(num_sparse_layers)
             ]
         )
 
-        mid = int(dict_dim * content_ratio)
-        spk_dim = dict_dim - mid
+        self.mid = int(dict_dim * content_ratio)
+        spk_dim = dict_dim - self.mid
         self.spk_concat_dim = spk_dim * num_sparse_layers
-        self.cnt_concat_dim = mid * num_sparse_layers
+        self.cnt_concat_dim = self.mid * num_sparse_layers
 
-        self.layer_mixer = SparseLayerMixer(num_sparse_layers)
+        #self.layer_mixer = SparseLayerMixer(num_sparse_layers)
+
 
         self.decoder_adapter = DecoderAdapter(
             self.cnt_concat_dim + self.spk_concat_dim,
             input_dim,
         )
 
-    def _build_content_features(self, h_stacked, mid):
-        return self.layer_mixer(h_stacked, mid, type="cnt")
+    # def _build_content_features(self, h_stacked, mid):
+    #     return self.layer_mixer(h_stacked, mid, type="cnt")
     
-    def forward(self, z, speaker_codes=None, **kwargs):
+    def forward(self, z, speaker_codes=None,
+                stage=sb.Stage.TRAIN,
+                 **kwargs):
         residual = z
         all_h = []
+        all_h_spk = []
         total_reconstruction = 0
         total_l1_reg_content = 0.0
         total_l1_reg_speaker = 0.0
 
         for sparse_module in self.sparse_module_list:
-            x_approx_i, h_cnt_i, h_spk_i, l1_cnt_i, l1_spk_i = sparse_module(residual, speaker_codes=speaker_codes)
+            x_approx_i, h_cnt_i, h_spk_i, l1_cnt_i, l1_spk_i = sparse_module(residual, speaker_codes=speaker_codes, stage=stage)
             residual = residual - x_approx_i
             total_reconstruction = total_reconstruction + x_approx_i
             # Expand speaker code over time so shape is (B, D, T).
-            h_spk_time = h_spk_i.expand(-1, h_spk_i.shape[1], z.shape[2]).contiguous()
-
+            spk_unit_vector = torch.ones(1, 1, z.shape[2], device=z.device)
+            h_spk_time = h_spk_i @ spk_unit_vector  # (B, K_spk, T)
             h_i = torch.cat([h_cnt_i, h_spk_time], dim=1)
 
             # Fix the loss to compute once instead of the iterations
             all_h.append(h_i)
+            all_h_spk.append(h_spk_i)
             total_l1_reg_content += l1_cnt_i
             total_l1_reg_speaker += l1_spk_i
 
         h_stacked = torch.stack(all_h, dim=1)
-        mid = int(h_stacked.shape[-2] * self.content_ratio)
+        
+        h_projected = torch.flatten(h_stacked, start_dim=1, end_dim=2)
 
-        h_cnt = self._build_content_features(h_stacked, mid)
-        h_spk = self.layer_mixer(h_stacked, mid, type="spk")
+        B, D, T = h_projected.shape
+        mid = D // 2
 
-        h_projected = torch.cat([h_cnt, h_spk], dim=-1)
+        h_cnt = h_projected[:, :mid, :]
+        h_spk = h_projected[:, mid:, :]
+
+
+        h_projected = h_projected.permute(0, 2, 1).contiguous()  # (B, T, D)
+
         h_projected = self.decoder_adapter(h_projected)
-
+        
         adapter_loss = F.mse_loss(
             h_projected.view_as(z),
             z,
@@ -342,8 +361,6 @@ class ResidualSparseDisentangle(nn.Module):
         )
 
         return (
-            #z_proj_content,
-            #z_proj_speaker,
             h_cnt,
             h_spk,
             h_stacked,
