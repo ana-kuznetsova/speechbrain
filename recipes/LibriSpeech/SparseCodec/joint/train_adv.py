@@ -117,7 +117,6 @@ class SparseBrain(sb.core.Brain):
             sparse_loss,
             l1_reg_content,
             l1_reg_speaker,
-            adapter_loss
         ) = self.modules.disentangle(enc_out, speaker_codes=speaker_codes, frame_lens=wav_lens)
 
         # 2. Main Standard Branches
@@ -166,14 +165,14 @@ class SparseBrain(sb.core.Brain):
 
         return (
             p_ctc, pred_hyps, wav_lens, spk_logits, sparse_loss, h, h_projected,
-            l1_reg_content, l1_reg_speaker, adapter_loss,
+            l1_reg_content, l1_reg_speaker,
             adv_spk_logits, p_adv_ctc # Append our adversarial tensors to the tuple
         )
 
     def compute_objectives(self, predictions: Tuple, batch: Dict[str, torch.Tensor], stage: sb.Stage) -> torch.Tensor:
         (
             p_seq, pred_hyps, wav_lens, spk_logits, sparse_loss, h, h_projected,
-            l1_reg_content, l1_reg_speaker, adapter_loss,
+            l1_reg_content, l1_reg_speaker,
             adv_spk_logits, p_adv_ctc
         ) = predictions
 
@@ -189,7 +188,6 @@ class SparseBrain(sb.core.Brain):
         # Standard Main Task Objectives
         ctc_batch_loss = self.hparams.ctc_cost(p_seq, tokens, wav_lens, tokens_lens, reduction=self.hparams.loss_reduction) * self.hparams.ctc_weight
         sparse_batch_loss = sparse_loss * self.hparams.sparse_loss_weight
-        adapter_batch_loss = adapter_loss * self.hparams.adapter_loss_weight
         spk_reg_loss = l1_reg_speaker * self.hparams.spk_reg_weight
         content_reg_loss = l1_reg_content * self.hparams.content_reg_weight
 
@@ -206,12 +204,12 @@ class SparseBrain(sb.core.Brain):
             # Combine everything
             loss = (
                 ctc_batch_loss + sparse_batch_loss + batch_aam_loss 
-                + spk_reg_loss + content_reg_loss + adapter_batch_loss
+                + spk_reg_loss + content_reg_loss
                 + loss_adv_spk + loss_adv_ctc
             )
         else:
             batch_aam_loss = torch.tensor(0.0, device=ctc_batch_loss.device)
-            loss = ctc_batch_loss + sparse_batch_loss + batch_aam_loss + spk_reg_loss + content_reg_loss + adapter_batch_loss
+            loss = ctc_batch_loss + sparse_batch_loss + batch_aam_loss + spk_reg_loss + content_reg_loss
 
         if stage == sb.Stage.VALID:
             predicted_words = self.tokenizer(pred_hyps, task="decode_from_list")
@@ -222,7 +220,7 @@ class SparseBrain(sb.core.Brain):
             target_words = [wrd.split(" ") for wrd in batch.wrd]
             self.wer_metric.append(uttid, predicted_words, target_words)
             spk_predictions = torch.argmax(spk_logits, dim=1)
-            self.spk_error_metrics.append(uttid, spk_predictions, batch.spk_id_encoded.data)
+            self.spk_error_metrics.append(uttid, spk_predictions, spk_targets)
         
         if stage == sb.Stage.TRAIN:
             with torch.no_grad():
@@ -240,7 +238,6 @@ class SparseBrain(sb.core.Brain):
                 "loss": loss.item(),
                 "loss_ctc": ctc_batch_loss.item(),
                 "sparse_recon_loss": sparse_batch_loss.item(),
-                "adapter_loss": adapter_batch_loss.item(),
                 "loss_aam": batch_aam_loss.item(),
                 "loss_spk_reg": spk_reg_loss.item(),
                 "loss_content_reg": content_reg_loss.item(),

@@ -277,18 +277,7 @@ class ResidualSparseDisentangle(nn.Module):
         self.spk_concat_dim = spk_dim * num_sparse_layers
         self.cnt_concat_dim = self.mid * num_sparse_layers
 
-
-        self.decoder_adapter = DecoderAdapter(
-            self.cnt_concat_dim + self.spk_concat_dim,
-            input_dim,
-        )
-
-    # def _build_content_features(self, h_stacked, mid):
-    #     return self.layer_mixer(h_stacked, mid, type="cnt")
-    
-    def forward(self, z, speaker_codes=None,
-                stage=sb.Stage.TRAIN,
-                 **kwargs):
+    def forward(self, z, speaker_codes=None, stage=sb.Stage.TRAIN, **kwargs):
         residual = z
         all_h = []
         all_h_spk = []
@@ -297,52 +286,46 @@ class ResidualSparseDisentangle(nn.Module):
         total_l1_reg_speaker = 0.0
 
         for sparse_module in self.sparse_module_list:
-            x_approx_i, h_cnt_i, h_spk_i, l1_cnt_i, l1_spk_i = sparse_module(residual, speaker_codes=speaker_codes, stage=stage)
+            x_approx_i, h_cnt_i, h_spk_i, l1_cnt_i, l1_spk_i = sparse_module(
+                residual, speaker_codes=speaker_codes, stage=stage
+            )
             residual = residual - x_approx_i
             total_reconstruction = total_reconstruction + x_approx_i
-            # Expand speaker code over time so shape is (B, D, T).
+            
+            # Expand speaker code over time so shape is (B, K_spk, T)
             spk_unit_vector = torch.ones(1, 1, z.shape[2], device=z.device)
             h_spk_time = h_spk_i @ spk_unit_vector  # (B, K_spk, T)
+            
+            # Concatenate content and speaker codes along dictionary/feature dimension
             h_i = torch.cat([h_cnt_i, h_spk_time], dim=1)
 
-            # Fix the loss to compute once instead of the iterations
             all_h.append(h_i)
             all_h_spk.append(h_spk_i)
             total_l1_reg_content += l1_cnt_i
             total_l1_reg_speaker += l1_spk_i
 
+        # Stack layers: Shape (B, Num_Layers, K_cnt + K_spk, T)
         h_stacked = torch.stack(all_h, dim=1)
-        
-        h_projected = torch.flatten(h_stacked, start_dim=1, end_dim=2)
 
-        B, D, T = h_projected.shape
-        mid = D // 2
+        # Flatten layers and feature dims for concatenated code representations
+        # Shape: (B, Num_Layers * (K_cnt + K_spk), T)
+        h_flat = torch.flatten(h_stacked, start_dim=1, end_dim=2)
 
-        h_cnt = h_projected[:, :mid, :]
-        h_spk = h_projected[:, mid:, :]
+        B, D_total, T = h_flat.shape
+        mid = D_total // 2
 
+        # Split concatenated codes back into content and speaker components
+        h_cnt = h_flat[:, :mid, :]
+        h_spk = h_flat[:, mid:, :]
 
-        h_projected = h_projected.permute(0, 2, 1).contiguous()  # (B, T, D)
-
-        h_projected = self.decoder_adapter(h_projected)
-        
-        adapter_loss = F.mse_loss(
-            h_projected.view_as(z),
-            z,
-        )
-        
-        total_recon_loss = F.mse_loss(
-            total_reconstruction,
-            z
-        )
+        # Reconstruction loss evaluated directly in DAC latent space
+        total_recon_loss = F.mse_loss(total_reconstruction, z)
 
         return (
             h_cnt,
             h_spk,
             h_stacked,
-            h_projected,
             total_recon_loss,
             total_l1_reg_content,
             total_l1_reg_speaker,
-            adapter_loss,
         )

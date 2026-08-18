@@ -195,7 +195,6 @@ content_reg_weight: 1e-3   # Slightly increase L1 regularization to enforce true
 spk_reg_weight: 1e-3
 spk_loss_weight: 1.0
 ctc_weight: 1.0
-adapter_loss_weight: 1.0
 
 
 

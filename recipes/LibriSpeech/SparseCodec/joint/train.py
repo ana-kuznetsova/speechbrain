@@ -238,9 +238,7 @@ class SparseBrain(sb.core.Brain):
             target_words = [wrd.split(" ") for wrd in batch.wrd]
             self.wer_metric.append(uttid, predicted_words, target_words)
             spk_predictions = torch.argmax(spk_logits, dim=1)
-            self.spk_error_metrics.append(
-                uttid, spk_predictions, batch.spk_id_encoded.data
-            )
+            self.spk_error_metrics.append(uttid, spk_predictions, spk_targets)
         if stage == sb.Stage.TRAIN:
             # Log individual losses with file logger
             self.hparams.train_logger.log_stats(

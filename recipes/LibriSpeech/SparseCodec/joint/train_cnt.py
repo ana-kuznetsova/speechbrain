@@ -131,11 +131,9 @@ class SparseBrain(sb.core.Brain):
             h_cnt,
             h_spk,
             h,
-            h_projected,
             recon_loss,
             l1_reg_content,
             l1_reg_speaker,
-            adapter_loss
         ) = self.modules.disentangle(
             enc_out,
             speaker_codes=speaker_codes,
@@ -186,10 +184,8 @@ class SparseBrain(sb.core.Brain):
             spk_logits,
             recon_loss,
             h,
-            h_projected,
             l1_reg_content,
             l1_reg_speaker,
-            adapter_loss
         )
 
     def compute_objectives(
@@ -212,10 +208,8 @@ class SparseBrain(sb.core.Brain):
             spk_logits,
             recon_loss,
             h,
-            h_projected,
             l1_reg_content,
             l1_reg_speaker,
-            adapter_loss
         ) = predictions
 
         uttid = batch.id
@@ -225,10 +219,8 @@ class SparseBrain(sb.core.Brain):
         # Sparse-only training for first two epochs
         if stage == sb.Stage.TRAIN and getattr(self, "sparse_only", False):
             recon_batch_loss = recon_loss * self.hparams.sparse_loss_weight
-            adapter_batch_loss = adapter_loss * self.hparams.adapter_loss_weight
 
-            # During sparse-only warmup, optimize reconstruction and adapter alignment.
-            loss = recon_batch_loss + adapter_batch_loss
+            loss = recon_batch_loss
 
             # Optionally log other losses as zero
             ctc_batch_loss = torch.tensor(0.0, device=recon_loss.device)
@@ -241,7 +233,6 @@ class SparseBrain(sb.core.Brain):
             )
             ctc_batch_loss = ctc_batch_loss * self.hparams.ctc_weight
             recon_batch_loss = recon_loss * self.hparams.sparse_loss_weight
-            adapter_batch_loss = adapter_loss * self.hparams.adapter_loss_weight
 
             if stage == sb.Stage.TRAIN:
                 batch_aam_loss = self.hparams.spk_aam_loss(spk_logits, spk_targets)
@@ -257,23 +248,20 @@ class SparseBrain(sb.core.Brain):
                 + batch_aam_loss
                 + spk_reg_loss
                 + content_reg_loss
-                + adapter_batch_loss
             )
         # Decode words for ASR predictions
-        if stage == sb.Stage.VALID:
+        if stage == sb.Stage.VALID and not getattr(self, "sparse_only", False):
             # Decode token terms to words
             predicted_words = self.tokenizer(pred_hyps, task="decode_from_list")
         elif stage == sb.Stage.TEST:
             predicted_words = [hyp[0].text.split(" ") for hyp in pred_hyps]
 
         # Compute WER and speaker verification error metrics for validation and testing stages
-        if stage != sb.Stage.TRAIN:
+        if stage != sb.Stage.TRAIN and not getattr(self, "sparse_only", False):
             target_words = [wrd.split(" ") for wrd in batch.wrd]
             self.wer_metric.append(uttid, predicted_words, target_words)
             spk_predictions = torch.argmax(spk_logits, dim=1)
-            self.spk_error_metrics.append(
-                uttid, spk_predictions, batch.spk_id_encoded.data
-            )
+            self.spk_error_metrics.append(uttid, spk_predictions, spk_targets)
         if stage == sb.Stage.TRAIN:
             with torch.no_grad():
                 # 1. Sparsity Percentage (How many are zero?)
@@ -291,7 +279,6 @@ class SparseBrain(sb.core.Brain):
                     "loss": loss.item(),
                     "loss_ctc": 0.0,
                     "sparse_recon_loss": recon_batch_loss.item(),
-                    "adapter_loss": adapter_batch_loss.item(),
                     "loss_aam": 0.0,
                     "loss_spk_reg": 0.0,
                     "loss_content_reg": 0.0,
@@ -306,7 +293,6 @@ class SparseBrain(sb.core.Brain):
                     "loss": loss.item(),
                     "loss_ctc": ctc_batch_loss.item(),
                     "sparse_recon_loss": recon_batch_loss.item(),
-                    "adapter_loss": adapter_batch_loss.item(),
                     "loss_aam": batch_aam_loss.item(),
                     "loss_spk_reg": spk_reg_loss.item(),
                     "loss_content_reg": content_reg_loss.item(),
@@ -343,7 +329,9 @@ class SparseBrain(sb.core.Brain):
         """Gets called at the beginning of each epoch.
         Initializes the WER and speaker verification error metrics for validation and testing stages.
         """
-        if stage != sb.Stage.TRAIN:
+        if stage != sb.Stage.TRAIN and not (
+            stage == sb.Stage.VALID and getattr(self, "sparse_only", False)
+        ):
             self.wer_metric = self.hparams.error_rate_computer()
             self.spk_error_metrics = self.hparams.spk_error_stats()
 
@@ -359,7 +347,13 @@ class SparseBrain(sb.core.Brain):
                 set_sparse_only_training(self.modules.disentangle, enable_sparse_only=False)
                 self.sparse_only = False
         else:
-            self.sparse_only = False
+            warmup_epochs = getattr(self.hparams, "number_warmup_epochs", 0)
+            self.sparse_only = (
+                stage == sb.Stage.VALID
+                and epoch is not None
+                and warmup_epochs > 0
+                and epoch <= warmup_epochs
+            )
 
     def on_stage_end(self, stage, stage_loss, epoch):
         """Gets called at the end of a epoch."""
@@ -369,7 +363,7 @@ class SparseBrain(sb.core.Brain):
         if stage == sb.Stage.TRAIN:
             # Log average of individual loss components for the training stage
             self.train_stats = stage_stats
-        else:
+        elif not (stage == sb.Stage.VALID and getattr(self, "sparse_only", False)):
             stage_stats["WER"] = self.wer_metric.summarize("error_rate")
             stage_stats["ErrorRate"] = self.spk_error_metrics.summarize("average")
             current_epoch = self.hparams.epoch_counter.current
@@ -430,6 +424,10 @@ class SparseBrain(sb.core.Brain):
             )
 
         if stage == sb.Stage.VALID:
+            if getattr(self, "sparse_only", False):
+                logger.info(
+                    "Skipping WER, speaker error, and EER during sparse-only warmup."
+                )
             if type(self.hparams.scheduler).__name__ == "NewBobScheduler":
                 lr, new_lr = self.hparams.scheduler(stage_stats["loss"])
                 sb.nnet.schedulers.update_learning_rate(self.optimizer, new_lr)
@@ -451,11 +449,12 @@ class SparseBrain(sb.core.Brain):
                 train_stats=self.train_stats,
                 valid_stats=stage_stats,
             )
-            self.checkpointer.save_and_keep_only(
-                meta={"WER": stage_stats["WER"], "epoch": epoch},
-                min_keys=["WER"],
-                num_to_keep=self.hparams.avg_checkpoints,
-            )
+            if not getattr(self, "sparse_only", False):
+                self.checkpointer.save_and_keep_only(
+                    meta={"WER": stage_stats["WER"], "epoch": epoch},
+                    min_keys=["WER"],
+                    num_to_keep=self.hparams.avg_checkpoints,
+                )
 
         elif stage == sb.Stage.TEST:
             self.hparams.train_logger.log_stats(

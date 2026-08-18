@@ -178,7 +178,6 @@ loss_reduction: batchmean
 sparse_loss_weight: 1.0
 spk_reg_weight: 5e-4
 spk_aam_loss_weight: 10.0
-adapter_loss_weight: 1.0
 content_reg_weight: 5e-4
 spk_loss_weight: 1.0
 ctc_weight: 1.0
@@ -186,8 +185,6 @@ ctc_weight: 1.0
 # Bring task weights down, and push reconstruction weights up
 #ctc_weight: 0.01          # 269.0 * 0.01 = ~2.69
 #spk_aam_loss_weight: 0.1  # 14.71 * 0.1  = ~1.47
-#adapter_loss_weight: 5.0  # 2.21  * 5.0  = ~11.05
-
 
 ############################## models ################################
 
