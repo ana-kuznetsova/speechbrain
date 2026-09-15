@@ -44,25 +44,6 @@ class GradientReversal(nn.Module):
 
     
 
-class DecoderAdapter(nn.Module):
-    def __init__(self, input_dim=64, output_dim=1024):
-        super().__init__()
-        # First linear layer to expand capacity
-        self.fc1 = nn.Linear(input_dim, 512)
-        self.relu = nn.ReLU()
-        
-        # Final projection to DAC dimension (Strictly NO activation at the end!)
-        self.fc2 = nn.Linear(512, output_dim)
-        
-        # Normalize the outputs to help match the variance of the ±18 range
-        self.ln = nn.LayerNorm(output_dim)
-
-    def forward(self, x):
-        x = self.relu(self.fc1(x))
-        x = self.fc2(x)
-        x = self.ln(x) 
-        return x
-
 
 class SparseDisentangle(nn.Module):
     """Sparse dictionary module using unrolled ISTA iterations with asymmetric latent codes:
@@ -88,9 +69,10 @@ class SparseDisentangle(nn.Module):
         dict_dim: int,
         num_speakers: int = 252,
         content_ratio: float = 0.5,
-        num_steps: int = 20,
+        num_steps: int = 5,
         step_size: float = 2.0,
         l1_lambda: float = 1e-4,
+        p_drop: float = 0.1,
     ):
         super().__init__()
         self.input_dim = input_dim
@@ -99,6 +81,7 @@ class SparseDisentangle(nn.Module):
         self.num_steps = num_steps
         self.step_size = step_size
         self.l1_lambda = l1_lambda
+        self.p_drop = p_drop
 
         # Split sizes
         self.mid = int(dict_dim * content_ratio)
@@ -191,6 +174,7 @@ class SparseDisentangle(nn.Module):
 
         # H_spk prototype lookup: (B, K_spk, 1)
         H_spk_time = torch.einsum("dk, bdt -> bkt", W_spk, z)
+
         H_spk = self._get_or_init_speaker_prototypes(
             H_spk_time, speaker_codes
         )  # (B, K_spk, 1)
@@ -225,8 +209,15 @@ class SparseDisentangle(nn.Module):
                 H_spk = self.soft_threshold(H_spk + eta * grad_spk, threshold)
 
         # 5. Final Reconstruction
-        z_cnt = torch.einsum("dk, bkt -> bdt", W_cnt, H_cnt)
-        z_spk = torch.einsum("dk, bkr -> bdr", W_spk, H_spk)
+        H_cnt_final = H_cnt
+        H_spk_final = H_spk
+
+        if stage == sb.Stage.TRAIN and self.p_drop > 0.0:
+            H_cnt_final = F.dropout(H_cnt, p=self.p_drop, training=True)
+            H_spk_final = F.dropout(H_spk, p=self.p_drop, training=True)
+
+        z_cnt = torch.einsum("dk, bkt -> bdt", W_cnt, H_cnt_final)
+        z_spk = torch.einsum("dk, bkr -> bdr", W_spk, H_spk_final)
         z_approx = z_cnt + z_spk  # Broadcasts (B, D_in, 1) across T
 
 
@@ -250,6 +241,7 @@ class ResidualSparseDisentangle(nn.Module):
         num_steps=20,
         content_ratio=0.5,
         num_speakers=252,
+        p_drop=0.1,
     ):
         super().__init__()
 
@@ -258,6 +250,7 @@ class ResidualSparseDisentangle(nn.Module):
         self.num_layers = num_sparse_layers
         self.content_ratio = content_ratio
         self.num_steps = num_steps
+        self.p_drop = p_drop
 
         self.sparse_module_list = nn.ModuleList(
             [
@@ -266,7 +259,8 @@ class ResidualSparseDisentangle(nn.Module):
                     dict_dim,
                     content_ratio=content_ratio,
                     num_steps=num_steps,
-                    num_speakers=num_speakers
+                    num_speakers=num_speakers, 
+                    p_drop=p_drop,
                 )
                 for _ in range(num_sparse_layers)
             ]
@@ -325,6 +319,7 @@ class ResidualSparseDisentangle(nn.Module):
             h_cnt,
             h_spk,
             h_stacked,
+            total_reconstruction,
             total_recon_loss,
             total_l1_reg_content,
             total_l1_reg_speaker,

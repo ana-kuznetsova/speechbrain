@@ -23,7 +23,7 @@ cached_data_folder: !ref <output_folder>/cache
 # Data files
 data_folder: !PLACEHOLDER # e.g., /path/to/LibriSpeech
 #train_splits: ["train-clean-100", "train-clean-360", "train-other-500"]
-train_splits: ["train-clean-360"]
+train_splits: ["train-clean-100"]
 dev_splits: ["dev-clean"]
 test_splits: ["test-clean", "test-other", "dev-other"]
 skip_prep: False
@@ -41,8 +41,8 @@ test_veri_file: !ref <output_folder>/veri_test.txt
 
 
 ####################### Training Parameters ####################################
-number_of_epochs: 2
-number_warmup_epochs: 2
+number_of_epochs: 10
+#number_warmup_epochs: 1
 batch_size: 16 # This works for 2x GPUs with 32GB
 test_batch_size: 1
 grad_accumulation_factor: 2
@@ -51,7 +51,7 @@ sorting: descending #random
 num_workers: 4
 precision: fp32 # bf16, fp16 or fp32loss_reduction: batchmean
 valid_search_interval: 1
-avg_checkpoints: 1 # Number of checkpoints to average for evaluation
+avg_checkpoints: 3 # Number of checkpoints to average for evaluation
 cache_size: 1.e+10
 
 lr_model: 0.0003
@@ -149,9 +149,10 @@ freeze_embedding: False
 pretrain_embeddings: False
 num_codebooks: 6 # For 3kbps bitrate
 sample_rate: 16000
-sparse_dim: 2048
+sparse_dim: 512
 num_sparse_layers: 2
 content_ratio: 0.5 #regulates how many atoms are responsible for content vs speaker information. 
+#sparse_only: False
 
 codec: !new:speechbrain.lobes.models.discrete.dac.DAC
     model_type: !ref <model_type>
@@ -162,10 +163,11 @@ codec: !new:speechbrain.lobes.models.discrete.dac.DAC
 disentangle: !new:speechbrain.lobes.models.sparse_disentangle.ResidualSparseDisentangle
     input_dim: !ref <encoder_dim>
     dict_dim: !ref <sparse_dim>
+    p_drop: 0.1
     num_sparse_layers: !ref <num_sparse_layers>
     content_ratio: !ref <content_ratio>
-    num_steps: 10 # Steps for inner ISTA recon loop
-    num_speakers: 922 # Number of speakers in the train-clean-360 set + <unk>
+    num_steps: 5 # Steps for inner ISTA recon loop
+    num_speakers: 252 # Number of speakers in the train-clean-360 set + <unk>
 
 
 # LSTM
@@ -192,8 +194,8 @@ prune_history: False
 loss_reduction: batchmean
 sparse_loss_weight: 1.0
 spk_aam_loss_weight: 0.1   # Reduced from 10.0
-content_reg_weight: 1e-3   # Slightly increase L1 regularization to enforce true sparsity
-spk_reg_weight: 1e-3
+content_reg_weight: 5e-2   # Slightly increase L1 regularization to enforce true sparsity
+spk_reg_weight: 2e-2
 spk_loss_weight: 1.0
 ctc_weight: 1.0
 
@@ -201,32 +203,25 @@ ctc_weight: 1.0
 
 ############################## models ################################
 
-#subsampler: !new:speechbrain.nnet.containers.Sequential
-#    input_shape: [Null, Null, 1024]  # Your z_q dim
-#    conv1: !name:speechbrain.nnet.CNN.Conv1d
-#        out_channels: 256
-#        kernel_size: 3
-#        stride: 2
-#   act1: !new:torch.nn.LeakyReLU
 
 asr_encoder: !new:speechbrain.nnet.RNN.LSTM
-   input_shape: [Null, Null, 2048]  # Output dim of subsampler
+   input_shape: [Null, Null, !ref <sparse_dim>]  # Output dim of subsampler
    num_layers: !ref <dnn_layers>
    bidirectional: True
    dropout: !ref <dropout>
    hidden_size: !ref <dnn_neurons>
 
 ctc_lin: !new:speechbrain.nnet.linear.Linear
-   input_size: 2048
+   input_size: !ref <dnn_neurons> * 2 # Bidirectional
    n_neurons: !ref <output_neurons>
 
 ## Speaker Embedding branch
-out_n_neurons: 922 # Number of speakers in the train-clean-360 set + <unk>
-#out_n_neurons: 252 # Number of speakers in the train-clean-100 set + <unk>
+#out_n_neurons: 922 # Number of speakers in the train-clean-360 set + <unk>
+out_n_neurons: 252 # Number of speakers in the train-clean-100 set + <unk>
 
 
 spk_classifier: !new:speechbrain.lobes.models.ECAPA_TDNN.Classifier
-    input_size: 2048
+    input_size: !ref <sparse_dim>
     out_neurons: !ref <out_n_neurons>
 
 modules:

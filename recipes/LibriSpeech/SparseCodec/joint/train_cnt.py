@@ -118,38 +118,32 @@ class SparseBrain(sb.core.Brain):
         # 1. Extract raw features. Shape from DAC encoder is usually [B, Channels, T]
         enc_out = self.modules.codec.encoder(wavs.unsqueeze(1))
 
-        # 2. Apply Augmentation only during training
-        if stage == sb.Stage.TRAIN and hasattr(self.hparams, "fea_augment"):
-            enc_out = enc_out.permute(0, 2, 1)
-            enc_out, enc_lens = self.hparams.fea_augment(enc_out, wav_lens)
-            enc_out = enc_out.permute(0, 2, 1)  
-        else:
-            pass
-
-
         (
             h_cnt,
             h_spk,
             h,
+            h_recon,
             recon_loss,
             l1_reg_content,
             l1_reg_speaker,
         ) = self.modules.disentangle(
             enc_out,
             speaker_codes=speaker_codes,
-            frame_lens=wav_lens,
         )
 
         # Top part of the in_tokens is used for ASR, and the bottom part is used for speaker classification
         # Handle different ASR encoder types
 
         h_cnt = h_cnt.permute(0, 2, 1)  # [B, T, D] for RNN or Conformer
+
         if isinstance(self.modules.asr_encoder, sb.nnet.RNN.LSTM):
             enc_out, _ = self.modules.asr_encoder(h_cnt, lengths=wav_lens)
         else:
             # Conformer or other types
             target_tokens, _ = batch.tokens
             enc_out, _, _, _ = self.modules.asr_encoder(h_cnt, target_tokens, wav_lens)
+
+
         logits = self.modules.ctc_lin(enc_out)
         p_ctc = self.hparams.log_softmax(logits)
 
@@ -165,7 +159,8 @@ class SparseBrain(sb.core.Brain):
         # Speaker classification head forward pass
         # Bottom part of the in_tokens is used for speaker classification
         h_spk = h_spk.permute(0, 2, 1)
-        spk_logits = self.modules.spk_classifier(h_spk)
+        h_spk_pooled = h_spk.mean(dim=1)
+        spk_logits = self.modules.spk_classifier(h_spk_pooled)
 
         # Collect utterance embeddings for Cosine similarity evaluation
         if stage != sb.Stage.TRAIN:
@@ -184,6 +179,7 @@ class SparseBrain(sb.core.Brain):
             spk_logits,
             recon_loss,
             h,
+            h_recon,
             l1_reg_content,
             l1_reg_speaker,
         )
@@ -208,6 +204,7 @@ class SparseBrain(sb.core.Brain):
             spk_logits,
             recon_loss,
             h,
+            h_recon,
             l1_reg_content,
             l1_reg_speaker,
         ) = predictions
@@ -219,6 +216,7 @@ class SparseBrain(sb.core.Brain):
         # Sparse-only training for first two epochs
         if stage == sb.Stage.TRAIN and getattr(self, "sparse_only", False):
             recon_batch_loss = recon_loss * self.hparams.sparse_loss_weight
+            #logging.info(f"Sparse-only training: recon_batch_loss = {recon_batch_loss.item()}")
 
             loss = recon_batch_loss
 
@@ -308,6 +306,10 @@ class SparseBrain(sb.core.Brain):
                 verbose=True,
             )
 
+        if stage in (sb.Stage.TRAIN, sb.Stage.VALID):
+            self.recon_loss_total += recon_batch_loss.detach().item()
+            self.recon_loss_count += 1
+
         return loss
 
     def on_evaluate_start(self, max_key=None, min_key=None):
@@ -329,6 +331,10 @@ class SparseBrain(sb.core.Brain):
         """Gets called at the beginning of each epoch.
         Initializes the WER and speaker verification error metrics for validation and testing stages.
         """
+        if stage in (sb.Stage.TRAIN, sb.Stage.VALID):
+            self.recon_loss_total = 0.0
+            self.recon_loss_count = 0
+
         if stage != sb.Stage.TRAIN and not (
             stage == sb.Stage.VALID and getattr(self, "sparse_only", False)
         ):
@@ -359,6 +365,12 @@ class SparseBrain(sb.core.Brain):
         """Gets called at the end of a epoch."""
 
         stage_stats = {"loss": stage_loss}
+        if stage in (sb.Stage.TRAIN, sb.Stage.VALID):
+            stage_stats["sparse_recon_loss"] = (
+                self.recon_loss_total / self.recon_loss_count
+                if self.recon_loss_count
+                else 0.0
+            )
 
         if stage == sb.Stage.TRAIN:
             # Log average of individual loss components for the training stage
@@ -449,7 +461,11 @@ class SparseBrain(sb.core.Brain):
                 train_stats=self.train_stats,
                 valid_stats=stage_stats,
             )
-            if not getattr(self, "sparse_only", False):
+            if getattr(self, "sparse_only", False):
+                self.checkpointer.save_checkpoint(
+                    meta={"epoch": epoch},
+                )
+            else:
                 self.checkpointer.save_and_keep_only(
                     meta={"WER": stage_stats["WER"], "epoch": epoch},
                     min_keys=["WER"],
