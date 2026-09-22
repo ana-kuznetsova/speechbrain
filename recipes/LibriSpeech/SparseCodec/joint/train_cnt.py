@@ -196,7 +196,7 @@ class SparseBrain(sb.core.Brain):
         Returns:
             Combined loss as a torch.Tensor
         """
-        # Unpack predictions from the forward() step.
+        # 1. Unpack predictions from the forward() step.
         (
             p_seq,  # ctc probabilities
             pred_hyps,  # predicted hypotheses (token ids)
@@ -213,102 +213,91 @@ class SparseBrain(sb.core.Brain):
         tokens, tokens_lens = batch.tokens
         spk_targets, _ = batch.spk_id_encoded
 
-        # Sparse-only training for first two epochs
+        # 1a. If sparse-only training is enabled, use only the reconstruction loss.
         if stage == sb.Stage.TRAIN and getattr(self, "sparse_only", False):
+            loss = recon_loss
+
+        # 2. Compute the combined loss for the training and validation stages.
+        # Components shared by every stage.
+        ctc_batch_loss = self.hparams.ctc_cost(
+            p_seq, tokens, wav_lens, tokens_lens, reduction=self.hparams.loss_reduction
+        )
+        ctc_batch_loss = ctc_batch_loss * self.hparams.ctc_weight
+        spk_reg_loss = l1_reg_speaker * self.hparams.spk_reg_weight
+        content_reg_loss = l1_reg_content * self.hparams.content_reg_weight
+        loss = ctc_batch_loss + spk_reg_loss + content_reg_loss
+
+        # 2a. TRAIN/VALID additionally include reconstruction and AAM losses.
+        if stage == sb.Stage.TRAIN or stage == sb.Stage.VALID:
             recon_batch_loss = recon_loss * self.hparams.sparse_loss_weight
-            #logging.info(f"Sparse-only training: recon_batch_loss = {recon_batch_loss.item()}")
+            batch_aam_loss = self.hparams.spk_aam_loss(spk_logits, spk_targets)
+            batch_aam_loss = batch_aam_loss * self.hparams.spk_aam_loss_weight
+            loss = loss + recon_batch_loss + batch_aam_loss
+        
+        # 2b. Compute sparsity and active atoms for logging/monitoring
+        if stage == sb.Stage.TRAIN or stage == sb.Stage.VALID:
+            with torch.no_grad():
+                h_abs = h.abs()  # Shape: (B, Num_Layers, K_total, T)
+                
+                # 1. Overall Sparsity Percentage (% of zero entries)
+                n_elements = h_abs.numel()
+                n_zero = (h_abs < 1e-4).sum().float()
+                sparsity_level = (n_zero / n_elements) * 100.0
 
-            loss = recon_batch_loss
+                # 2a. Average Activation Density Per Layer (Fraction of non-zero entries per layer)
+                # Result shape: (Num_Layers,) -> Average % of active codes at any given frame
+                active_density_per_layer = (h_abs > 1e-4).float().mean(dim=(0, 2, 3)) * 100.0
 
-            # Optionally log other losses as zero
-            ctc_batch_loss = torch.tensor(0.0, device=recon_loss.device)
-            batch_aam_loss = torch.tensor(0.0, device=recon_loss.device)
-            spk_reg_loss = torch.tensor(0.0, device=recon_loss.device)
-            content_reg_loss = torch.tensor(0.0, device=recon_loss.device)
-        else:
-            ctc_batch_loss = self.hparams.ctc_cost(
-                p_seq, tokens, wav_lens, tokens_lens, reduction=self.hparams.loss_reduction
-            )
-            ctc_batch_loss = ctc_batch_loss * self.hparams.ctc_weight
-            recon_batch_loss = recon_loss * self.hparams.sparse_loss_weight
+                # 2b. Count of Unique Active Dictionary Atoms Per Layer
+                # Checks if an atom was used AT LEAST ONCE across time for each batch item
+                # Shape: (Num_Layers,) -> Average number of distinct atoms used per sample
+                #active_atoms_used = (h_abs > 1e-4).any(dim=-1).float().sum(dim=-1).mean(dim=0)
 
-            if stage == sb.Stage.TRAIN:
-                batch_aam_loss = self.hparams.spk_aam_loss(spk_logits, spk_targets)
-                batch_aam_loss = batch_aam_loss * self.hparams.spk_aam_loss_weight
-            else:
-                batch_aam_loss = torch.tensor(0.0, device=ctc_batch_loss.device)
-            spk_reg_loss = l1_reg_speaker * self.hparams.spk_reg_weight
-            content_reg_loss = l1_reg_content * self.hparams.content_reg_weight
-
-            loss = (
-                ctc_batch_loss
-                + recon_batch_loss
-                + batch_aam_loss
-                + spk_reg_loss
-                + content_reg_loss
-            )
-        # Decode words for ASR predictions
+        # 3. Decode and evaluate predictions for validation and testing stages
+        # 3a. Decode ASR predictions
         if stage == sb.Stage.VALID and not getattr(self, "sparse_only", False):
             # Decode token terms to words
             predicted_words = self.tokenizer(pred_hyps, task="decode_from_list")
         elif stage == sb.Stage.TEST:
             predicted_words = [hyp[0].text.split(" ") for hyp in pred_hyps]
 
-        # Compute WER and speaker verification error metrics for validation and testing stages
+        # 3b. Compute WER and speaker verification error metrics 
         if stage != sb.Stage.TRAIN and not getattr(self, "sparse_only", False):
             target_words = [wrd.split(" ") for wrd in batch.wrd]
             self.wer_metric.append(uttid, predicted_words, target_words)
             spk_predictions = torch.argmax(spk_logits, dim=1)
             self.spk_error_metrics.append(uttid, spk_predictions, spk_targets)
-        if stage == sb.Stage.TRAIN:
-            with torch.no_grad():
-                # 1. Sparsity Percentage (How many are zero?)
-                h = h.abs()
-                n_elements = h.numel()
-                n_zero = (h.abs() < 1e-4).sum().float()
-                sparsity_level = (n_zero / n_elements) * 100
+        
+        # 4. Logging statistics
 
-                # 2. Active atoms per layer
-                active_per_layer = (h.abs() > 1e-4).float().mean(dim=(0, 2, 3))
-
-            # Prepare logging dictionary
-            if getattr(self, "sparse_only", False):
-                log_stats = {
-                    "loss": loss.item(),
-                    "loss_ctc": 0.0,
-                    "sparse_recon_loss": recon_batch_loss.item(),
-                    "loss_aam": 0.0,
-                    "loss_spk_reg": 0.0,
-                    "loss_content_reg": 0.0,
-                    "sparsity": sparsity_level.item(),
-                    **{
-                        f"active_atoms_layer_{i}": active_per_layer[i].item()
-                        for i in range(len(active_per_layer))
-                    },
-                }
-            else:
-                log_stats = {
-                    "loss": loss.item(),
-                    "loss_ctc": ctc_batch_loss.item(),
-                    "sparse_recon_loss": recon_batch_loss.item(),
-                    "loss_aam": batch_aam_loss.item(),
-                    "loss_spk_reg": spk_reg_loss.item(),
-                    "loss_content_reg": content_reg_loss.item(),
-                    "sparsity": sparsity_level.item(),
-                    **{
-                        f"active_atoms_layer_{i}": active_per_layer[i].item()
-                        for i in range(len(active_per_layer))
-                    },
-                }
-            self.hparams.train_logger.log_stats(
-                stats_meta={"epoch": self.hparams.epoch_counter.current},
-                train_stats=log_stats,
-                verbose=True,
-            )
-
-        if stage in (sb.Stage.TRAIN, sb.Stage.VALID):
-            self.recon_loss_total += recon_batch_loss.detach().item()
-            self.recon_loss_count += 1
+        # Prepare logging dictionary
+        if getattr(self, "sparse_only", False):
+            log_stats = {
+                "loss": loss.item(),
+            }
+        else:
+            log_stats = {
+                "loss": loss.item(),
+                "loss_ctc": ctc_batch_loss.item(),
+                "loss_spk_reg": spk_reg_loss.item(),
+                "loss_content_reg": content_reg_loss.item(),
+            }
+            # recon/AAM losses and sparsity stats are only computed for TRAIN/VALID
+            if stage == sb.Stage.TRAIN or stage == sb.Stage.VALID:
+                log_stats["sparse_recon_loss"] = recon_batch_loss.item()
+                log_stats["loss_aam"] = batch_aam_loss.item()
+                log_stats["sparsity"] = sparsity_level.item()
+                log_stats.update(
+                    {
+                        f"active_density_layer_{i}": active_density_per_layer[i].item()
+                        for i in range(len(active_density_per_layer))
+                    }
+                )
+        self.hparams.train_logger.log_stats(
+            stats_meta={"epoch": self.hparams.epoch_counter.current},
+            train_stats=log_stats,
+            verbose=True,
+        )
 
         return loss
 

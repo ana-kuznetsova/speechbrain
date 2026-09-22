@@ -1,1 +1,1 @@
-/projects/bfje/akuznetsova/repos/speechbrain/recipes/LibriSpeech/librispeech_prepare.py
+../../librispeech_prepare.py
