@@ -102,204 +102,219 @@ def set_sparse_only_training(residual_sparse_module, enable_sparse_only):
 # Define training procedure
 class SparseBrain(sb.core.Brain):
     def compute_forward(self, batch: Dict[str, torch.Tensor], stage: sb.Stage) -> Tuple:
-        """Forward computations from the waveform batches to the output probabilities.
-        Computes the outputs for both the ASR head and the speaker classification head.
+        """Forward computations from waveform batches to output probabilities and embeddings.
+        
         Args:
-            batch: Dictionary containing the input waveforms and their corresponding IDs
-            stage: Current stage of the training process (TRAIN, VALID, TEST)
+            batch: SpeechBrain PaddedBatch containing input waveforms and targets.
+            stage: Current training stage (TRAIN, VALID, TEST).
+            
         Returns:
-            Tuple containing the outputs for the ASR head and the speaker classification head
+            Tuple containing CTC probabilities, predicted hypotheses, lengths, 
+            speaker logits, reconstruction metrics, and latent representations:
+                - p_ctc: Log-probabilities from the CTC head
+                - pred_hyps: Predicted hypotheses (decoded sequences)
+                - wav_lens: Lengths of the input waveforms
+                - h_spk: Speaker latent representations
+                - h_recon: Reconstructed latent representations from the sparse module
+                - recon_loss: Reconstruction loss (MSE) for the latent representations
+                - l1_reg_content: L1 regularization term for content features
+                - l1_reg_speaker: L1 regularization term for speaker features
         """
-
         batch = batch.to(self.device)
         wavs, wav_lens = batch.sig
-        speaker_codes = batch.spk_id_encoded[0]  # Assuming spk_id_encoded is a tuple (tensor, lengths)
 
-        # 1. Extract raw features. Shape from DAC encoder is usually [B, Channels, T]
+        # 1. Extract raw features from DAC codec encoder: [B, Channels, T]
         enc_out = self.modules.codec.encoder(wavs.unsqueeze(1))
 
-        (
+        # 2. Residual Sparse Disentanglement Pass
+        (   recon_loss, 
+            l12_reg_content, 
+            l12_reg_speaker, 
             h_cnt,
             h_spk,
-            h,
-            h_recon,
-            recon_loss,
-            l1_reg_content,
-            l1_reg_speaker,
+            h_spk_mat,
+            h_all,
         ) = self.modules.disentangle(
             enc_out,
-            speaker_codes=speaker_codes,
+            stage=stage,
+            wav_lens=wav_lens
         )
 
-        # Top part of the in_tokens is used for ASR, and the bottom part is used for speaker classification
-        # Handle different ASR encoder types
-
-        h_cnt = h_cnt.permute(0, 2, 1)  # [B, T, D] for RNN or Conformer
+        # 3. ASR Encoder Forward Pass
+        # Permute content features to [B, T, D_cnt] for sequence modeling
+        h_cnt_seq = h_cnt.permute(0, 2, 1)
 
         if isinstance(self.modules.asr_encoder, sb.nnet.RNN.LSTM):
-            enc_out, _ = self.modules.asr_encoder(h_cnt, lengths=wav_lens)
+            enc_out_asr, _ = self.modules.asr_encoder(h_cnt_seq, lengths=wav_lens)
         else:
-            # Conformer or other types
+            # Conformer / Transformer models requiring target tokens or mask
             target_tokens, _ = batch.tokens
-            enc_out, _, _, _ = self.modules.asr_encoder(h_cnt, target_tokens, wav_lens)
+            enc_out_asr, _, _, _ = self.modules.asr_encoder(
+                h_cnt_seq, target_tokens, wav_lens
+            )
 
-
-        logits = self.modules.ctc_lin(enc_out)
+        logits = self.modules.ctc_lin(enc_out_asr)
         p_ctc = self.hparams.log_softmax(logits)
 
-        # Compute ASR predictions (words) for validation and testing stages
+        # 4. Decode ASR Predictions for Evaluation
         pred_hyps = None
         if stage == sb.Stage.VALID:
             pred_hyps = sb.decoders.ctc_greedy_decode(
                 p_ctc, wav_lens, blank_id=self.hparams.blank_index
             )
         elif stage == sb.Stage.TEST:
+            # Fixed: reference searcher via hparams
             pred_hyps = test_searcher(p_ctc, wav_lens)
 
-        # Speaker classification head forward pass
-        # Bottom part of the in_tokens is used for speaker classification
-        h_spk = h_spk.permute(0, 2, 1)
-        h_spk_pooled = h_spk.mean(dim=1)
-        spk_logits = self.modules.spk_classifier(h_spk_pooled)
+        # 5. Speaker Classification Head Forward Pass
+        # h_spk shape is (B, K_spk_total, 1) -> Squeeze to (B, K_spk_total)
+        h_spk_vec = h_spk.squeeze(-1)
+        spk_logits = self.modules.spk_classifier(h_spk_vec)
 
-        # Collect utterance embeddings for Cosine similarity evaluation
+        # 6. Collect Utterance Embeddings for Speaker Verification Scoring
         if stage != sb.Stage.TRAIN:
             if not hasattr(self, "eval_spk_embs"):
                 self.eval_spk_embs = {}
             utt_ids = batch.id
-            for utt_id, spk_embedding in zip(utt_ids, h_spk):
-                # Keep one fixed-size vector per utterance for verification scoring.
-                self.eval_spk_embs[utt_id] = (
-                    spk_embedding.squeeze(-1).reshape(-1).cpu().detach()
-                )
+            for utt_id, emb in zip(utt_ids, h_spk_vec):
+                self.eval_spk_embs[utt_id] = emb.cpu().detach()
+        #logging.info("Debug losses: recon_loss=%f, l12_reg_content=%f, l12_reg_speaker=%f", recon_loss.item(), l12_reg_content.item(), l12_reg_speaker.item())
         return (
-            p_ctc,  # ctc probabilities
-            pred_hyps,  # predicted hypotheses (token ids)
+            p_ctc,
+            pred_hyps,
             wav_lens,
             spk_logits,
             recon_loss,
-            h,
-            h_recon,
-            l1_reg_content,
-            l1_reg_speaker,
+            h_cnt,
+            h_spk,
+            h_spk_mat,
+            h_all,
+            l12_reg_content,
+            l12_reg_speaker,
         )
 
     def compute_objectives(
-        self, predictions: Tuple, batch: Dict[str, torch.Tensor], stage: sb.Stage
+        self, predictions: tuple, batch: dict, stage: sb.Stage
     ) -> torch.Tensor:
-        """Computes combined ASR and Speaker verification loss.
-        Stores individual loss components in a dictionary for logging and analysis.
+        """Computes combined ASR, reconstruction, and speaker losses.
+
         Args:
-            predictions: Tuple containing the outputs from the forward pass
-            batch: Dictionary containing the input waveforms and their corresponding IDs
-            stage: Current stage of the training process (TRAIN, VALID, TEST)
+            predictions: Tuple containing the outputs from compute_forward().
+            batch: PaddedBatch containing waveforms and target tokens/labels.
+            stage: Current training stage (TRAIN, VALID, TEST).
+
         Returns:
-            Combined loss as a torch.Tensor
+            Combined scalar loss tensor for backpropagation.
         """
-        # 1. Unpack predictions from the forward() step.
+        # 1. Unpack 9 prediction outputs matching updated compute_forward
         (
-            p_seq,  # ctc probabilities
-            pred_hyps,  # predicted hypotheses (token ids)
+            p_ctc,
+            pred_hyps,
             wav_lens,
             spk_logits,
             recon_loss,
-            h,
-            h_recon,
-            l1_reg_content,
-            l1_reg_speaker,
+            h_cnt,
+            h_spk,
+            h_spk_mat,
+            h_all,
+            l12_reg_content,
+            l12_reg_speaker,
         ) = predictions
 
         uttid = batch.id
+
+        # ------------------------------------------------------------------
+        # PATH A: Sparse-Only Warmup Training Phase
+        # ------------------------------------------------------------------
+        if stage == sb.Stage.TRAIN and getattr(self, "sparse_only", False):
+            total_loss = (
+                recon_loss * getattr(self.hparams, "sparse_loss_weight", 1.0)
+                + l12_reg_content * getattr(self.hparams, "content_reg_weight", 1e-4)
+                + l12_reg_speaker * getattr(self.hparams, "spk_reg_weight", 1e-4)
+            )
+            # Store for epoch-level summary stats tracking
+            if not hasattr(self, "stage_stats"):
+                self.stage_stats = {}
+            return total_loss
+
+        # ------------------------------------------------------------------
+        # PATH B: Standard Multi-Task Joint Training Phase
+        # ------------------------------------------------------------------
         tokens, tokens_lens = batch.tokens
         spk_targets, _ = batch.spk_id_encoded
 
-        # 1a. If sparse-only training is enabled, use only the reconstruction loss.
-        if stage == sb.Stage.TRAIN and getattr(self, "sparse_only", False):
-            loss = recon_loss
-
-        # 2. Compute the combined loss for the training and validation stages.
-        # Components shared by every stage.
+        # 2. Compute CTC loss for ASR
         ctc_batch_loss = self.hparams.ctc_cost(
-            p_seq, tokens, wav_lens, tokens_lens, reduction=self.hparams.loss_reduction
+            p_ctc, tokens, wav_lens, tokens_lens, reduction=self.hparams.loss_reduction
         )
         ctc_batch_loss = ctc_batch_loss * self.hparams.ctc_weight
-        spk_reg_loss = l1_reg_speaker * self.hparams.spk_reg_weight
-        content_reg_loss = l1_reg_content * self.hparams.content_reg_weight
-        loss = ctc_batch_loss + spk_reg_loss + content_reg_loss
 
-        # 2a. TRAIN/VALID additionally include reconstruction and AAM losses.
-        if stage == sb.Stage.TRAIN or stage == sb.Stage.VALID:
-            recon_batch_loss = recon_loss * self.hparams.sparse_loss_weight
+        # 3. Compute Regularization & Disentanglement Losses
+        spk_reg_loss = l12_reg_speaker * self.hparams.spk_reg_weight
+        content_reg_loss = l12_reg_content * self.hparams.content_reg_weight
+
+        total_loss = ctc_batch_loss + spk_reg_loss + content_reg_loss
+
+        # 4. Add Reconstruction & Speaker Classification Losses (TRAIN & VALID)
+        if stage in (sb.Stage.TRAIN, sb.Stage.VALID):
+            recon_batch_loss = recon_loss * getattr(
+                self.hparams, "sparse_loss_weight", 1.0
+            )
+            
+            # AAM / Angular Softmax Loss
             batch_aam_loss = self.hparams.spk_aam_loss(spk_logits, spk_targets)
-            batch_aam_loss = batch_aam_loss * self.hparams.spk_aam_loss_weight
-            loss = loss + recon_batch_loss + batch_aam_loss
-        
-        # 2b. Compute sparsity and active atoms for logging/monitoring
-        if stage == sb.Stage.TRAIN or stage == sb.Stage.VALID:
+            batch_aam_loss = batch_aam_loss * getattr(
+                self.hparams, "spk_aam_loss_weight", 1.0
+            )
+
+            total_loss = total_loss + recon_batch_loss + batch_aam_loss
+
+        # 5. Compute Sparsity & Activity Metrics for Monitoring
+        # Inside compute_objectives (for TRAIN and VALID):
+        if stage in (sb.Stage.TRAIN, sb.Stage.VALID):
             with torch.no_grad():
-                h_abs = h.abs()  # Shape: (B, Num_Layers, K_total, T)
-                
-                # 1. Overall Sparsity Percentage (% of zero entries)
+                h_abs = h_all.abs()
                 n_elements = h_abs.numel()
                 n_zero = (h_abs < 1e-4).sum().float()
                 sparsity_level = (n_zero / n_elements) * 100.0
+                #logging.info(f"Sparsity Level: {sparsity_level.item():.2f}%")
 
-                # 2a. Average Activation Density Per Layer (Fraction of non-zero entries per layer)
-                # Result shape: (Num_Layers,) -> Average % of active codes at any given frame
-                active_density_per_layer = (h_abs > 1e-4).float().mean(dim=(0, 2, 3)) * 100.0
+                # h_all: [B, 2, L*K, T] -> [B, 2, L, K, T]; density per layer
+                n_layers = self.hparams.num_sparse_layers
+                B_, _, _, T_ = h_abs.shape
+                active_density_per_layer = (
+                    (h_abs > 1e-4)
+                    .float()
+                    .view(B_, 2, n_layers, -1, T_)
+                    .mean(dim=(0, 1, 3, 4))
+                    * 100.0
+                )
 
-                # 2b. Count of Unique Active Dictionary Atoms Per Layer
-                # Checks if an atom was used AT LEAST ONCE across time for each batch item
-                # Shape: (Num_Layers,) -> Average number of distinct atoms used per sample
-                #active_atoms_used = (h_abs > 1e-4).any(dim=-1).float().sum(dim=-1).mean(dim=0)
+                # Ensure dictionary exists on self
+                if not hasattr(self, "stage_stats") or self.stage_stats is None:
+                    self.stage_stats = {}
 
-        # 3. Decode and evaluate predictions for validation and testing stages
-        # 3a. Decode ASR predictions
-        if stage == sb.Stage.VALID and not getattr(self, "sparse_only", False):
-            # Decode token terms to words
-            predicted_words = self.tokenizer(pred_hyps, task="decode_from_list")
-        elif stage == sb.Stage.TEST:
-            predicted_words = [hyp[0].text.split(" ") for hyp in pred_hyps]
-
-        # 3b. Compute WER and speaker verification error metrics 
+                # Safely append per-batch values
+                self.stage_stats.setdefault("sparsity", []).append(sparsity_level.item())
+                for i, density in enumerate(active_density_per_layer):
+                    self.stage_stats.setdefault(f"active_density_layer_{i}", []).append(density.item())
+                
+        # 6. Evaluation Metrics Accumulation (VALID & TEST)
         if stage != sb.Stage.TRAIN and not getattr(self, "sparse_only", False):
+            # Decode token hypotheses to text words
+            if stage == sb.Stage.VALID:
+                predicted_words = self.tokenizer(pred_hyps, task="decode_from_list")
+            elif stage == sb.Stage.TEST:
+                predicted_words = [hyp[0].text.split(" ") for hyp in pred_hyps]
+
+            # Accumulate WER & Speaker Accuracy Metrics
             target_words = [wrd.split(" ") for wrd in batch.wrd]
             self.wer_metric.append(uttid, predicted_words, target_words)
+
             spk_predictions = torch.argmax(spk_logits, dim=1)
             self.spk_error_metrics.append(uttid, spk_predictions, spk_targets)
-        
-        # 4. Logging statistics
 
-        # Prepare logging dictionary
-        if getattr(self, "sparse_only", False):
-            log_stats = {
-                "loss": loss.item(),
-            }
-        else:
-            log_stats = {
-                "loss": loss.item(),
-                "loss_ctc": ctc_batch_loss.item(),
-                "loss_spk_reg": spk_reg_loss.item(),
-                "loss_content_reg": content_reg_loss.item(),
-            }
-            # recon/AAM losses and sparsity stats are only computed for TRAIN/VALID
-            if stage == sb.Stage.TRAIN or stage == sb.Stage.VALID:
-                log_stats["sparse_recon_loss"] = recon_batch_loss.item()
-                log_stats["loss_aam"] = batch_aam_loss.item()
-                log_stats["sparsity"] = sparsity_level.item()
-                log_stats.update(
-                    {
-                        f"active_density_layer_{i}": active_density_per_layer[i].item()
-                        for i in range(len(active_density_per_layer))
-                    }
-                )
-        self.hparams.train_logger.log_stats(
-            stats_meta={"epoch": self.hparams.epoch_counter.current},
-            train_stats=log_stats,
-            verbose=True,
-        )
-
-        return loss
+        return total_loss
 
     def on_evaluate_start(self, max_key=None, min_key=None):
         """perform checkpoint average if needed"""
@@ -316,127 +331,170 @@ class SparseBrain(sb.core.Brain):
         self.hparams.model.load_state_dict(ckpt, strict=True)
         self.hparams.model.eval()
 
-    def on_stage_start(self, stage, epoch):
-        """Gets called at the beginning of each epoch.
-        Initializes the WER and speaker verification error metrics for validation and testing stages.
-        """
-        if stage in (sb.Stage.TRAIN, sb.Stage.VALID):
-            self.recon_loss_total = 0.0
-            self.recon_loss_count = 0
 
+
+    def on_stage_start(self, stage: sb.Stage, epoch: int = None):
+        """Gets called at the beginning of each epoch / stage.
+
+        Initializes loss accumulators, evaluation metrics, embedding dictionaries,
+        and handles parameter freeze/unfreeze state transitions for warmup.
+        """
+        # 1. Reset loss accumulators across ALL stages (TRAIN, VALID, TEST)
+        self.recon_loss_total = 0.0
+        self.recon_loss_count = 0
+
+        # 2. Reset speaker evaluation embedding store during non-training stages
+        if stage != sb.Stage.TRAIN:
+            self.eval_spk_embs = {}
+
+        # 3. Determine if current epoch is in the sparse-only warmup phase
+        warmup_epochs = getattr(self.hparams, "number_warmup_epochs", 0)
+        is_warmup = (
+            epoch is not None and warmup_epochs > 0 and epoch <= warmup_epochs
+        )
+        self.sparse_only = is_warmup
+
+        # 4. Initialize evaluation metrics when downstream tasks (ASR / verification) are active
         if stage != sb.Stage.TRAIN and not (
-            stage == sb.Stage.VALID and getattr(self, "sparse_only", False)
+            stage == sb.Stage.VALID and self.sparse_only
         ):
             self.wer_metric = self.hparams.error_rate_computer()
             self.spk_error_metrics = self.hparams.spk_error_stats()
 
-        # Freeze/unfreeze logic for sparse-only training
+        # 5. Apply Parameter Freezing / Unfreezing logic
         if stage == sb.Stage.TRAIN:
-            warmup_epochs = getattr(self.hparams, "number_warmup_epochs", 0)
-            if warmup_epochs > 0 and epoch <= warmup_epochs:  # Optional sparse-only warmup phase
-                # Only train SparseDisentangle modules
-                logger.info("Epoch %d: Starting sparse-only training. Only SparseDisentangle modules will be updated.", epoch)
-                set_sparse_only_training(self.modules.disentangle, enable_sparse_only=True)
-                self.sparse_only = True
+            if self.sparse_only:
+                # Rank-0 guarded logging to prevent multi-GPU output duplication
+                if not hasattr(self, "is_main_process") or self.is_main_process:
+                    logger.info(
+                        "Epoch %d: Sparse-only warmup active. "
+                        "Only SparseDisentangle parameters will receive gradients.",
+                        epoch,
+                    )
+                set_sparse_only_training(
+                    self.modules.disentangle, enable_sparse_only=True
+                )
             else:
-                set_sparse_only_training(self.modules.disentangle, enable_sparse_only=False)
-                self.sparse_only = False
-        else:
-            warmup_epochs = getattr(self.hparams, "number_warmup_epochs", 0)
-            self.sparse_only = (
-                stage == sb.Stage.VALID
-                and epoch is not None
-                and warmup_epochs > 0
-                and epoch <= warmup_epochs
-            )
+                set_sparse_only_training(
+                    self.modules.disentangle, enable_sparse_only=False
+                )
+    
 
-    def on_stage_end(self, stage, stage_loss, epoch):
-        """Gets called at the end of a epoch."""
 
+    def on_stage_end(self, stage: sb.Stage, stage_loss: float, epoch: int = None):
+        """Called at the end of an epoch to aggregate statistics, compute metrics,
+        update learning rates, and save model checkpoints.
+        """
         stage_stats = {"loss": stage_loss}
-        if stage in (sb.Stage.TRAIN, sb.Stage.VALID):
-            stage_stats["sparse_recon_loss"] = (
-                self.recon_loss_total / self.recon_loss_count
-                if self.recon_loss_count
-                else 0.0
+
+        # 1. Aggregate Sparsity and Layer Activity Metrics collected during batch forward passes
+        if hasattr(self, "stage_stats") and isinstance(self.stage_stats, dict):
+            for key, values in self.stage_stats.items():
+                if isinstance(values, list) and len(values) > 0:
+                    stage_stats[key] = sum(values) / len(values)
+            # Clear accumulators for the next stage
+            self.stage_stats = {}
+
+        # 2. Stage-Specific Statistics Setup
+        if stage == sb.Stage.TRAIN:
+            # Cache full training stats (including sparsity/densities) for valid_stats output call
+            self.train_stats = stage_stats
+
+        # 3. Validation and Testing Metrics (WER, SER, Cosine EER)
+        elif not (stage == sb.Stage.VALID and getattr(self, "sparse_only", False)):
+            current_epoch = (
+                self.hparams.epoch_counter.current if epoch is None else epoch
+            )
+            valid_search_interval = getattr(
+                self.hparams, "valid_search_interval", 1
             )
 
-        if stage == sb.Stage.TRAIN:
-            # Log average of individual loss components for the training stage
-            self.train_stats = stage_stats
-        elif not (stage == sb.Stage.VALID and getattr(self, "sparse_only", False)):
-            stage_stats["WER"] = self.wer_metric.summarize("error_rate")
-            stage_stats["ErrorRate"] = self.spk_error_metrics.summarize("average")
-            current_epoch = self.hparams.epoch_counter.current
-            valid_search_interval = self.hparams.valid_search_interval
             if current_epoch % valid_search_interval == 0 or stage == sb.Stage.TEST:
                 stage_stats["WER"] = self.wer_metric.summarize("error_rate")
-                stage_stats["ErrorRate"] = self.spk_error_metrics.summarize("average")
+                stage_stats["ErrorRate"] = self.spk_error_metrics.summarize(
+                    "average"
+                )
 
-            # Compute cosine similarity stats for speaker verification
-            # Load verification trial pairs
-            veri_file = (
-                self.hparams.valid_veri_file
-                if stage == sb.Stage.VALID
-                else self.hparams.test_veri_file
-            )
-            trial_pairs = load_verification_trials(veri_file)
+                # --- Speaker Verification Cosine EER Calculation ---
+                veri_file = (
+                    self.hparams.valid_veri_file
+                    if stage == sb.Stage.VALID
+                    else self.hparams.test_veri_file
+                )
+                trial_pairs = load_verification_trials(veri_file)
+                similarity = torch.nn.CosineSimilarity(dim=-1, eps=1e-6)
 
-            similarity = torch.nn.CosineSimilarity(dim=-1, eps=1e-6)
+                positive_scores = []
+                negative_scores = []
 
-            positive_scores = []
-            negative_scores = []
+                for label, utt1, utt2 in trial_pairs:
+                    spk_emb1 = self.eval_spk_embs.get(utt1)
+                    spk_emb2 = self.eval_spk_embs.get(utt2)
 
-            for label, utt1, utt2 in trial_pairs:
-                spk_emb1 = self.eval_spk_embs.get(utt1)
-                spk_emb2 = self.eval_spk_embs.get(utt2)
-                if spk_emb1 is None or spk_emb2 is None:
-                    logger.warning(
-                        f"Speaker embedding not found for {utt1} or {utt2}. Skipping this pair."
+                    if spk_emb1 is None or spk_emb2 is None:
+                        continue
+
+                    spk_emb1 = spk_emb1.reshape(-1)
+                    spk_emb2 = spk_emb2.reshape(-1)
+
+                    if spk_emb1.numel() != spk_emb2.numel():
+                        logger.warning(
+                            "Mismatched embedding sizes for %s (%d) and %s (%d). Skipping.",
+                            utt1,
+                            spk_emb1.numel(),
+                            utt2,
+                            spk_emb2.numel(),
+                        )
+                        continue
+
+                    cos_sim = similarity(spk_emb1, spk_emb2)
+                    if str(label).strip() == "1":
+                        positive_scores.append(cos_sim.item())
+                    else:
+                        negative_scores.append(cos_sim.item())
+
+                # Guard against empty verification scores
+                if len(positive_scores) > 0 and len(negative_scores) > 0:
+                    pos_tensor = torch.tensor(positive_scores)
+                    neg_tensor = torch.tensor(negative_scores)
+                    eer, _ = self.hparams.spk_verification_metrics(
+                        pos_tensor, neg_tensor
                     )
-                    continue
-                spk_emb1 = spk_emb1.reshape(-1)
-                spk_emb2 = spk_emb2.reshape(-1)
-                if spk_emb1.numel() != spk_emb2.numel():
-                    logger.warning(
-                        "Mismatched embedding sizes for %s (%d) and %s (%d). Skipping pair.",
-                        utt1,
-                        spk_emb1.numel(),
-                        utt2,
-                        spk_emb2.numel(),
-                    )
-                    continue
-                cos_sim = similarity(spk_emb1, spk_emb2)
-                if label == "1":
-                    positive_scores.append(cos_sim.item())
+                    stage_stats["EER"] = eer
                 else:
-                    negative_scores.append(cos_sim.item())
-            positive_scores = torch.tensor(positive_scores)
-            negative_scores = torch.tensor(negative_scores)
-            eer, _ = self.hparams.spk_verification_metrics(
-                positive_scores, negative_scores
-            )
-            stage_stats["EER"] = eer
-            logger.info(
-                "Statistics for epoch %s: EER %s, WER %s",
-                str(epoch),
-                stage_stats["EER"],
-                stage_stats["WER"],
-            )
+                    logger.warning(
+                        "Insufficient evaluation trial pairs found to compute EER."
+                    )
+                    stage_stats["EER"] = float("nan")
 
+                if not hasattr(self, "is_main_process") or self.is_main_process:
+                    logger.info(
+                        "Statistics for epoch %s: EER %s, WER %s",
+                        str(epoch),
+                        str(stage_stats.get("EER", "N/A")),
+                        str(stage_stats.get("WER", "N/A")),
+                    )
+
+        # 4. End-of-Validation Operations
         if stage == sb.Stage.VALID:
             if getattr(self, "sparse_only", False):
-                logger.info(
-                    "Skipping WER, speaker error, and EER during sparse-only warmup."
-                )
-            if type(self.hparams.scheduler).__name__ == "NewBobScheduler":
+                if not hasattr(self, "is_main_process") or self.is_main_process:
+                    logger.info(
+                        "Skipping WER, speaker error, and EER during sparse-only warmup."
+                    )
+
+            # Scheduler step / LR retrieval
+            scheduler_name = type(self.hparams.scheduler).__name__
+            if scheduler_name == "NewBobScheduler":
                 lr, new_lr = self.hparams.scheduler(stage_stats["loss"])
                 sb.nnet.schedulers.update_learning_rate(self.optimizer, new_lr)
-            elif type(self.hparams.scheduler).__name__ == "LinearNoamScheduler":
+            elif scheduler_name == "LinearNoamScheduler":
                 lr = self.hparams.scheduler.current_lr
             else:
-                raise NotImplementedError
-            steps = self.optimizer_step
+                # Safe generic fallback for PyTorch / custom schedulers
+                lr = self.optimizer.param_groups[0]["lr"]
+
+            steps = getattr(self, "optimizer_step", 0)
             optimizer = self.optimizer.__class__.__name__
 
             epoch_stats = {
@@ -445,28 +503,36 @@ class SparseBrain(sb.core.Brain):
                 "steps": steps,
                 "optimizer": optimizer,
             }
+
+            # Log training vs validation stats (both now contain their aggregated sparsity metrics)
             self.hparams.train_logger.log_stats(
                 stats_meta=epoch_stats,
-                train_stats=self.train_stats,
+                train_stats=getattr(self, "train_stats", {}),
                 valid_stats=stage_stats,
             )
+
+            # Checkpoint saving logic
             if getattr(self, "sparse_only", False):
-                self.checkpointer.save_checkpoint(
-                    meta={"epoch": epoch},
-                )
+                self.checkpointer.save_checkpoint(meta={"epoch": epoch})
             else:
                 self.checkpointer.save_and_keep_only(
-                    meta={"WER": stage_stats["WER"], "epoch": epoch},
+                    meta={
+                        "WER": stage_stats.get("WER", stage_loss),
+                        "epoch": epoch,
+                    },
                     min_keys=["WER"],
-                    num_to_keep=self.hparams.avg_checkpoints,
+                    num_to_keep=getattr(self.hparams, "avg_checkpoints", 1),
                 )
 
+        # 5. End-of-Test Operations
         elif stage == sb.Stage.TEST:
             self.hparams.train_logger.log_stats(
                 stats_meta={"Epoch loaded": self.hparams.epoch_counter.current},
                 test_stats=stage_stats,
             )
-            if if_main_process():
+
+            is_main = getattr(self, "is_main_process", True)
+            if is_main and hasattr(self.hparams, "output_wer_folder"):
                 with open(self.hparams.output_wer_folder, "w", encoding="utf-8") as w:
                     self.wer_metric.write_stats(w)
 

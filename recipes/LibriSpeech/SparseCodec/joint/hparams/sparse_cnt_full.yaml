@@ -147,8 +147,8 @@ freeze_embedding: False
 pretrain_embeddings: False
 num_codebooks: 6 # For 3kbps bitrate
 sample_rate: 16000
-sparse_dim: 512
-num_sparse_layers: 2
+sparse_dim: 64
+num_sparse_layers: 4
 content_ratio: 0.5 #regulates how many atoms are responsible for content vs speaker information. 
 #sparse_only: False
 
@@ -161,11 +161,9 @@ codec: !new:speechbrain.lobes.models.discrete.dac.DAC
 disentangle: !new:speechbrain.lobes.models.sparse_disentangle.ResidualSparseDisentangle
     input_dim: !ref <encoder_dim>
     dict_dim: !ref <sparse_dim>
-    p_drop: 0.1
     num_sparse_layers: !ref <num_sparse_layers>
     content_ratio: !ref <content_ratio>
     num_steps: 5 # Steps for inner ISTA recon loop
-    num_speakers: 252 # Number of speakers in the train-clean-360 set + <unk>
 
 
 # LSTM
@@ -191,11 +189,10 @@ prune_history: False
 # Loss function parameters
 loss_reduction: batchmean
 sparse_loss_weight: 1.0
-spk_aam_loss_weight: 0.1   # Reduced from 10.0
-content_reg_weight: 5e-2   # Slightly increase L1 regularization to enforce true sparsity
-spk_reg_weight: 2e-2
-spk_loss_weight: 1.0
-ctc_weight: 1.0
+spk_aam_loss_weight: 2.0e6
+content_reg_weight: 500.0
+spk_reg_weight: 8.0e5
+ctc_weight: 8000.0
 
 
 

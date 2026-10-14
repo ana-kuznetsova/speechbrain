@@ -7,6 +7,38 @@ from torch.autograd import Function
 import speechbrain as sb
 import logging
 
+def l12_cnt_loss(H_cnt: torch.Tensor) -> torch.Tensor:
+    """Computes the L12 norm for the content matrix H_cnt."""
+    l1_per_time = torch.sum(torch.abs(H_cnt), dim=1)
+    l12_per_sample = torch.sqrt(torch.sum(l1_per_time ** 2, dim=1) + 1e-8)
+    return l12_per_sample.mean()
+
+
+def l1_spk_loss(H_spk: torch.Tensor) -> torch.Tensor:
+    """Computes the L1 norm for the speaker matrix H_spk."""
+    loss = torch.abs(H_spk).sum(dim=-1)
+    return loss.mean()
+
+def recon_loss(z: torch.Tensor, z_approx: torch.Tensor) -> torch.Tensor:
+    """Computes the reconstruction loss between z and z_approx."""
+    loss = F.mse_loss(z_approx, z, reduction='none')
+    loss = torch.sum(loss, dim=[1, 2])
+    return loss.mean()
+
+def cnt_mask(z: torch.Tensor, wav_lens: torch.Tensor = None) -> tuple:
+    """Returns the valid-frame mask (B, 1, T) and valid frame counts (B, 1)."""
+    B, _, T = z.shape
+    if wav_lens is None:
+        mask = torch.ones(B, 1, T, device=z.device, dtype=z.dtype)
+        n_valid = torch.full((B, 1), float(T), device=z.device)
+        return mask, n_valid
+    lens = torch.round(wav_lens.to(z.device) * T).clamp(min=1, max=T)
+    mask = (
+        (torch.arange(T, device=z.device)[None, :] < lens[:, None])
+        .unsqueeze(1)
+        .to(z.dtype)
+    )
+    return mask, mask.sum(dim=-1)
 
 class GradientReversalFunction(Function):
     @staticmethod
@@ -42,121 +74,48 @@ class GradientReversal(nn.Module):
             
         return GradientReversalFunction.apply(x, active_alpha)
 
-    
 
 
 class SparseDisentangle(nn.Module):
-    """Sparse dictionary module using unrolled ISTA iterations with asymmetric latent codes:
+    """Sparse dictionary module using unrolled ISTA iterations with functional asymmetric latent codes:
 
       - H_cnt: Time-varying content matrix of shape (B, K_cnt, T)
-      - H_spk: Time-invariant speaker vector of shape (B, K_spk, 1)
+      - H_spk: Time-invariant speaker vector of shape (B, K_spk, 1) derived functionally from z.
 
     Reconstruction: z_approx = W_cnt @ H_cnt + W_spk @ H_spk
-
-    Args:
-        input_dim (int): Feature dimension D of input signal z.
-        dict_dim (int): Total dictionary size K = K_cnt + K_spk.
-        content_ratio (float): Fraction of dictionary atoms assigned to content
-          W_cnt.
-        num_steps (int): Number of unrolled ISTA steps.
-        step_size (float): ISTA step size eta.
-        l1_lambda (float): Sparsity penalty lambda.
     """
 
     def __init__(
         self,
         input_dim: int,
         dict_dim: int,
-        num_speakers: int = 252,
         content_ratio: float = 0.5,
         num_steps: int = 5,
-        step_size: float = 2.0,
         l1_lambda: float = 1e-4,
-        p_drop: float = 0.1,
     ):
         super().__init__()
         self.input_dim = input_dim
         self.dict_dim = dict_dim
         self.content_ratio = content_ratio
         self.num_steps = num_steps
-        self.step_size = step_size
         self.l1_lambda = l1_lambda
-        self.p_drop = p_drop
-
+    
         # Split sizes
         self.mid = int(dict_dim * content_ratio)
 
         # Dictionary parameter W (input_dim x dict_dim)
         self.W = nn.Parameter(torch.randn(input_dim, dict_dim) * 0.1)
-        self.prototype_table = nn.Embedding(num_speakers, dict_dim - self.mid)
-        self.register_buffer(
-            "speaker_initialized",
-            torch.zeros(num_speakers, dtype=torch.bool),
-        )
-        self.speaker_frame_map = {}
-
-    def _get_or_init_speaker_prototypes(self, H_spk_time: torch.Tensor, speaker_codes: torch.Tensor) -> torch.Tensor:
-        """Initializes or retrieves prototype vectors for each sample in the batch.
-
-        Args:
-            H_spk_time: Projected speaker frame representations (B, K_spk, T)
-            speaker_codes: Tensor of speaker IDs (B,)
-
-        Returns:
-            H_spk: Initialized/looked-up speaker vectors (B, K_spk, 1)
-        """
-        B, K_spk, T = H_spk_time.shape
-        spk_ids = speaker_codes.to(
-            device=H_spk_time.device, dtype=torch.long
-        ).view(-1)
-
-        if spk_ids.numel() == 1 and B > 1:
-            spk_ids = spk_ids.expand(B)
-
-        batch_prototypes = []
-
-        for i, spk_id_tensor in enumerate(spk_ids):
-            spk_id = spk_id_tensor.item()
-
-            # 1. Assign a fixed random frame index for this speaker if unseen
-            if spk_id not in self.speaker_frame_map:
-                self.speaker_frame_map[spk_id] = torch.randint(
-                    0, T, size=(1,)
-                ).item()
-
-            spk_idx = self.speaker_frame_map[spk_id] % T
-
-            # 2. If prototype table entry is uninitialized, copy the sampled frame vector
-            if not self.speaker_initialized[spk_id].item():
-                sampled_vec = H_spk_time[i, :, spk_idx]  # Shape: (K_spk,)
-                with torch.no_grad():
-                    self.prototype_table.weight[spk_id].copy_(sampled_vec)
-                    self.speaker_initialized[spk_id] = True
-
-            # 3. Lookup current embedding from prototype_table
-            proto_vec = self.prototype_table(
-                spk_ids[i : i + 1]
-            )  # Shape: (1, K_spk)
-
-            batch_prototypes.append(proto_vec)
-
-        # Stack into (B, K_spk, 1)
-        prototypes = torch.cat(batch_prototypes, dim=0).unsqueeze(-1)
-        return prototypes
 
     def soft_threshold(self, H: torch.Tensor, threshold: float) -> torch.Tensor:
         """Applies proximal operator: sign(H) * max(0, |H| - threshold)."""
         return torch.sign(H) * torch.relu(torch.abs(H) - threshold)
 
     def forward(
-        self, z: torch.Tensor, 
-        speaker_codes: torch.Tensor = None,
-        stage: sb.Stage = sb.Stage.TRAIN
+        self, 
+        z: torch.Tensor, 
+        stage: sb.Stage = sb.Stage.TRAIN,
+        wav_lens: torch.Tensor = None,
     ) -> tuple:
-        if speaker_codes is None:
-            raise ValueError(
-                "speaker_codes are required to track speaker prototypes"
-            )
         B, D_in, T = z.shape
 
         # 1. Normalize dictionary columns
@@ -165,83 +124,66 @@ class SparseDisentangle(nn.Module):
         ).clamp(min=1e-5)
         W_normalized = self.W / W_norm  # Shape: (D_in, K)
 
-        # Split normalized dictionary into W_cnt and W_spk
         W_cnt = W_normalized[:, : self.mid]  # (D_in, K_cnt)
         W_spk = W_normalized[:, self.mid :]  # (D_in, K_spk)
 
-        # 2. Initializations
-        H_cnt = torch.einsum("dk, bdt -> bkt", W_cnt, z)  # (B, K_cnt, T)
-
-        # H_spk prototype lookup: (B, K_spk, 1)
-        H_spk_time = torch.einsum("dk, bdt -> bkt", W_spk, z)
-
-        H_spk = self._get_or_init_speaker_prototypes(
-            H_spk_time, speaker_codes
+        # 2. Functional Initializations (NO prototype table / NO discrete IDs)
+        H_cnt = torch.randn(
+            B, self.mid, T, device=W_cnt.device, dtype=W_cnt.dtype
+        )  # (B, K_cnt, T)
+        h_spk = torch.randn(
+            B,
+            self.dict_dim - self.mid,
+            1,
+            device=W_cnt.device,
+            dtype=W_cnt.dtype,
         )  # (B, K_spk, 1)
 
+        # Mask of valid (non-padded) frames, (B, 1, T)
+        mask, n_valid = cnt_mask(z, wav_lens)
+        H_cnt = H_cnt * mask
+
         # 3. Dynamic Lipschitz Step Size Calculation
-        if stage == sb.Stage.TRAIN:
-            with torch.no_grad():
-                s = torch.linalg.svdvals(W_normalized)[0]
-                L = (s**2).item()
-                # Safe step size for joint descent
-                eta = 1.0 / max(L, 1e-5)
-                threshold = eta * self.l1_lambda
+        with torch.no_grad():
+            s = torch.linalg.svdvals(W_normalized)[0]
+            L = (s**2).item()
+            eta = 1.0 / max(L, 1e-5)
+            threshold = eta * self.l1_lambda
 
+        # 4. ISTA Optimization Loop (Applies in ALL stages identically)
+        for step in range(self.num_steps):
+            z_cnt = torch.einsum("dk, bkt -> bdt", W_cnt, H_cnt)
+            # Expand speaker code across frames
+            H_spk = h_spk.expand(B, self.dict_dim - self.mid, T)
+            z_spk = torch.einsum("dk, bkr -> bdr", W_spk, H_spk)
+            
+            residual = (z - (z_cnt + z_spk)) * mask
 
-            # 4. ISTA Optimization Loop
-            for step in range(self.num_steps):
-                # z_cnt: (B, D_in, T)
-                z_cnt = torch.einsum("dk, bkt -> bdt", W_cnt, H_cnt)
+            # Content update: (B, K_cnt, T)
+            grad_cnt = torch.einsum("dk, bdt -> bkt", W_cnt, residual)
+            H_cnt = self.soft_threshold(H_cnt + eta * grad_cnt, threshold) * mask
 
-                # z_spk: (B, D_in, 1) -- contract K_spk, keep single frame dimension 'r' (size 1)
-                z_spk = torch.einsum("dk, bkr -> bdr", W_spk, H_spk)
-                
-                # PyTorch automatically broadcasts z_spk (B, D_in, 1) across T when subtracting
-                residual = z - (z_cnt + z_spk)
+            # Speaker update: average residual projection across T -> (B, K_spk, 1)
+            grad_spk = torch.einsum("dk, bdt -> bk", W_spk, residual).unsqueeze(-1) / n_valid.unsqueeze(-1)
+            h_spk = self.soft_threshold(h_spk + eta * grad_spk, threshold)
 
-                # Content update: (B, K_cnt, T)
-                grad_cnt = torch.einsum("dk, bdt -> bkt", W_cnt, residual)
-                H_cnt = self.soft_threshold(H_cnt + eta * grad_cnt, threshold)
+        # 5. Final Reconstruction & Regularization
 
-                # Speaker update: contract d and t -> (B, K_spk), unsqueeze to (B, K_spk, 1)
-                grad_spk = torch.einsum("dk, bdt -> bk", W_spk, residual).unsqueeze(-1) / T
-                H_spk = self.soft_threshold(H_spk + eta * grad_spk, threshold)
+        z_cnt = torch.einsum("dk, bkt -> bdt", W_cnt, H_cnt)
+        z_spk = torch.einsum("dk, bkr -> bdr", W_spk, H_spk)
+        z_approx = z_cnt + z_spk
 
-        # 5. Final Reconstruction
-        H_cnt_final = H_cnt
-        H_spk_final = H_spk
+        return z_approx, H_cnt, h_spk, H_spk
 
-        if stage == sb.Stage.TRAIN and self.p_drop > 0.0:
-            H_cnt_final = F.dropout(H_cnt, p=self.p_drop, training=True)
-            H_spk_final = F.dropout(H_spk, p=self.p_drop, training=True)
-
-        z_cnt = torch.einsum("dk, bkt -> bdt", W_cnt, H_cnt_final)
-        z_spk = torch.einsum("dk, bkr -> bdr", W_spk, H_spk_final)
-        z_approx = z_cnt + z_spk  # Broadcasts (B, D_in, 1) across T
-
-
-        # 6. Regularization penalties
-        l1_cnt = H_cnt.abs().mean()
-        l1_spk = H_spk.abs().mean()
-
-        # Compute L2 only for inner loop logging purposes, not for backpropagation
-        #with torch.no_grad():
-        #    l2_err =  F.mse_loss(z_approx, z)
-        #    logging.info(f"Inner Loop L2 error: {l2_err.item():.6f}")
-
-        return z_approx, H_cnt, H_spk, l1_cnt, l1_spk
 
 class ResidualSparseDisentangle(nn.Module):
     def __init__(
         self,
-        input_dim,
-        dict_dim,
-        num_sparse_layers=4,
-        num_steps=20,
-        content_ratio=0.5,
-        num_speakers=252,
-        p_drop=0.1,
+        input_dim: int,
+        dict_dim: int,
+        num_sparse_layers: int = 4,
+        num_steps: int = 20,
+        content_ratio: float = 0.5,
     ):
         super().__init__()
 
@@ -250,7 +192,7 @@ class ResidualSparseDisentangle(nn.Module):
         self.num_layers = num_sparse_layers
         self.content_ratio = content_ratio
         self.num_steps = num_steps
-        self.p_drop = p_drop
+
 
         self.sparse_module_list = nn.ModuleList(
             [
@@ -259,68 +201,50 @@ class ResidualSparseDisentangle(nn.Module):
                     dict_dim,
                     content_ratio=content_ratio,
                     num_steps=num_steps,
-                    num_speakers=num_speakers, 
-                    p_drop=p_drop,
                 )
                 for _ in range(num_sparse_layers)
             ]
         )
 
         self.mid = int(dict_dim * content_ratio)
-        spk_dim = dict_dim - self.mid
-        self.spk_concat_dim = spk_dim * num_sparse_layers
+        self.spk_dim = dict_dim - self.mid
+        self.spk_concat_dim = self.spk_dim * num_sparse_layers
         self.cnt_concat_dim = self.mid * num_sparse_layers
 
-    def forward(self, z, speaker_codes=None, stage=sb.Stage.TRAIN, **kwargs):
+    def forward(self, z: torch.Tensor, stage: sb.Stage = sb.Stage.TRAIN, wav_lens: torch.Tensor = None):
         residual = z
-        all_h = []
+
+        all_h_cnt = []
         all_h_spk = []
-        total_reconstruction = 0
-        total_l1_reg_content = 0.0
+        all_h_spk_mat = []
+
+        total_reconstruction = 0.0
+        total_l12_reg_content = 0.0
         total_l1_reg_speaker = 0.0
 
         for sparse_module in self.sparse_module_list:
-            x_approx_i, h_cnt_i, h_spk_i, l1_cnt_i, l1_spk_i = sparse_module(
-                residual, speaker_codes=speaker_codes, stage=stage
-            )
-            residual = residual - x_approx_i
-            total_reconstruction = total_reconstruction + x_approx_i
-            
-            # Expand speaker code over time so shape is (B, K_spk, T)
-            spk_unit_vector = torch.ones(1, 1, z.shape[2], device=z.device)
-            h_spk_time = h_spk_i @ spk_unit_vector  # (B, K_spk, T)
-            
-            # Concatenate content and speaker codes along dictionary/feature dimension
-            h_i = torch.cat([h_cnt_i, h_spk_time], dim=1)
+            z_approx, H_cnt, h_spk, H_spk = sparse_module(residual, stage=stage, wav_lens=wav_lens)
+            all_h_cnt.append(H_cnt)
+            all_h_spk.append(h_spk)
+            all_h_spk_mat.append(H_spk)
 
-            all_h.append(h_i)
-            all_h_spk.append(h_spk_i)
-            total_l1_reg_content += l1_cnt_i
-            total_l1_reg_speaker += l1_spk_i
+            residual = residual - z_approx
+            total_reconstruction = total_reconstruction + z_approx
 
-        # Stack layers: Shape (B, Num_Layers, K_cnt + K_spk, T)
-        h_stacked = torch.stack(all_h, dim=1)
+            # Compute L12 regularization for content and speaker features
+            l12_content = l12_cnt_loss(H_cnt)
 
-        # Flatten layers and feature dims for concatenated code representations
-        # Shape: (B, Num_Layers * (K_cnt + K_spk), T)
-        h_flat = torch.flatten(h_stacked, start_dim=1, end_dim=2)
+            total_l12_reg_content = total_l12_reg_content + l12_content
+            l1_speaker = l1_spk_loss(h_spk)
+            total_l1_reg_speaker = total_l1_reg_speaker + l1_speaker
 
-        B, D_total, T = h_flat.shape
-        mid = D_total // 2
+        # Compute recosntruction loss
+        recon_loss_val = recon_loss(total_reconstruction, z)
 
-        # Split concatenated codes back into content and speaker components
-        h_cnt = h_flat[:, :mid, :]
-        h_spk = h_flat[:, mid:, :]
+        # Aggregate layer-wise codes
+        all_h_cnt = torch.cat(all_h_cnt, dim=1)
+        all_h_spk = torch.cat(all_h_spk, dim=1)
+        all_h_spk_mat = torch.cat(all_h_spk_mat, dim=1)
+        all_h = torch.stack([all_h_cnt, all_h_spk_mat], dim=1)
 
-        # Reconstruction loss evaluated directly in DAC latent space
-        total_recon_loss = F.mse_loss(total_reconstruction, z)
-
-        return (
-            h_cnt,
-            h_spk,
-            h_stacked,
-            total_reconstruction,
-            total_recon_loss,
-            total_l1_reg_content,
-            total_l1_reg_speaker,
-        )
+        return recon_loss_val, total_l12_reg_content, total_l1_reg_speaker, all_h_cnt, all_h_spk, all_h_spk_mat, all_h
