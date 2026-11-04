@@ -13,6 +13,7 @@ Authors
 
 import logging
 import os
+import random
 import sys
 import time
 from pathlib import Path
@@ -27,6 +28,7 @@ from tqdm import tqdm
 import torch.nn.functional as F
 
 import speechbrain as sb
+from speechbrain.lobes.models.sparse_disentangle import cnt_mask
 from speechbrain.nnet import loss
 from speechbrain.tokenizers.SentencePiece import SentencePiece
 from speechbrain.utils.distributed import if_main_process, run_on_main
@@ -99,6 +101,94 @@ def set_sparse_only_training(residual_sparse_module, enable_sparse_only):
             param.requires_grad = True
 
 
+def _unwrap(module):
+    """Returns the underlying module when wrapped (e.g. by DistributedDataParallel),
+    so that custom methods such as coherence_penalty() can be called on it."""
+    return getattr(module, "module", module)
+
+
+def pooled_content_statistics(h_cnt: torch.Tensor, wav_lens: torch.Tensor) -> torch.Tensor:
+    """Utterance-level summary of the time-varying content code, (B, 3 * K).
+
+    Masked mean, standard deviation and mean absolute value over time. These
+    are the statistics from which a downstream model (e.g. the bidirectional
+    LSTM) could read speaker identity out of the content code.
+    """
+    mask, n_valid = cnt_mask(h_cnt, wav_lens)  # (B, 1, T), (B, 1)
+    n = n_valid.unsqueeze(-1)  # (B, 1, 1)
+    mean = (h_cnt * mask).sum(dim=-1, keepdim=True) / n
+    var = (((h_cnt - mean) * mask) ** 2).sum(dim=-1, keepdim=True) / n
+    mean_abs = (h_cnt.abs() * mask).sum(dim=-1, keepdim=True) / n
+    return torch.cat([mean, (var + 1e-8).sqrt(), mean_abs], dim=1).squeeze(-1)
+
+
+def cross_correlation_penalty(x: torch.Tensor, y: torch.Tensor, eps: float = 1e-5) -> torch.Tensor:
+    """Mean squared cross-correlation between every feature of x (B, Dx) and
+    every feature of y (B, Dy), estimated over the batch.
+
+    It is zero when no content statistic is linearly correlated with any
+    speaker-code dimension. Features are standardised first, so the value does
+    not depend on the scale of the codes. Returns 0 for tiny batches, where the
+    estimate is meaningless.
+    """
+    batch = x.shape[0]
+    if batch < 4:
+        return x.new_zeros(())
+    x = (x - x.mean(dim=0, keepdim=True)) / (x.std(dim=0, keepdim=True) + eps)
+    y = (y - y.mean(dim=0, keepdim=True)) / (y.std(dim=0, keepdim=True) + eps)
+    corr = x.t() @ y / (batch - 1)
+    return corr.pow(2).mean()
+
+
+def content_invariance_loss(
+    h_cnt: torch.Tensor, h_cnt_aug: torch.Tensor, wav_lens: torch.Tensor, eps: float = 1e-8
+) -> torch.Tensor:
+    """Relative squared distance between the content codes of an utterance and
+    of its pitch/formant-shifted version (same frames, so codes are aligned).
+
+    Normalised by the code energy so that the value is in [0, 2] regardless of
+    the scale of the codes.
+    """
+    mask, _ = cnt_mask(h_cnt, wav_lens)
+    diff = ((h_cnt - h_cnt_aug) * mask).pow(2).sum(dim=(1, 2))
+    energy = (h_cnt * mask).pow(2).sum(dim=(1, 2)) + (h_cnt_aug * mask).pow(2).sum(
+        dim=(1, 2)
+    )
+    return (diff / (energy + eps)).mean()
+
+
+def embedding_trial_eer(embeddings: dict, trial_pairs: list, eer_fn) -> float:
+    """Cosine-scoring EER for a dict {utt_id: vector} on a list of trials.
+
+    Embeddings are z-scored per feature over the evaluation set first, so that
+    large-magnitude features do not dominate the cosine. Used to measure how
+    much speaker information can be read from the content code: an EER near
+    50% means little leakage, a low EER means strong leakage.
+    """
+    if len(embeddings) < 2:
+        return float("nan")
+    keys = list(embeddings.keys())
+    mat = torch.stack([embeddings[k].reshape(-1) for k in keys]).float()
+    mat = (mat - mat.mean(dim=0, keepdim=True)) / (mat.std(dim=0, keepdim=True) + 1e-5)
+    standardized = dict(zip(keys, mat))
+
+    positive_scores, negative_scores = [], []
+    for label, utt1, utt2 in trial_pairs:
+        emb1, emb2 = standardized.get(utt1), standardized.get(utt2)
+        if emb1 is None or emb2 is None:
+            continue
+        score = F.cosine_similarity(emb1, emb2, dim=0, eps=1e-6).item()
+        if str(label).strip() == "1":
+            positive_scores.append(score)
+        else:
+            negative_scores.append(score)
+
+    if not positive_scores or not negative_scores:
+        return float("nan")
+    eer, _ = eer_fn(torch.tensor(positive_scores), torch.tensor(negative_scores))
+    return eer
+
+
 # Define training procedure
 class SparseBrain(sb.core.Brain):
     def compute_forward(self, batch: Dict[str, torch.Tensor], stage: sb.Stage) -> Tuple:
@@ -119,6 +209,8 @@ class SparseBrain(sb.core.Brain):
                 - recon_loss: Reconstruction loss (MSE) for the latent representations
                 - l1_reg_content: L1 regularization term for content features
                 - l1_reg_speaker: L1 regularization term for speaker features
+                - h_cnt_aug: Content code of a pitch-shifted copy of the batch
+                  (TRAIN with invariance_weight > 0 only, otherwise None)
         """
         batch = batch.to(self.device)
         wavs, wav_lens = batch.sig
@@ -139,6 +231,18 @@ class SparseBrain(sb.core.Brain):
             stage=stage,
             wav_lens=wav_lens
         )
+
+        # 2b. Speaker-altering augmentation (invariance loss): the content code of a
+        # pitch/formant-shifted copy of the same utterance should match the original one.
+        # Only during joint TRAIN; the shifted branch runs without gradients (it acts
+        # as a fixed target), which also keeps the extra memory cost low.
+        h_cnt_aug = None
+        if (
+            stage == sb.Stage.TRAIN
+            and not getattr(self, "sparse_only", False)
+            and getattr(self.hparams, "invariance_weight", 0.0) > 0
+        ):
+            h_cnt_aug = self._content_code_of_shifted_audio(wavs, wav_lens, stage)
 
         # 3. ASR Encoder Forward Pass
         # Permute content features to [B, T, D_cnt] for sequence modeling
@@ -175,9 +279,16 @@ class SparseBrain(sb.core.Brain):
         if stage != sb.Stage.TRAIN:
             if not hasattr(self, "eval_spk_embs"):
                 self.eval_spk_embs = {}
+            if not hasattr(self, "eval_cnt_embs"):
+                self.eval_cnt_embs = {}
             utt_ids = batch.id
             for utt_id, emb in zip(utt_ids, h_spk_vec):
                 self.eval_spk_embs[utt_id] = emb.cpu().detach()
+            # Pooled content-code statistics, scored the same way as the speaker
+            # code to measure how much speaker information leaks into H_cnt.
+            cnt_stats = pooled_content_statistics(h_cnt.detach(), wav_lens)
+            for utt_id, stats in zip(utt_ids, cnt_stats):
+                self.eval_cnt_embs[utt_id] = stats.cpu()
         #logging.info("Debug losses: recon_loss=%f, l12_reg_content=%f, l12_reg_speaker=%f", recon_loss.item(), l12_reg_content.item(), l12_reg_speaker.item())
         return (
             p_ctc,
@@ -191,7 +302,49 @@ class SparseBrain(sb.core.Brain):
             h_all,
             l12_reg_content,
             l12_reg_speaker,
+            h_cnt_aug,
         )
+
+    def _content_code_of_shifted_audio(self, wavs, wav_lens, stage):
+        """Content code (B, K, T) of a randomly pitch/formant-shifted copy of wavs.
+
+        The phase-vocoder pitch shift changes pitch and formants (speaker
+        cues) while keeping duration, so frames stay aligned with the original.
+        """
+        shifts = getattr(
+            self.hparams, "invariance_pitch_steps", [-4, -3, -2, 2, 3, 4]
+        )
+        n_steps = random.choice(list(shifts))
+        with torch.no_grad():
+            wavs_aug = torchaudio.functional.pitch_shift(
+                wavs, self.hparams.sample_rate, n_steps
+            )
+            # Guard against off-by-a-few-samples lengths from resampling
+            n_samples = wavs.shape[-1]
+            if wavs_aug.shape[-1] < n_samples:
+                wavs_aug = F.pad(wavs_aug, (0, n_samples - wavs_aug.shape[-1]))
+            wavs_aug = wavs_aug[..., :n_samples]
+            enc_aug = self.modules.codec.encoder(wavs_aug.unsqueeze(1))
+            h_cnt_aug = self.modules.disentangle(
+                enc_aug, stage=stage, wav_lens=wav_lens
+            )[3]
+        return h_cnt_aug
+
+    def _dictionary_coherence_loss(self):
+        """Weighted dictionary coherence penalty and the raw values for logging.
+
+        Penalises overlap between content atoms and speaker atoms (cross) and
+        redundancy among atoms of the same branch (intra), so that the two
+        branches span different subspaces and cannot explain the same signal
+        component.
+        """
+        cross_weight = getattr(self.hparams, "coherence_weight", 0.0)
+        intra_weight = getattr(self.hparams, "intra_coherence_weight", 0.0)
+        if cross_weight == 0 and intra_weight == 0:
+            return 0.0, {}
+        cross, intra = _unwrap(self.modules.disentangle).coherence_penalty()
+        loss = cross_weight * cross + intra_weight * intra
+        return loss, {"coherence_cross": cross, "coherence_intra": intra}
 
     def compute_objectives(
         self, predictions: tuple, batch: dict, stage: sb.Stage
@@ -206,7 +359,7 @@ class SparseBrain(sb.core.Brain):
         Returns:
             Combined scalar loss tensor for backpropagation.
         """
-        # 1. Unpack 9 prediction outputs matching updated compute_forward
+        # 1. Unpack 12 prediction outputs matching updated compute_forward
         (
             p_ctc,
             pred_hyps,
@@ -219,6 +372,7 @@ class SparseBrain(sb.core.Brain):
             h_all,
             l12_reg_content,
             l12_reg_speaker,
+            h_cnt_aug,
         ) = predictions
 
         uttid = batch.id
@@ -227,14 +381,26 @@ class SparseBrain(sb.core.Brain):
         # PATH A: Sparse-Only Warmup Training Phase
         # ------------------------------------------------------------------
         if stage == sb.Stage.TRAIN and getattr(self, "sparse_only", False):
+            # Dictionary coherence penalty: learn content/speaker atoms that
+            # span different subspaces from the very start of training.
+            coherence_loss, coherence_logs = self._dictionary_coherence_loss()
             total_loss = (
                 recon_loss * getattr(self.hparams, "sparse_loss_weight", 1.0)
                 + l12_reg_content * getattr(self.hparams, "content_reg_weight", 1e-4)
                 + l12_reg_speaker * getattr(self.hparams, "spk_reg_weight", 1e-4)
+                + coherence_loss
             )
             # Store for epoch-level summary stats tracking
             if not hasattr(self, "stage_stats"):
                 self.stage_stats = {}
+            self._log_periodic_train_losses(
+                {
+                    "recon_loss": recon_loss,
+                    "total_l12_reg_content": l12_reg_content,
+                    "total_l1_reg_speaker": l12_reg_speaker,
+                    **coherence_logs,
+                }
+            )
             return total_loss
 
         # ------------------------------------------------------------------
@@ -247,6 +413,7 @@ class SparseBrain(sb.core.Brain):
         ctc_batch_loss = self.hparams.ctc_cost(
             p_ctc, tokens, wav_lens, tokens_lens, reduction=self.hparams.loss_reduction
         )
+        ctc_raw_loss = ctc_batch_loss
         ctc_batch_loss = ctc_batch_loss * self.hparams.ctc_weight
 
         # 3. Compute Regularization & Disentanglement Losses
@@ -263,11 +430,51 @@ class SparseBrain(sb.core.Brain):
             
             # AAM / Angular Softmax Loss
             batch_aam_loss = self.hparams.spk_aam_loss(spk_logits, spk_targets)
+            aam_raw_loss = batch_aam_loss
             batch_aam_loss = batch_aam_loss * getattr(
                 self.hparams, "spk_aam_loss_weight", 1.0
             )
 
             total_loss = total_loss + recon_batch_loss + batch_aam_loss
+
+            # Raw (unweighted) values of the leakage-reduction terms, for logging
+            extra_losses = {}
+
+            # 4a. Dictionary coherence: content and speaker atoms should span
+            # different subspaces so one branch cannot explain the other's signal.
+            coherence_loss, coherence_logs = self._dictionary_coherence_loss()
+            total_loss = total_loss + coherence_loss
+            extra_losses.update(coherence_logs)
+
+            # 4b. Dependence penalty: decorrelate the pooled content-code
+            # statistics (mean / std / mean|.| over time) from the speaker code.
+            dependence_weight = getattr(self.hparams, "dependence_weight", 0.0)
+            if dependence_weight > 0:
+                dependence_loss = cross_correlation_penalty(
+                    pooled_content_statistics(h_cnt, wav_lens), h_spk.squeeze(-1)
+                )
+                total_loss = total_loss + dependence_weight * dependence_loss
+                extra_losses["dependence_loss"] = dependence_loss
+
+            # 4c. Invariance loss: content code must not change when pitch/formants
+            # (speaker cues) of the same utterance are shifted. TRAIN only.
+            invariance_weight = getattr(self.hparams, "invariance_weight", 0.0)
+            if h_cnt_aug is not None and invariance_weight > 0:
+                invariance_loss = content_invariance_loss(h_cnt, h_cnt_aug, wav_lens)
+                total_loss = total_loss + invariance_weight * invariance_loss
+                extra_losses["invariance_loss"] = invariance_loss
+
+            if stage == sb.Stage.TRAIN:
+                self._log_periodic_train_losses(
+                    {
+                        "ctc_loss": ctc_raw_loss,
+                        "aam_loss": aam_raw_loss,
+                        "recon_loss": recon_loss,
+                        "total_l12_reg_content": l12_reg_content,
+                        "total_l1_reg_speaker": l12_reg_speaker,
+                        **extra_losses,
+                    }
+                )
 
         # 5. Compute Sparsity & Activity Metrics for Monitoring
         # Inside compute_objectives (for TRAIN and VALID):
@@ -298,6 +505,9 @@ class SparseBrain(sb.core.Brain):
                 self.stage_stats.setdefault("sparsity", []).append(sparsity_level.item())
                 for i, density in enumerate(active_density_per_layer):
                     self.stage_stats.setdefault(f"active_density_layer_{i}", []).append(density.item())
+                # Epoch-level averages of the leakage-reduction terms (train / valid lines)
+                for name, value in extra_losses.items():
+                    self.stage_stats.setdefault(name, []).append(float(value.detach()))
                 
         # 6. Evaluation Metrics Accumulation (VALID & TEST)
         if stage != sb.Stage.TRAIN and not getattr(self, "sparse_only", False):
@@ -315,6 +525,45 @@ class SparseBrain(sb.core.Brain):
             self.spk_error_metrics.append(uttid, spk_predictions, spk_targets)
 
         return total_loss
+
+    def _log_periodic_train_losses(self, losses: dict):
+        """Accumulate per-batch training loss terms and append their mean to
+        train_log.txt every ``loss_log_interval`` optimizer steps (default 100).
+        """
+        if not hasattr(self, "periodic_loss_acc"):
+            self.periodic_loss_acc = {}
+            self.last_periodic_log_step = -1
+
+        for name, value in losses.items():
+            if torch.is_tensor(value):
+                value = value.detach()
+            self.periodic_loss_acc.setdefault(name, []).append(float(value))
+
+        interval = getattr(self.hparams, "loss_log_interval", 100)
+        step = getattr(self, "optimizer_step", 0)
+        # Skip until the interval is reached; the step guard avoids duplicate
+        # lines when gradient accumulation runs several batches per step.
+        if interval <= 0 or step == 0 or step % interval != 0:
+            return
+        if step == self.last_periodic_log_step:
+            return
+
+        mean_losses = {
+            name: sum(vals) / len(vals)
+            for name, vals in self.periodic_loss_acc.items()
+        }
+        self.periodic_loss_acc = {}
+        self.last_periodic_log_step = step
+
+        self.hparams.train_logger.log_stats(
+            stats_meta={
+                "epoch": getattr(self, "current_epoch", None),
+                "steps": step,
+                "avg_over_last": interval,
+            },
+            train_stats=mean_losses,
+            verbose=False,
+        )
 
     def on_evaluate_start(self, max_key=None, min_key=None):
         """perform checkpoint average if needed"""
@@ -340,12 +589,14 @@ class SparseBrain(sb.core.Brain):
         and handles parameter freeze/unfreeze state transitions for warmup.
         """
         # 1. Reset loss accumulators across ALL stages (TRAIN, VALID, TEST)
+        self.current_epoch = epoch
         self.recon_loss_total = 0.0
         self.recon_loss_count = 0
 
         # 2. Reset speaker evaluation embedding store during non-training stages
         if stage != sb.Stage.TRAIN:
             self.eval_spk_embs = {}
+            self.eval_cnt_embs = {}
 
         # 3. Determine if current epoch is in the sparse-only warmup phase
         warmup_epochs = getattr(self.hparams, "number_warmup_epochs", 0)
@@ -466,6 +717,15 @@ class SparseBrain(sb.core.Brain):
                         "Insufficient evaluation trial pairs found to compute EER."
                     )
                     stage_stats["EER"] = float("nan")
+
+                # Leakage diagnostic: same verification trials scored on the pooled
+                # CONTENT code. ~50% EER = no speaker info in H_cnt; a low value
+                # means speaker identity can be read from the content branch.
+                stage_stats["leak_EER"] = embedding_trial_eer(
+                    self.eval_cnt_embs,
+                    trial_pairs,
+                    self.hparams.spk_verification_metrics,
+                )
 
                 if not hasattr(self, "is_main_process") or self.is_main_process:
                     logger.info(

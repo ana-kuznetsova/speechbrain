@@ -40,7 +40,9 @@ test_veri_file: !ref <output_folder>/veri_test.txt
 
 ####################### Training Parameters ####################################
 number_of_epochs: 10
-#number_warmup_epochs: 1
+# Reconstruction-only warmup: the dictionary is learned first (with the coherence
+# penalty) before the ASR / speaker heads see the codes.
+number_warmup_epochs: 1
 batch_size: 16 # This works for 2x GPUs with 32GB
 test_batch_size: 1
 grad_accumulation_factor: 2
@@ -163,7 +165,18 @@ disentangle: !new:speechbrain.lobes.models.sparse_disentangle.ResidualSparseDise
     dict_dim: !ref <sparse_dim>
     num_sparse_layers: !ref <num_sparse_layers>
     content_ratio: !ref <content_ratio>
-    num_steps: 5 # Steps for inner ISTA recon loop
+    num_steps: 8 # Steps for inner ISTA recon loop (FISTA below converges faster per step)
+    # Sparsity: lambda is a fraction of lambda_max (scale-free). The old absolute 1e-4
+    # never zeroed anything (active density was ~99.97%). Tune with the logged
+    # active_density_layer_* values: lower lambda = denser codes.
+    l1_lambda: 0.2
+    relative_lambda: True
+    code_init: zeros # deterministic start instead of N(0, 1) noise
+    use_fista: True # Nesterov momentum in the unrolled solver
+    # Speaker branch fits only the per-utterance time-mean; content branch fits the
+    # mean-removed signal, so H_cnt has no constant offset to carry speaker identity.
+    mean_split: True
+    speaker_first: True # only used when mean_split is False (Gauss-Seidel order)
 
 
 # LSTM
@@ -193,6 +206,20 @@ spk_aam_loss_weight: 2.0e6
 content_reg_weight: 500.0
 spk_reg_weight: 8.0e5
 ctc_weight: 8000.0
+
+# Speaker-leakage reduction (weights are relative to the ~1e7 total loss; check the
+# periodic train_log lines and tune). Set a weight to 0 to disable a term.
+# Dictionary coherence: overlap between content and speaker atoms (cross), and
+# redundancy among atoms of the same branch (intra).
+coherence_weight: 1.0e5
+intra_coherence_weight: 2.0e4
+# Decorrelate pooled content-code statistics from the speaker code (batch statistic).
+dependence_weight: 5.0e5
+# Content code must be invariant to pitch/formant shifts of the same utterance
+# (extra no-grad encoder + sparse-coding pass per batch; set 0 to save compute).
+invariance_weight: 5.0e5
+invariance_pitch_steps: [-4, -3, -2, 2, 3, 4] # semitones, one drawn per batch
+loss_log_interval: 100 # steps between periodic loss lines in train_log.txt
 
 
 
