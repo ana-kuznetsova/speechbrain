@@ -209,8 +209,10 @@ class SparseBrain(sb.core.Brain):
                 - recon_loss: Reconstruction loss (MSE) for the latent representations
                 - l1_reg_content: L1 regularization term for content features
                 - l1_reg_speaker: L1 regularization term for speaker features
-                - h_cnt_aug: Content code of a pitch-shifted copy of the batch
-                  (TRAIN with invariance_weight > 0 only, otherwise None)
+                - h_cnt_aug: List of content codes of pitch-shifted copies of the
+                  batch (TRAIN with invariance_weight > 0 only, otherwise None)
+                - asr_inv: (ASR features of the unshifted codes, list of ASR features
+                  of the shifted codes) when invariance_target is "asr", otherwise None
         """
         batch = batch.to(self.device)
         wavs, wav_lens = batch.sig
@@ -241,6 +243,7 @@ class SparseBrain(sb.core.Brain):
             stage == sb.Stage.TRAIN
             and not getattr(self, "sparse_only", False)
             and getattr(self.hparams, "invariance_weight", 0.0) > 0
+            and self._penalty_scale() > 0
         ):
             h_cnt_aug = self._content_code_of_shifted_audio(wavs, wav_lens, stage)
 
@@ -256,6 +259,21 @@ class SparseBrain(sb.core.Brain):
             enc_out_asr, _, _, _ = self.modules.asr_encoder(
                 h_cnt_seq, target_tokens, wav_lens
             )
+
+        asr_inv = None
+        if h_cnt_aug is not None and getattr(self.hparams, "invariance_target", "content") == "asr":
+            if not isinstance(self.modules.asr_encoder, sb.nnet.RNN.LSTM):
+                raise NotImplementedError("invariance_target: asr needs the LSTM ASR encoder")
+            # The unshifted features use detached codes, so this penalty trains only the
+            # ASR encoder and sends no gradient into the dictionary. The shifted features
+            # are a fixed target. Dropout makes the two passes differ slightly.
+            enc_inv, _ = self.modules.asr_encoder(h_cnt_seq.detach(), lengths=wav_lens)
+            with torch.no_grad():
+                enc_augs = [
+                    self.modules.asr_encoder(h.permute(0, 2, 1), lengths=wav_lens)[0]
+                    for h in h_cnt_aug
+                ]
+            asr_inv = (enc_inv, enc_augs)
 
         logits = self.modules.ctc_lin(enc_out_asr)
         p_ctc = self.hparams.log_softmax(logits)
@@ -303,32 +321,92 @@ class SparseBrain(sb.core.Brain):
             l12_reg_content,
             l12_reg_speaker,
             h_cnt_aug,
+            asr_inv,
         )
 
+    def _relative_recon_error(self):
+        """Scale-free reconstruction error recorded by the disentangler, or None."""
+        return getattr(_unwrap(self.modules.disentangle), "last_relative_recon_error", None)
+
+    def _penalty_scale(self) -> float:
+        """Multiplier in [0, 1] for the dependence and invariance penalties.
+
+        0 before ``penalty_start_epoch``, then a linear ramp to 1 over
+        ``penalty_ramp_epochs`` epochs (1 right away when the ramp is 0). Lets
+        the CTC head start learning before the leakage penalties bite.
+        Epoch 1 is the reconstruction-only warmup when it is enabled.
+        """
+        start = getattr(self.hparams, "penalty_start_epoch", 0)
+        ramp = getattr(self.hparams, "penalty_ramp_epochs", 0)
+        epoch = getattr(self, "current_epoch", None)
+        if epoch is None:
+            return 1.0
+        if epoch < start:
+            return 0.0
+        if ramp <= 0:
+            return 1.0
+        return min(1.0, (epoch - start + 1) / ramp)
+
     def _content_code_of_shifted_audio(self, wavs, wav_lens, stage):
-        """Content code (B, K, T) of a randomly pitch/formant-shifted copy of wavs.
+        """List of content codes (B, K, T) of pitch/formant-shifted copies of wavs.
 
         The phase-vocoder pitch shift changes pitch and formants (speaker
         cues) while keeping duration, so frames stay aligned with the original.
+        ``invariance_num_shifts`` different shifts are drawn per batch; more
+        shifts make the gradient less dependent on one random shift, at the
+        cost of one extra encoder and sparse-coding pass each.
         """
-        shifts = getattr(
-            self.hparams, "invariance_pitch_steps", [-4, -3, -2, 2, 3, 4]
+        shifts = list(
+            getattr(self.hparams, "invariance_pitch_steps", [-4, -3, -2, 2, 3, 4])
         )
-        n_steps = random.choice(list(shifts))
+        n_shifts = getattr(self.hparams, "invariance_num_shifts", 1)
+        chosen = random.sample(shifts, min(n_shifts, len(shifts)))
+        codes = []
         with torch.no_grad():
-            wavs_aug = torchaudio.functional.pitch_shift(
-                wavs, self.hparams.sample_rate, n_steps
+            for n_steps in chosen:
+                wavs_aug = torchaudio.functional.pitch_shift(
+                    wavs, self.hparams.sample_rate, n_steps
+                )
+                # Guard against off-by-a-few-samples lengths from resampling
+                n_samples = wavs.shape[-1]
+                if wavs_aug.shape[-1] < n_samples:
+                    wavs_aug = F.pad(wavs_aug, (0, n_samples - wavs_aug.shape[-1]))
+                wavs_aug = wavs_aug[..., :n_samples]
+                enc_aug = self.modules.codec.encoder(wavs_aug.unsqueeze(1))
+                codes.append(
+                    self.modules.disentangle(enc_aug, stage=stage, wav_lens=wav_lens)[3]
+                )
+        return codes
+
+    def _log_gradient_norms(self, terms: dict):
+        """Every ``grad_log_interval`` steps, write the gradient norm that each
+        weighted loss term puts on the dictionary to train_log.txt (0 = off).
+
+        Shows which term actually drives the dictionary, e.g. whether the
+        reconstruction loss is drowned out by the regularisers or penalties.
+        """
+        interval = getattr(self.hparams, "grad_log_interval", 0)
+        step = getattr(self, "optimizer_step", 0)
+        if interval <= 0 or step == 0 or step % interval != 0:
+            return
+        if step == getattr(self, "last_grad_log_step", -1):
+            return
+        self.last_grad_log_step = step
+        params = [m.W for m in _unwrap(self.modules.disentangle).sparse_module_list]
+        norms = {}
+        for name, loss in terms.items():
+            if not torch.is_tensor(loss) or not loss.requires_grad:
+                continue
+            grads = torch.autograd.grad(
+                loss, params, retain_graph=True, allow_unused=True
             )
-            # Guard against off-by-a-few-samples lengths from resampling
-            n_samples = wavs.shape[-1]
-            if wavs_aug.shape[-1] < n_samples:
-                wavs_aug = F.pad(wavs_aug, (0, n_samples - wavs_aug.shape[-1]))
-            wavs_aug = wavs_aug[..., :n_samples]
-            enc_aug = self.modules.codec.encoder(wavs_aug.unsqueeze(1))
-            h_cnt_aug = self.modules.disentangle(
-                enc_aug, stage=stage, wav_lens=wav_lens
-            )[3]
-        return h_cnt_aug
+            sq = [g.float().pow(2).sum() for g in grads if g is not None]
+            norms["gradW_" + name] = float(torch.stack(sq).sum().sqrt()) if sq else 0.0
+        self.hparams.train_logger.log_stats(
+            stats_meta={"epoch": getattr(self, "current_epoch", None), "steps": step},
+            train_stats=norms,
+            verbose=False,
+        )
 
     def _dictionary_coherence_loss(self):
         """Weighted dictionary coherence penalty and the raw values for logging.
@@ -359,7 +437,7 @@ class SparseBrain(sb.core.Brain):
         Returns:
             Combined scalar loss tensor for backpropagation.
         """
-        # 1. Unpack 12 prediction outputs matching updated compute_forward
+        # 1. Unpack 13 prediction outputs matching updated compute_forward
         (
             p_ctc,
             pred_hyps,
@@ -373,6 +451,7 @@ class SparseBrain(sb.core.Brain):
             l12_reg_content,
             l12_reg_speaker,
             h_cnt_aug,
+            asr_inv,
         ) = predictions
 
         uttid = batch.id
@@ -393,11 +472,20 @@ class SparseBrain(sb.core.Brain):
             # Store for epoch-level summary stats tracking
             if not hasattr(self, "stage_stats"):
                 self.stage_stats = {}
+            self._log_gradient_norms(
+                {
+                    "recon": recon_loss * getattr(self.hparams, "sparse_loss_weight", 1.0),
+                    "l12_content": l12_reg_content * getattr(self.hparams, "content_reg_weight", 1e-4),
+                    "l1_spk": l12_reg_speaker * getattr(self.hparams, "spk_reg_weight", 1e-4),
+                    "coherence": coherence_loss,
+                }
+            )
             self._log_periodic_train_losses(
                 {
                     "recon_loss": recon_loss,
                     "total_l12_reg_content": l12_reg_content,
                     "total_l1_reg_speaker": l12_reg_speaker,
+                    "rel_recon_err": self._relative_recon_error(),
                     **coherence_logs,
                 }
             )
@@ -436,6 +524,13 @@ class SparseBrain(sb.core.Brain):
             )
 
             total_loss = total_loss + recon_batch_loss + batch_aam_loss
+            weighted_terms = {
+                "ctc": ctc_batch_loss,
+                "aam": batch_aam_loss,
+                "recon": recon_batch_loss,
+                "l12_content": content_reg_loss,
+                "l1_spk": spk_reg_loss,
+            }
 
             # Raw (unweighted) values of the leakage-reduction terms, for logging
             extra_losses = {}
@@ -445,26 +540,54 @@ class SparseBrain(sb.core.Brain):
             coherence_loss, coherence_logs = self._dictionary_coherence_loss()
             total_loss = total_loss + coherence_loss
             extra_losses.update(coherence_logs)
+            weighted_terms["coherence"] = coherence_loss
 
             # 4b. Dependence penalty: decorrelate the pooled content-code
             # statistics (mean / std / mean|.| over time) from the speaker code.
+            penalty_scale = self._penalty_scale()
+            extra_losses["penalty_scale"] = torch.tensor(penalty_scale)
+
             dependence_weight = getattr(self.hparams, "dependence_weight", 0.0)
-            if dependence_weight > 0:
-                dependence_loss = cross_correlation_penalty(
-                    pooled_content_statistics(h_cnt, wav_lens), h_spk.squeeze(-1)
+            dependence_loss = cross_correlation_penalty(
+                pooled_content_statistics(h_cnt, wav_lens), h_spk.squeeze(-1)
+            )
+            extra_losses["dependence_loss"] = dependence_loss  # logged even when unweighted
+            if dependence_weight > 0 and penalty_scale > 0:
+                # The batch estimate of the mean squared correlation of independent
+                # features is about 1/(B-1); optionally do not penalise below it.
+                floor_scale = getattr(self.hparams, "dependence_floor_scale", 0.0)
+                floor = floor_scale / max(h_cnt.shape[0] - 1, 1)
+                weighted_terms["dependence"] = (
+                    penalty_scale * dependence_weight * torch.relu(dependence_loss - floor)
                 )
-                total_loss = total_loss + dependence_weight * dependence_loss
-                extra_losses["dependence_loss"] = dependence_loss
+                total_loss = total_loss + weighted_terms["dependence"]
 
             # 4c. Invariance loss: content code must not change when pitch/formants
             # (speaker cues) of the same utterance are shifted. TRAIN only.
             invariance_weight = getattr(self.hparams, "invariance_weight", 0.0)
-            if h_cnt_aug is not None and invariance_weight > 0:
-                invariance_loss = content_invariance_loss(h_cnt, h_cnt_aug, wav_lens)
-                total_loss = total_loss + invariance_weight * invariance_loss
+            if h_cnt_aug is not None and invariance_weight > 0 and penalty_scale > 0:
+                if asr_inv is not None:
+                    # Distance between ASR-encoder features, (B, T, D) -> (B, D, T)
+                    enc_inv, enc_augs = asr_inv
+                    pairs = [(enc_inv.permute(0, 2, 1), e.permute(0, 2, 1)) for e in enc_augs]
+                else:
+                    pairs = [(h_cnt, h_aug) for h_aug in h_cnt_aug]
+                invariance_loss = torch.stack(
+                    [content_invariance_loss(a, b, wav_lens) for a, b in pairs]
+                ).mean()
+                margin = getattr(self.hparams, "invariance_margin", 0.0)
+                weighted_terms["invariance"] = (
+                    penalty_scale * invariance_weight * torch.relu(invariance_loss - margin)
+                )
+                total_loss = total_loss + weighted_terms["invariance"]
                 extra_losses["invariance_loss"] = invariance_loss
 
+            rel_recon = self._relative_recon_error()
+            if rel_recon is not None:
+                extra_losses["rel_recon_err"] = rel_recon
+
             if stage == sb.Stage.TRAIN:
+                self._log_gradient_norms(weighted_terms)
                 self._log_periodic_train_losses(
                     {
                         "ctc_loss": ctc_raw_loss,
@@ -1116,6 +1239,10 @@ if __name__ == "__main__":
     # Calculate elapsed time
     elapsed_time = (end_time - start_time) / 3600  # Convert to hours
     logger.info("Elapsed time %s hours", elapsed_time)
+
+    # Short ablation runs can skip the slow beam-search test (and its checkpoint pruning)
+    if hparams.get("skip_test", False):
+        sys.exit(0)
 
     # Testing
     if not os.path.exists(hparams["output_wer_folder"]):

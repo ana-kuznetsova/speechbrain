@@ -152,6 +152,13 @@ sample_rate: 16000
 sparse_dim: 64
 num_sparse_layers: 4
 content_ratio: 0.5 #regulates how many atoms are responsible for content vs speaker information. 
+# Sparsity: lambda is a fraction of lambda_max (scale-free). The old absolute 1e-4
+# never zeroed anything (active density was ~99.97%). Tune with the logged
+# active_density_layer_* values: lower lambda = denser codes.
+l1_lambda: 0.2
+# Speaker branch fits only the per-utterance time-mean; content branch fits the
+# mean-removed signal, so H_cnt has no constant offset to carry speaker identity.
+mean_split: True
 #sparse_only: False
 
 codec: !new:speechbrain.lobes.models.discrete.dac.DAC
@@ -166,16 +173,11 @@ disentangle: !new:speechbrain.lobes.models.sparse_disentangle.ResidualSparseDise
     num_sparse_layers: !ref <num_sparse_layers>
     content_ratio: !ref <content_ratio>
     num_steps: 8 # Steps for inner ISTA recon loop (FISTA below converges faster per step)
-    # Sparsity: lambda is a fraction of lambda_max (scale-free). The old absolute 1e-4
-    # never zeroed anything (active density was ~99.97%). Tune with the logged
-    # active_density_layer_* values: lower lambda = denser codes.
-    l1_lambda: 0.2
+    l1_lambda: !ref <l1_lambda>
     relative_lambda: True
     code_init: zeros # deterministic start instead of N(0, 1) noise
     use_fista: True # Nesterov momentum in the unrolled solver
-    # Speaker branch fits only the per-utterance time-mean; content branch fits the
-    # mean-removed signal, so H_cnt has no constant offset to carry speaker identity.
-    mean_split: True
+    mean_split: !ref <mean_split>
     speaker_first: True # only used when mean_split is False (Gauss-Seidel order)
 
 
@@ -207,19 +209,41 @@ content_reg_weight: 500.0
 spk_reg_weight: 8.0e5
 ctc_weight: 8000.0
 
-# Speaker-leakage reduction (weights are relative to the ~1e7 total loss; check the
-# periodic train_log lines and tune). Set a weight to 0 to disable a term.
+# Speaker-leakage reduction. Weights are relative to the ~1e7 total loss. In the first run
+# (weights 1e5 / 2e4 / 5e5 / 5e5) these terms were only 0.02% / 0.2% / 0.1% / 1% of the loss
+# and leak_EER stayed at ~22%, so they were raised 100x / 100x / 100x / 50x.
+# Check the periodic train_log lines and tune. Set a weight to 0 to disable a term.
 # Dictionary coherence: overlap between content and speaker atoms (cross), and
 # redundancy among atoms of the same branch (intra).
-coherence_weight: 1.0e5
-intra_coherence_weight: 2.0e4
+coherence_weight: 1.0e7
+intra_coherence_weight: 2.0e6
 # Decorrelate pooled content-code statistics from the speaker code (batch statistic).
-dependence_weight: 5.0e5
+dependence_weight: 5.0e7
 # Content code must be invariant to pitch/formant shifts of the same utterance
 # (extra no-grad encoder + sparse-coding pass per batch; set 0 to save compute).
-invariance_weight: 5.0e5
-invariance_pitch_steps: [-4, -3, -2, 2, 3, 4] # semitones, one drawn per batch
+invariance_weight: 2.5e7
+invariance_pitch_steps: [-4, -3, -2, 2, 3, 4] # semitones, drawn per batch without replacement
+# Number of different shifts drawn per batch (each costs an extra encoder + sparse-coding pass).
+invariance_num_shifts: 1
+# Where the invariance loss acts: "content" = on h_cnt (trains the dictionary), "asr" = on the
+# ASR-encoder output of detached codes (trains only the ASR encoder, not the dictionary).
+invariance_target: content
+# Every N steps, log the gradient norm of each weighted loss term on the dictionary (0 = off).
+grad_log_interval: 0
 loss_log_interval: 100 # steps between periodic loss lines in train_log.txt
+
+# Penalty schedule for the dependence and invariance terms: off before penalty_start_epoch
+# (epoch 1 is the warmup), then a linear ramp to full strength over penalty_ramp_epochs.
+# The defaults apply the penalties at full strength from the first joint epoch.
+penalty_start_epoch: 0
+penalty_ramp_epochs: 0
+# Hinge variants: do not penalise below the batch-noise floor of the dependence statistic
+# (floor = dependence_floor_scale / (batch_size - 1); 0 = plain penalty) or below an
+# invariance margin (0 = plain penalty).
+dependence_floor_scale: 0.0
+invariance_margin: 0.0
+# Skip the final beam-search test (useful for short ablation runs).
+skip_test: False
 
 
 

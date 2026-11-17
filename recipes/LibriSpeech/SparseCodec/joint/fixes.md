@@ -59,8 +59,17 @@ the module are unaffected.
 - Disentangle block: `num_steps: 8`, `l1_lambda: 0.2`, `relative_lambda: True`,
   `code_init: zeros`, `use_fista: True`, `mean_split: True`, `speaker_first: True`
   (the last is ignored while `mean_split` is on).
-- New loss weights: `coherence_weight: 1.0e5`, `intra_coherence_weight: 2.0e4`,
-  `dependence_weight: 5.0e5`, `invariance_weight: 5.0e5`.
+- New loss weights: `coherence_weight: 1.0e7`, `intra_coherence_weight: 2.0e6`,
+  `dependence_weight: 5.0e7`, `invariance_weight: 2.5e7`. The first run used
+  `1.0e5 / 2.0e4 / 5.0e5 / 5.0e5`, which made these terms only about 0.02% / 0.2% / 0.1% / 1%
+  of the optimised loss; `leak_EER` stayed at about 22%, so they were raised 100x / 100x / 100x / 50x.
+
+### Ablation and balancing options (see [experiments.md](./experiments.md))
+
+`penalty_start_epoch` / `penalty_ramp_epochs` (delay and ramp the dependence and invariance
+penalties), `dependence_floor_scale` and `invariance_margin` (hinge variants), `skip_test`,
+top-level `l1_lambda` and `mean_split`, and the new `rel_recon_err` log field (scale-free
+reconstruction error). `invariance_num_shifts`, `invariance_target` (`asr` applies invariance to the ASR-encoder features of detached codes, leaving the dictionary untouched) and `grad_log_interval` (per-term gradient norms on the dictionary) support the reconstruction experiments in experiments.md, Phase 3. All default to the previous behaviour.
 
 ## Not implemented
 
